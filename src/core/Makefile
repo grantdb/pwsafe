@@ -91,8 +91,7 @@ StringX.cpp: core_st.h
 
 clean:
 	@rm -f *~ $(OBJ) $(TEST) $(LIB)
-	@rm -rf $(DEPDIR)
-#	@rm core_st.cpp core_st.h
+	@rm -rf $(DEPDIR}
 
 setup:
 	@mkdir -p $(OBJPATH) $(OBJPATH)/pugixml $(OBJPATH)/XML/Xerces $(LIBPATH) $(DEPDIR)
