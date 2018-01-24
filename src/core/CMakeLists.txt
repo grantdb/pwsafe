@@ -88,7 +88,7 @@ if (NOT WIN32 OR WX_WINDOWS)
   add_custom_command (
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/core_st.cpp ${CMAKE_CURRENT_BINARY_DIR}/core_st.h
     COMMAND "${PERL_EXECUTABLE}" "${RC2CPP}" "${PROJECT_SOURCE_DIR}/src/core/core.rc2"
-    COMMAND "${MV}" "${FROM}.cpp" "${TO}.cpp"
+#    COMMAND "${MV}" "${FROM}.cpp" "${TO}.cpp"
     COMMAND "${MV}" "${FROM}.h" "${TO}.h"
     DEPENDS core.rc2
     )
