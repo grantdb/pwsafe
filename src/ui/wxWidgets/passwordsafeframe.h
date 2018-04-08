@@ -166,6 +166,9 @@ class PasswordSafeFrame: public wxFrame, public UIInterFace
 {
     DECLARE_CLASS( PasswordSafeFrame )
     DECLARE_EVENT_TABLE()
+    
+private:
+    enum class ViewType { TREE, GRID } m_currentView;
 
 public:
     /// Constructors
@@ -422,9 +425,12 @@ public:
   ItemListConstIter GetEntryIter() const {return m_core.GetEntryIter();}
   ItemListConstIter GetEntryEndIter() const {return m_core.GetEntryEndIter();}
 
-  void Execute(Command *pcmd, PWScore *pcore = NULL);
+  void Execute(Command *pcmd, PWScore *pcore = nullptr);
 
-  bool IsTreeView() const {return m_currentView == TREE;}
+  void SetViewType(const ViewType& view) { m_currentView = view; }
+  bool IsTreeView() const { return m_currentView == ViewType::TREE; }
+  bool IsGridView() const { return m_currentView == ViewType::GRID; }
+  
   void RefreshViews();
   void FlattenTree(OrderedItemList& olist);
 
@@ -469,8 +475,8 @@ public:
   CPWStatusBar* m_statusBar;
   ////@end PasswordSafeFrame member variables
  private:
-  enum SaveType {ST_INVALID = -1, ST_NORMALEXIT = 0, ST_SAVEIMMEDIATELY,
-                 ST_ENDSESSIONEXIT, ST_WTSLOGOFFEXIT, ST_FAILSAFESAVE};
+  enum class SaveType { INVALID = -1, NORMALEXIT = 0, IMMEDIATELY, 
+                        ENDSESSIONEXIT, WTSLOGOFFEXIT, FAILSAFESAVE };
 
   //we need to restrict the size of individual text fields, to prevent creating
   //enormous databases.  See the comments in DboxMain.h
@@ -482,7 +488,7 @@ public:
   int Open(const wxString &fname); // prompt for password, try to Load.
   int SaveIfChanged();
   int SaveAs(void);
-  int Save(SaveType st = ST_INVALID);
+  int Save(SaveType savetype = SaveType::INVALID);
   int SaveImmediately();
   void ShowGrid(bool show = true);
   void ShowTree(bool show = true);
@@ -504,6 +510,7 @@ public:
   void CreateDragBar();
   void RefreshToolbarButtons();
   PWSDragBar* GetDragBar();
+  void CreateStatusBar();
   bool IsClosed() const;
   void SaveSettings() const;
   void LockDb();
@@ -550,7 +557,6 @@ public:
   /// File open, double-click, modify, r-o r/w, filter...
   void UpdateStatusBar();
   PWScore &m_core;
-  enum {TREE, GRID} m_currentView;
   PasswordSafeSearch* m_search;
   SystemTray* m_sysTray;
   bool m_exitFromMenu;
@@ -586,6 +592,8 @@ public:
   bool m_bShowExpiry, m_bShowUnsaved; // predefined filters
   bool m_bFilterActive;
   void ApplyFilters();
+  
+  bool m_InitialTreeDisplayStatusAtOpen;
 };
 
 BEGIN_DECLARE_EVENT_TYPES()

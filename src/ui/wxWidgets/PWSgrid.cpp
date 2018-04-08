@@ -26,10 +26,8 @@
 #include <utility> // for make_pair
 #include "PWSgrid.h"
 #include "passwordsafeframe.h" // for DispatchDblClickAction()
-#include <wx/headerctrl.h>
 #include <wx/memory.h>
 #include <algorithm>
-#include <functional>
 #include "./PWSgridtable.h"
 
 #ifdef __WXMSW__
@@ -80,15 +78,23 @@ PWSGrid::PWSGrid(wxWindow* parent, PWScore &core,
   Init();
   Create(parent, id, pos, size, style);
   
-  // Handler for double click events on column header separator
   auto *header = wxGrid::GetGridColHeader();
   
   if (header) {
+    
+    // Handler for double click events on column header separator
     header->Bind(
       wxEVT_HEADER_SEPARATOR_DCLICK, 
       [=](wxHeaderCtrlEvent& event) {
         wxGrid::AutoSizeColumn(event.GetColumn());
       }
+    );
+    
+    // Handler for single click events on column header
+    header->Bind(
+      wxEVT_HEADER_CLICK, 
+      &PWSGrid::OnHeaderClick,
+      this
     );
   }
 }
@@ -110,6 +116,9 @@ bool PWSGrid::Create(wxWindow* parent, wxWindowID id, const wxPoint& pos, const 
   UseNativeColHeader(true);
 #endif
 ////@end PWSGrid creation
+  
+  UpdateSorting();
+  
   return true;
 }
 
@@ -210,6 +219,18 @@ void PWSGrid::AddItem(const CItemData &item, int row)
   m_row_map.insert(std::make_pair(row, CUUID(uuid)));
   m_uuid_map.insert(std::make_pair(CUUID(uuid), row));
   InsertRows(row);
+}
+
+void PWSGrid::RefreshItem(const CItemData &item, int row)
+{
+  int nRows = GetNumberRows();
+  if (row == -1)
+    row = nRows;
+  uuid_array_t uuid;
+  item.GetUUID(uuid);
+  m_row_map.insert(std::make_pair(row, CUUID(uuid)));
+  m_uuid_map.insert(std::make_pair(CUUID(uuid), row));
+  RefreshRow(row);
 }
 
 void PWSGrid::UpdateItem(const CItemData &item)
@@ -399,17 +420,17 @@ void PWSGrid::OnContextMenu( wxContextMenuEvent& evt )
 CItemData *PWSGrid::GetItem(int row) const
 {
   if (row < 0 || row > const_cast<PWSGrid *>(this)->GetNumberRows())
-    return NULL;
+    return nullptr;
   auto iter = m_row_map.find(row);
   if (iter != m_row_map.end()) {
     uuid_array_t uuid;
     iter->second.GetARep(uuid);
     auto itemiter = m_core.Find(uuid);
     if (itemiter == m_core.GetEntryEndIter())
-      return NULL;
+      return nullptr;
     return &itemiter->second;
   }
-  return NULL;
+  return nullptr;
 }
 
 /*!
@@ -419,7 +440,7 @@ CItemData *PWSGrid::GetItem(int row) const
 void PWSGrid::OnLeftDClick( wxGridEvent& evt )
 {
   CItemData *item = GetItem(evt.GetRow());
-  if (item != NULL)
+  if (item != nullptr)
     dynamic_cast<PasswordSafeFrame *>(GetParent())->
       DispatchDblClickAction(*item);
 }
@@ -494,4 +515,59 @@ void PWSGrid::SetFilterState(bool state)
   const wxColour *colour = state ? wxRED : wxBLACK;
   SetDefaultCellTextColour(*colour);
   ForceRefresh();
+}
+
+void PWSGrid::UpdateSorting()
+{
+  SortByColumn(
+    PWSprefs::GetInstance()->GetPref(PWSprefs::SortedColumn),
+    PWSprefs::GetInstance()->GetPref(PWSprefs::SortAscending)
+  );
+}
+
+void PWSGrid::OnHeaderClick(wxHeaderCtrlEvent& event)
+{
+  SortByColumn(event.GetColumn(), !IsSortOrderAscending());
+  
+  if (GetSortingColumn() != wxNOT_FOUND) {
+    PWSprefs::GetInstance()->SetPref(PWSprefs::SortedColumn , GetSortingColumn());
+    PWSprefs::GetInstance()->SetPref(PWSprefs::SortAscending, IsSortOrderAscending());
+  }
+}
+
+void PWSGrid::SortByColumn(int column, bool ascending)
+{
+  UnsetSortingColumn();
+  
+  SetSortingColumn(column, ascending);
+  
+  if (ascending) {
+    AscendingSortedMultimap collection;
+    
+    RearrangeItems<AscendingSortedMultimap> (collection, column);
+  }
+  else {
+    DescendingSortedMultimap collection;
+    
+    RearrangeItems<DescendingSortedMultimap> (collection, column);
+  }
+}
+
+template<typename ItemsCollection>
+void PWSGrid::RearrangeItems(ItemsCollection& collection, int column)
+{
+  int row = 0;
+  
+  for (row = 0; row < GetNumberRows(); row++) {
+    collection.insert(std::pair<wxString, const CItemData*>(GetCellValue(row, column), GetItem(row)));
+  }
+  
+  m_row_map.clear();
+  m_uuid_map.clear();
+  
+  row = 0;
+  
+  for (auto& item : collection) {
+    RefreshItem(*item.second, row++);
+  }
 }

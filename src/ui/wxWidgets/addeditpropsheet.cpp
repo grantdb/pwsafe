@@ -94,14 +94,14 @@ END_EVENT_TABLE()
  */
 
 AddEditPropSheet::AddEditPropSheet(wxWindow* parent, PWScore &core,
-                                   AddOrEdit type, const CItemData *item, UIInterFace* ui,
+                                   SheetType type, const CItemData *item, UIInterFace* ui,
                                    const wxString& selectedGroup,
                                    wxWindowID id, const wxString& caption,
                                    const wxPoint& pos, const wxSize& size,
                                    long style)
 : m_core(core), m_ui(ui), m_selectedGroup(selectedGroup), m_type(type)
 {
-  if (item != NULL)
+  if (item != nullptr)
     m_item = *item; // copy existing item to display values
   else
     m_item.CreateUUID(); // We're adding a new entry
@@ -109,13 +109,13 @@ AddEditPropSheet::AddEditPropSheet(wxWindow* parent, PWScore &core,
   wxString dlgTitle;
   if (caption == SYMBOL_AUTOPROPSHEET_TITLE) {
     switch(m_type) {
-      case ADD:
+      case SheetType::ADD:
         dlgTitle = SYMBOL_ADDPROPSHEET_TITLE;
         break;
-      case EDIT:
+      case SheetType::EDIT:
         dlgTitle = SYMBOL_EDITPROPSHEET_TITLE;
         break;
-      case VIEW:
+      case SheetType::VIEW:
         dlgTitle = SYMBOL_VIEWPROPSHEET_TITLE;
         break;
       default:
@@ -136,7 +136,7 @@ bool AddEditPropSheet::Create( wxWindow* parent, wxWindowID id, const wxString& 
   SetExtraStyle(wxWS_EX_VALIDATE_RECURSIVELY|wxWS_EX_BLOCK_EVENTS);
   wxPropertySheetDialog::Create( parent, id, caption, pos, size, style );
 
-  int flags = (m_type == VIEW) ? (wxCLOSE|wxHELP) : (wxOK|wxCANCEL|wxHELP);
+  int flags = (m_type == SheetType::VIEW) ? (wxCLOSE|wxHELP) : (wxOK|wxCANCEL|wxHELP);
   CreateButtons(flags);
   CreateControls();
   Centre();
@@ -165,45 +165,45 @@ void AddEditPropSheet::Init()
 ////@begin AddEditPropSheet member initialisation
   m_XTimeInt = 0;
   m_isNotesHidden = !PWSprefs::GetInstance()->GetPref(PWSprefs::ShowNotesDefault);
-  m_BasicPanel = NULL;
-  m_BasicFGSizer = NULL;
-  m_groupCtrl = NULL;
-  m_UsernameCtrl = NULL;
-  m_PasswordCtrl = NULL;
-  m_ShowHideCtrl = NULL;
-  m_Password2Ctrl = NULL;
-  m_noteTX = NULL;
-  m_DCAcomboBox = NULL;
-  m_SDCAcomboBox = NULL;
-  m_MaxPWHistCtrl = NULL;
-  m_PWHgrid = NULL;
-  m_OnRB = NULL;
-  m_ExpDate = NULL;
-  m_InRB = NULL;
-  m_ExpTimeCtrl = NULL;
-  m_RecurringCtrl = NULL;
-  m_NeverRB = NULL;
-  m_defPWPRB = NULL;
-  m_cbxPolicyNames = NULL;
-  m_ourPWPRB = NULL;
-  m_pwpLenCtrl = NULL;
-  m_pwMinsGSzr = NULL;
-  m_pwpUseLowerCtrl = NULL;
-  m_pwNumLCbox = NULL;
-  m_pwpLCSpin = NULL;
-  m_pwpUseUpperCtrl = NULL;
-  m_pwNumUCbox = NULL;
-  m_pwpUCSpin = NULL;
-  m_pwpUseDigitsCtrl = NULL;
-  m_pwNumDigbox = NULL;
-  m_pwpDigSpin = NULL;
-  m_pwpSymCtrl = NULL;
-  m_pwNumSymbox = NULL;
-  m_pwpSymSpin = NULL;
-  m_ownsymbols = NULL;
-  m_pwpEasyCtrl = NULL;
-  m_pwpPronounceCtrl = NULL;
-  m_pwpHexCtrl = NULL;
+  m_BasicPanel = nullptr;
+  m_BasicFGSizer = nullptr;
+  m_groupCtrl = nullptr;
+  m_UsernameCtrl = nullptr;
+  m_PasswordCtrl = nullptr;
+  m_ShowHideCtrl = nullptr;
+  m_Password2Ctrl = nullptr;
+  m_noteTX = nullptr;
+  m_DCAcomboBox = nullptr;
+  m_SDCAcomboBox = nullptr;
+  m_MaxPWHistCtrl = nullptr;
+  m_PWHgrid = nullptr;
+  m_OnRB = nullptr;
+  m_ExpDate = nullptr;
+  m_InRB = nullptr;
+  m_ExpTimeCtrl = nullptr;
+  m_RecurringCtrl = nullptr;
+  m_NeverRB = nullptr;
+  m_defPWPRB = nullptr;
+  m_cbxPolicyNames = nullptr;
+  m_ourPWPRB = nullptr;
+  m_pwpLenCtrl = nullptr;
+  m_pwMinsGSzr = nullptr;
+  m_pwpUseLowerCtrl = nullptr;
+  m_pwNumLCbox = nullptr;
+  m_pwpLCSpin = nullptr;
+  m_pwpUseUpperCtrl = nullptr;
+  m_pwNumUCbox = nullptr;
+  m_pwpUCSpin = nullptr;
+  m_pwpUseDigitsCtrl = nullptr;
+  m_pwNumDigbox = nullptr;
+  m_pwpDigSpin = nullptr;
+  m_pwpSymCtrl = nullptr;
+  m_pwNumSymbox = nullptr;
+  m_pwpSymSpin = nullptr;
+  m_ownsymbols = nullptr;
+  m_pwpEasyCtrl = nullptr;
+  m_pwpPronounceCtrl = nullptr;
+  m_pwpHexCtrl = nullptr;
 ////@end AddEditPropSheet member initialisation
 }
 
@@ -658,8 +658,8 @@ void AddEditPropSheet::CreateControls()
   itemStaticText86->SetValidator( wxGenericValidator(& m_RMTime) );
   m_ownsymbols->SetValidator( wxGenericValidator(& m_symbols) );
   // Connect events and objects
-  m_noteTX->Connect(ID_TEXTCTRL7, wxEVT_SET_FOCUS, wxFocusEventHandler(AddEditPropSheet::OnNoteSetFocus), NULL, this);
-  m_ownsymbols->Connect(IDC_OWNSYMBOLS, wxEVT_SET_FOCUS, wxFocusEventHandler(AddEditPropSheet::OnOwnSymSetFocus), NULL, this);
+  m_noteTX->Connect(ID_TEXTCTRL7, wxEVT_SET_FOCUS, wxFocusEventHandler(AddEditPropSheet::OnNoteSetFocus), nullptr, this);
+  m_ownsymbols->Connect(IDC_OWNSYMBOLS, wxEVT_SET_FOCUS, wxFocusEventHandler(AddEditPropSheet::OnOwnSymSetFocus), nullptr, this);
 ////@end AddEditPropSheet content construction
 
   // Non-DialogBlock initializations:
@@ -712,11 +712,11 @@ static void EnableSizerChildren(wxSizer *sizer, bool enable)
   wxSizerItemList::iterator iter;
   for (iter = items.begin(); iter != items.end(); iter++) {
     wxWindow *childW = (*iter)->GetWindow();
-    if (childW != NULL)
+    if (childW != nullptr)
       childW->Enable(enable);
     else { // if another sizer, recurse!
       wxSizer *childS = (*iter)->GetSizer();
-      if (childS != NULL)
+      if (childS != nullptr)
         EnableSizerChildren(childS, enable);
     }
   }
@@ -885,7 +885,7 @@ void AddEditPropSheet::ItemFieldsToPropSheet()
     m_groupCtrl->Append(sviter->c_str());
 
   // select relevant group
-  const StringX group = (m_type == ADD? tostringx(m_selectedGroup): m_item.GetGroup());
+  const StringX group = (m_type == SheetType::ADD ? tostringx(m_selectedGroup): m_item.GetGroup());
   if (!group.empty()) {
     bool foundGroup = false;
     for (size_t igrp = 0; igrp < svec.size(); igrp++) {
@@ -935,8 +935,8 @@ void AddEditPropSheet::ItemFieldsToPropSheet()
 #endif
   // XXX since PWSRun not yet implemented in Linux, Send button's always disabled:
   sendBtn->Enable(false);
-  m_notes = (m_type != ADD && m_isNotesHidden) ?
-    wxString(_("[Notes hidden - click here to display]")) : towxstring(m_item.GetNotes());
+  m_notes = (m_type != SheetType::ADD && m_isNotesHidden) ?
+    wxString(_("[Notes hidden - click here to display]")) : towxstring(m_item.GetNotes(TCHAR('\n')));
   // Following has no effect under Linux :-(
   long style = m_noteTX->GetExtraStyle();
   if (prefs->GetPref(PWSprefs::NotesWordWrap))
@@ -955,7 +955,7 @@ void AddEditPropSheet::ItemFieldsToPropSheet()
 
   // History: If we're adding, use preferences, otherwise,
   // get values from m_item
-  if (m_type == ADD) {
+  if (m_type == SheetType::ADD) {
     // Get history preferences
     m_keepPWHist = prefs->GetPref(PWSprefs::SavePasswordHistory);
     m_maxPWHist = prefs->GetPref(PWSprefs::NumPWHistoryDefault);
@@ -1183,7 +1183,7 @@ void AddEditPropSheet::OnOk(wxCommandEvent& /* evt */)
     }
 
     switch (m_type) {
-    case EDIT: {
+    case SheetType::EDIT: {
       bool bIsModified, bIsPSWDModified;
       short lastDCA, lastShiftDCA;
       const PWSprefs *prefs = PWSprefs::GetInstance();
@@ -1203,8 +1203,8 @@ void AddEditPropSheet::OnOk(wxCommandEvent& /* evt */)
       // isn't marked as modified. Relies on fact that
       // Note field can't be modified w/o first getting focus
       // and that we turn off m_isNotesHidden when that happens.
-      if (m_type != ADD && m_isNotesHidden)
-        m_notes = m_item.GetNotes().c_str();
+      if (m_type != SheetType::ADD && m_isNotesHidden)
+        m_notes = m_item.GetNotes(TCHAR('\n')).c_str();
 
       // Create a new PWHistory string based on settings in this dialog, and compare it
       // with the PWHistory string from the item being edited, to see if the user modified it.
@@ -1254,7 +1254,7 @@ void AddEditPropSheet::OnOk(wxCommandEvent& /* evt */)
       bIsModified = (group        != m_item.GetGroup().c_str()       ||
                      m_title      != m_item.GetTitle().c_str()       ||
                      m_user       != m_item.GetUser().c_str()        ||
-                     m_notes      != m_item.GetNotes().c_str()       ||
+                     m_notes      != m_item.GetNotes(TCHAR('\n')).c_str()       ||
                      m_url        != m_item.GetURL().c_str()         ||
                      m_email      != m_item.GetEmail().c_str()       ||
                      m_autotype   != m_item.GetAutoType().c_str()    ||
@@ -1354,7 +1354,7 @@ void AddEditPropSheet::OnOk(wxCommandEvent& /* evt */)
     }
       break;
 
-    case ADD:
+    case SheetType::ADD:
       m_item.SetGroup(tostringx(group));
       m_item.SetTitle(tostringx(m_title));
       m_item.SetUser(m_user.empty() ?
@@ -1418,7 +1418,7 @@ void AddEditPropSheet::OnOk(wxCommandEvent& /* evt */)
         m_item.SetXTime(m_tttXTime);
       }
       break;
-    case VIEW:
+    case SheetType::VIEW:
       // No Update
       break;
     default:
@@ -1581,9 +1581,9 @@ void AddEditPropSheet::OnUseHexCBClick( wxCommandEvent& /* evt */ )
 
 void AddEditPropSheet::OnNoteSetFocus( wxFocusEvent& /* evt */ )
 {
-  if (m_type != ADD && m_isNotesHidden) {
+  if (m_type != SheetType::ADD && m_isNotesHidden) {
     m_isNotesHidden = false;
-    m_notes = m_item.GetNotes().c_str();
+    m_notes = m_item.GetNotes(TCHAR('\n')).c_str();
     m_noteTX->ChangeValue(m_notes);
   }
 }

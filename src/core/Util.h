@@ -42,7 +42,7 @@ extern void trashMemory(void *buffer, size_t length);
 extern void trashMemory(LPTSTR buffer, size_t length);
 extern void burnStack(unsigned long len); // borrowed from libtomcrypt
 
-extern void ConvertString(const StringX &text,
+extern void ConvertPasskey(const StringX &text,
                           unsigned char *&txt, size_t &txtlen);
 
 extern void GenRandhash(const StringX &passkey,
@@ -54,7 +54,7 @@ extern size_t _readcbc(FILE *fp, unsigned char * &buffer,
                        size_t &buffer_len,
                        unsigned char &type, Fish *Algorithm,
                        unsigned char *cbcbuffer,
-                       const unsigned char *TERMINAL_BLOCK = NULL,
+                       const unsigned char *TERMINAL_BLOCK = nullptr,
                        ulong64 file_len = 0);
 
 // typeless version for V4 content (caller pre-allocates buffer)
@@ -102,7 +102,9 @@ inline int32 getInt32(const unsigned char buf[4])
 #if defined(_DEBUG)
   // Following code works for big or little endian architectures but we'll warn anyway
   // if CPU is really little endian
-  if ( *reinterpret_cast<const int32 *>(buf) == (buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24)) )
+  if (
+      *reinterpret_cast<const int32 *>(buf) != 0 &&
+      *reinterpret_cast<const int32 *>(buf) == (buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24)) )
   {
     pws_os::Trace0(_T("Warning: PWS_BIG_ENDIAN defined but architecture is little endian\n"));
   }
@@ -158,7 +160,9 @@ inline void putInt32(unsigned char buf[4], const int32 val )
 #if defined(_DEBUG)
   // Above code works for big or little endian architectures but we'll warn anyway
   // if CPU is really little endian
-  if ( *(int32*) buf == (buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24)) )
+  if (
+      *reinterpret_cast<const int32 *>(buf) != 0 &&
+      *reinterpret_cast<int32*>(buf) == (buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24)) )
   {
     pws_os::Trace0(_T("Warning: PWS_BIG_ENDIAN defined but architecture is little endian\n"));
   }
@@ -230,6 +234,18 @@ void inline putInt(unsigned char *buf, const T val) { GetPutImpl<T, sizeof(T)>::
 
 bool operator==(const std::string& str1, const stringT& str2);
 inline bool operator==(const stringT& str1, const std::string &str2) { return str2 == str1; }
+
+inline void byteswap(unsigned char * begin, unsigned char * end) {
+    unsigned char *a = begin;
+    unsigned char *b = end;
+    ASSERT(a < b);
+    unsigned char tmp;
+    while (a < b) {
+        tmp = *a;
+        *a++ = *b;
+        *b-- = tmp;
+    }
+}
 
 namespace PWSUtil {
   // namespace of common utility functions

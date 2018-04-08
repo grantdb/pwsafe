@@ -18,10 +18,12 @@
 
 ////@begin includes
 #include "wx/grid.h"
+#include <wx/headerctrl.h>
 ////@end includes
 #include "core/ItemData.h"
 #include "core/PWScore.h"
 #include "os/UUID.h"
+#include <functional>
 #include <map>
 
 /*!
@@ -52,7 +54,10 @@ typedef std::map<pws_os::CUUID, int, std::less<pws_os::CUUID> > UUIDRowMapT;
  */
 
 class PWSGrid: public wxGrid
-{    
+{
+  typedef std::multimap<wxString, const CItemData*, std::greater<wxString> > DescendingSortedMultimap;
+  typedef std::multimap<wxString, const CItemData*, std::less<wxString> >    AscendingSortedMultimap;
+  
   DECLARE_CLASS( PWSGrid )
   DECLARE_EVENT_TABLE()
 
@@ -81,6 +86,7 @@ public:
   void AddItem(const CItemData &item, int row = -1);
   void UpdateItem(const CItemData &item);
   void RefreshRow(int row);
+  void RefreshItem(const CItemData &item, int row = -1);
   void RefreshItemRow(const pws_os::CUUID& uuid);
   void RefreshItemField(const pws_os::CUUID& uuid, CItemData::FieldType ft);
   void Remove(const pws_os::CUUID &uuid);
@@ -106,6 +112,10 @@ public:
   void OnChar( wxKeyEvent& evt);
 
   void OnDBGUIPrefsChange(wxEvent& evt);
+  
+  /// EVT_HEADER_CLICK
+  void OnHeaderClick(wxHeaderCtrlEvent& event);
+  
 ////@end PWSGrid event handler declarations
 
 ////@begin PWSGrid member function declarations
@@ -129,11 +139,18 @@ public:
   void SaveSettings() const;
 
   void SetFilterState(bool state);
-
+  
+  void UpdateSorting();
+  
 ////@begin PWSGrid member variables
 ////@end PWSGrid member variables
 
  private:
+  void SortByColumn(int column, bool ascending);
+  
+  template<typename ItemsCollection>
+  void RearrangeItems(ItemsCollection& collection, int column);
+
   PWScore &m_core;
   RowUUIDMapT m_row_map;
   UUIDRowMapT m_uuid_map;

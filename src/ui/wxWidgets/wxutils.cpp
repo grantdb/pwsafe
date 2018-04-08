@@ -30,6 +30,7 @@
 #endif
 
 #include <wx/taskbar.h>
+#include <wx/versioninfo.h>
 
 /*
  * Reads a file into a PWScore object, and displays an appropriate msgbox
@@ -37,7 +38,7 @@
  */
 
 int ReadCore(PWScore& othercore, const wxString& file, const StringX& combination,
-             bool showMsgbox /*= true*/, wxWindow* msgboxParent /*= NULL*/,
+             bool showMsgbox /*= true*/, wxWindow* msgboxParent /*= nullptr*/,
         bool setupCopy /*= false*/)
 {
   othercore.ClearDBData();
@@ -185,7 +186,7 @@ void ShowHideText(wxTextCtrl *&txtCtrl, const wxString &text,
   txtCtrl = new wxTextCtrl(parent, id, text,
                            wxDefaultPosition, wxDefaultSize,
                            show ? 0 : wxTE_PASSWORD);
-  if (validator != NULL)
+  if (validator != nullptr)
     txtCtrl->SetValidator(*validator);
   ApplyPasswordFont(txtCtrl);
   sizer->Replace(tmp, txtCtrl);
@@ -204,9 +205,15 @@ int pless(int* first, int* second) { return *first - *second; }
 bool IsTaskBarIconAvailable()
 {
 #if defined(__WXGTK__)
-  const wxLinuxDistributionInfo ldi = wxGetLinuxDistributionInfo();
-  if (ldi.Id.IsEmpty() || ldi.Id == wxT("Ubuntu") || ldi.Id == wxT("Fedora"))
-    return false;
+  const wxVersionInfo verInfo = wxGetLibraryVersionInfo();
+  int major = verInfo.GetMajor();
+  int minor = verInfo.GetMinor();
+  int micro = verInfo.GetMicro();
+  if (major < 3 || (major == 3 && ((minor == 0 && micro < 4) || (minor == 1 && micro < 1)))) {
+    const wxLinuxDistributionInfo ldi = wxGetLinuxDistributionInfo();
+    if (ldi.Id.IsEmpty() || ldi.Id == wxT("Ubuntu") || ldi.Id == wxT("Fedora"))
+      return false;
+  }
 #endif
   return wxTaskBarIcon::IsAvailable();
 }

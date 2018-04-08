@@ -353,9 +353,7 @@ void DboxMain::SetUpInitialMenuStrings()
   // change shortcuts as per preferences
   std::vector<st_prefShortcut> vShortcuts(PWSprefs::GetInstance()->GetPrefShortcuts());
 
-  const size_t N = vShortcuts.size();
-  for (size_t i = 0; i < N; i++) {
-    const st_prefShortcut &stxst = vShortcuts[i];
+  for (auto &stxst : vShortcuts) {
     // User should not have these sub-entries in their config file
     if (stxst.id == ID_MENUITEM_GROUPENTER  ||
         stxst.id == ID_MENUITEM_VIEWENTRY   ||
@@ -383,7 +381,7 @@ void DboxMain::SetUpInitialMenuStrings()
 
     name += iter->second.name;
     Remove(name, L'&');
-    vShortcuts[i].Menu_Name = name;
+    stxst.Menu_Name = name;
 
     // Check not already in use (ignore if deleting current shortcut)
     if (stxst.siVirtKey != 0) {
@@ -406,26 +404,18 @@ void DboxMain::SetUpInitialMenuStrings()
       iter->second.siVirtKey  = stxst.siVirtKey;
       iter->second.cPWSModifier = stxst.cPWSModifier;
     }
-  }
+  } // user preference shortcut handling
 
   // Update Menu names for later XML comment
   PWSprefs::GetInstance()->SetPrefShortcuts(vShortcuts);
 
-  // Set up the shortcuts based on the main entry
-  // for View, Delete and Rename
-  iter = m_MapMenuShortcuts.find(ID_MENUITEM_EDITENTRY);
-  ASSERT(iter != m_MapMenuShortcuts.end());
-  iter_entry = m_MapMenuShortcuts.find(ID_MENUITEM_VIEWENTRY);
-  ASSERT(iter_entry != m_MapMenuShortcuts.end());
-  iter_entry->second.SetKeyFlags(iter->second);
-
   SetupSpecialShortcuts();
-
   UpdateAccelTable();
 }
 
 void DboxMain::UpdateAccelTable()
 {
+  // m)MapMenuShortcuts -> app.m_ghAccelTable
   ACCEL *pacceltbl, *pxatbl;
   int numscs(0);
   CountShortcuts cntscs;
@@ -1632,7 +1622,8 @@ void DboxMain::SetupSpecialShortcuts()
 {
   MapMenuShortcutsIter iter, iter_entry, iter_group;
 
-  // Find Delete Shortcut
+  // Set up some shortcuts based on the main entry
+
   iter = m_MapMenuShortcuts.find(ID_MENUITEM_DELETE);
 
   // Save for CTreeCtrl & CListCtrl PreTranslateMessage
@@ -1687,6 +1678,25 @@ void DboxMain::SetupSpecialShortcuts()
   }
 }
 
+void DboxMain::UpdateEditViewAccelerator(bool isRO)
+{
+  // If isRO, remove Ctrl-Enter from ID_MENUITEM_EDITENTRY, set to ID_MENUITEM_VIEWENTRY
+  // else, vice-versa
+  auto edit_iter = m_MapMenuShortcuts.find(ID_MENUITEM_EDITENTRY);
+  ASSERT(edit_iter != m_MapMenuShortcuts.end());
+  auto view_iter = m_MapMenuShortcuts.find(ID_MENUITEM_VIEWENTRY);
+  ASSERT(view_iter != m_MapMenuShortcuts.end());
+  
+  if (isRO) {
+    view_iter->second.SetKeyFlags(edit_iter->second);
+    edit_iter->second.ClearKeyFlags();
+  } else { // !isRO
+    edit_iter->second.SetKeyFlags(view_iter->second);
+    view_iter->second.ClearKeyFlags();
+  } // !isRO
+  UpdateAccelTable();
+}
+
 bool DboxMain::ProcessLanguageMenu(CMenu *pPopupMenu)
 {
   app.GetLanguageFiles();
@@ -1725,26 +1735,24 @@ const unsigned int DboxMain::GetMenuShortcut(const unsigned short int &siVirtKey
 {
   unsigned int nControlID(0);
   sxMenuItemName.empty();
-  MapMenuShortcutsIter inuse_iter;
 
   st_MenuShortcut st_mst;
   st_mst.siVirtKey = siVirtKey;
   st_mst.cPWSModifier = cPWSModifier;
   
-  inuse_iter = std::find_if(m_MapMenuShortcuts.begin(),
-                            m_MapMenuShortcuts.end(),
-                            already_inuse(st_mst));
+  auto inuse_iter = std::find_if(m_MapMenuShortcuts.begin(),
+                                 m_MapMenuShortcuts.end(),
+                                 already_inuse(st_mst));
 
   if (inuse_iter != m_MapMenuShortcuts.end()) {
     nControlID = inuse_iter->first;
     sxMenuItemName = inuse_iter->second.name.c_str();
   }
 
-  // std::vector<st_MenuShortcut> m_ReservedShortcuts
+  // is it in the reserved shortcuts?
   if (nControlID == 0) {
-    std::vector<st_MenuShortcut>::iterator iter;
-    iter = std::find_if(m_ReservedShortcuts.begin(), m_ReservedShortcuts.end(),
-                        reserved(st_mst));
+    auto iter = std::find_if(m_ReservedShortcuts.begin(), m_ReservedShortcuts.end(),
+                             reserved(st_mst));
 
     if (iter != m_ReservedShortcuts.end()) {
       nControlID = iter->nControlID;

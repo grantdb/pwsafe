@@ -249,7 +249,7 @@ static void DisplayFileWriteError(int rc, const StringX &fname);
  */
 
 PasswordSafeFrame::PasswordSafeFrame(PWScore &core)
-: m_core(core), m_currentView(GRID), m_search(0), m_sysTray(new SystemTray(this)),
+: m_core(core), m_currentView(ViewType::GRID), m_search(0), m_sysTray(new SystemTray(this)),
   m_exitFromMenu(false), m_bRestoredDBUnsaved(false),
   m_RUEList(core), m_guiInfo(new GUIInfo), m_bTSUpdated(false), m_savedDBPrefs(wxEmptyString),
   m_bShowExpiry(false), m_bFilterActive(false)
@@ -261,13 +261,13 @@ PasswordSafeFrame::PasswordSafeFrame(wxWindow* parent, PWScore &core,
                                      wxWindowID id, const wxString& caption,
                                      const wxPoint& pos, const wxSize& size,
                                      long style)
-  : m_core(core), m_currentView(GRID), m_search(0), m_sysTray(new SystemTray(this)),
+  : m_core(core), m_currentView(ViewType::GRID), m_search(0), m_sysTray(new SystemTray(this)),
     m_exitFromMenu(false), m_bRestoredDBUnsaved(false),
     m_RUEList(core), m_guiInfo(new GUIInfo), m_bTSUpdated(false), m_savedDBPrefs(wxEmptyString),
-    m_bShowExpiry(false), m_bFilterActive(false)
+    m_bShowExpiry(false), m_bFilterActive(false), m_InitialTreeDisplayStatusAtOpen(true)
 {
     Init();
-    m_currentView = (PWSprefs::GetInstance()->GetPref(PWSprefs::LastView) == _T("list")) ? GRID : TREE;
+    m_currentView = (PWSprefs::GetInstance()->GetPref(PWSprefs::LastView) == _T("list")) ? ViewType::GRID : ViewType::TREE;
     if (PWSprefs::GetInstance()->GetPref(PWSprefs::AlwaysOnTop))
       style |= wxSTAY_ON_TOP;
     Create( parent, id, caption, pos, size, style );
@@ -290,6 +290,7 @@ bool PasswordSafeFrame::Create( wxWindow* parent, wxWindowID id, const wxString&
   m_search = new PasswordSafeSearch(this);
   CreateMainToolbar();
   CreateDragBar();
+  CreateStatusBar();
   return true;
 }
 
@@ -309,6 +310,13 @@ void PasswordSafeFrame::CreateDragBar()
     dragbar->Hide();
   }
   GetMenuBar()->Check(ID_SHOWHIDE_DRAGBAR, bShow);
+}
+
+void PasswordSafeFrame::CreateStatusBar()
+{
+  m_statusBar = new CPWStatusBar(this, ID_STATUSBAR, wxST_SIZEGRIP|wxNO_BORDER);
+  m_statusBar->Setup();
+  SetStatusBar(m_statusBar);
 }
 
 /*!
@@ -346,9 +354,9 @@ void PasswordSafeFrame::Init()
 
   m_RUEList.SetMax(PWSprefs::GetInstance()->PWSprefs::MaxREItems);
 ////@begin PasswordSafeFrame member initialisation
-  m_grid = NULL;
-  m_tree = NULL;
-  m_statusBar = NULL;
+  m_grid = nullptr;
+  m_tree = nullptr;
+  m_statusBar = nullptr;
 ////@end PasswordSafeFrame member initialisation
   RegisterLanguageMenuItems();
 }
@@ -521,10 +529,6 @@ void PasswordSafeFrame::CreateMenubar()
   menuBar->Append(itemMenu79, _("&Help"));
   itemFrame1->SetMenuBar(menuBar);
 
-  m_statusBar = new CPWStatusBar( itemFrame1, ID_STATUSBAR, wxST_SIZEGRIP|wxNO_BORDER );
-  m_statusBar->SetFieldsCount(6);
-  itemFrame1->SetStatusBar(m_statusBar);
-
 ////@end PasswordSafeFrame content construction
 
   menuBar->Thaw();
@@ -537,10 +541,9 @@ void PasswordSafeFrame::CreateMenubar()
     menuBar->Refresh();
 
   // Update menu selections
-  GetMenuBar()->Check( (m_currentView == TREE) ? ID_TREE_VIEW : ID_LIST_VIEW, true);
+  GetMenuBar()->Check( (IsTreeView()) ? ID_TREE_VIEW : ID_LIST_VIEW, true);
   GetMenuBar()->Check( PWSprefs::GetInstance()->GetPref(PWSprefs::UseNewToolbar) ?
                        ID_TOOLBAR_NEW: ID_TOOLBAR_CLASSIC, true );
-  m_statusBar->Setup();
 
 }
 
@@ -566,9 +569,9 @@ void PasswordSafeFrame::CreateControls()
                             wxTR_EDIT_LABELS|wxTR_HAS_BUTTONS |wxTR_HIDE_ROOT|wxTR_SINGLE );
   // let the tree ctrl handle ID_ADDGROUP & ID_RENAME all by itself
   Connect(ID_ADDGROUP, wxEVT_COMMAND_MENU_SELECTED,
-                       wxCommandEventHandler(PWSTreeCtrl::OnAddGroup), NULL, m_tree);
+                       wxCommandEventHandler(PWSTreeCtrl::OnAddGroup), nullptr, m_tree);
   Connect(ID_RENAME, wxEVT_COMMAND_MENU_SELECTED,
-                       wxCommandEventHandler(PWSTreeCtrl::OnRenameGroup), NULL, m_tree);
+                       wxCommandEventHandler(PWSTreeCtrl::OnRenameGroup), nullptr, m_tree);
 
   itemBoxSizer83->Add(m_tree, wxSizerFlags().Expand().Border(0).Proportion(1));
   itemBoxSizer83->Layout();
@@ -788,11 +791,11 @@ int PasswordSafeFrame::Load(const StringX &passwd)
   if (status == PWScore::SUCCESS) {
     wxGetApp().ConfigureIdleTimer();
     SetTitle(m_core.GetCurFile().c_str());
-    m_sysTray->SetTrayStatus(SystemTray::TRAY_UNLOCKED);
+    m_sysTray->SetTrayStatus(SystemTray::TrayStatus::UNLOCKED);
     m_core.ResumeOnDBNotification();
   } else {
     SetTitle(wxEmptyString);
-    m_sysTray->SetTrayStatus(SystemTray::TRAY_CLOSED);
+    m_sysTray->SetTrayStatus(SystemTray::TrayStatus::CLOSED);
   }
   UpdateStatusBar();
   return status;
@@ -800,8 +803,9 @@ int PasswordSafeFrame::Load(const StringX &passwd)
 
 bool PasswordSafeFrame::Show(bool show)
 {
-  ShowGrid(show && (m_currentView == GRID));
-  ShowTree(show && (m_currentView == TREE));
+  ShowGrid(show && IsGridView());
+  ShowTree(show && IsTreeView());
+  
   return wxFrame::Show(show);
 }
 
@@ -835,6 +839,8 @@ void PasswordSafeFrame::ShowGrid(bool show)
         m_grid->AddItem(iter->second, i++);
     }
 
+    m_grid->UpdateSorting();
+    
     m_guiInfo->RestoreGridViewInfo(m_grid);
   }
   else {
@@ -870,12 +876,33 @@ void PasswordSafeFrame::ShowTree(bool show)
     if (!m_tree->IsEmpty()) // avoid assertion!
       m_tree->SortChildrenRecursively(m_tree->GetRootItem());
 
-    m_guiInfo->RestoreTreeViewInfo(m_tree);
+    if (m_InitialTreeDisplayStatusAtOpen) {
+      m_InitialTreeDisplayStatusAtOpen = false;
+      
+      switch (PWSprefs::GetInstance()->GetPref(PWSprefs::TreeDisplayStatusAtOpen)) {
+        case PWSprefs::AllCollapsed:
+          m_tree->SetGroupDisplayStateAllCollapsed();
+          break;
+        case PWSprefs::AllExpanded:
+          m_tree->SetGroupDisplayStateAllExpanded();
+          break;
+        case PWSprefs::AsPerLastSave:
+          m_tree->RestoreGroupDisplayState();
+          break;
+        default:
+          m_tree->SetGroupDisplayStateAllCollapsed();
+      }
+      
+      m_guiInfo->SaveTreeViewInfo(m_tree);
+    }
+    else {
+      m_guiInfo->RestoreTreeViewInfo(m_tree);
+    }
   }
   else {
     m_guiInfo->SaveTreeViewInfo(m_tree);
   }
-
+  
   m_tree->Show(show);
   GetSizer()->Layout();
 }
@@ -900,10 +927,10 @@ PWSDragBar* PasswordSafeFrame::GetDragBar()
 int PasswordSafeFrame::SaveImmediately()
 {
   // Get normal save to do this (code already there for intermediate backups)
-  return Save(ST_SAVEIMMEDIATELY);
+  return Save(SaveType::IMMEDIATELY);
 }
 
-int PasswordSafeFrame::Save(SaveType st /* = ST_INVALID*/)
+int PasswordSafeFrame::Save(SaveType savetype /* = SaveType::INVALID*/)
 {
   stringT bu_fname; // used to undo backup if save failed
   PWSprefs *prefs = PWSprefs::GetInstance();
@@ -911,6 +938,11 @@ int PasswordSafeFrame::Save(SaveType st /* = ST_INVALID*/)
   // Save Application related preferences
   prefs->SaveApplicationPreferences();
   prefs->SaveShortcuts();
+  
+  // Save Group Display State
+  if (IsTreeView() && prefs->GetPref(PWSprefs::TreeDisplayStatusAtOpen) == PWSprefs::AsPerLastSave) {
+    m_tree->SaveGroupDisplayState();
+  }
 
   if (m_core.GetCurFile().empty())
     return SaveAs();
@@ -925,24 +957,29 @@ int PasswordSafeFrame::Save(SaveType st /* = ST_INVALID*/)
         std::wstring userBackupDir = prefs->GetPref(PWSprefs::BackupDir).c_str();
         if (!m_core.BackupCurFile(maxNumIncBackups, backupSuffix,
                                   userBackupPrefix, userBackupDir, bu_fname)) {
-          switch (st) {
-            case ST_NORMALEXIT:
+          switch (savetype) {
+            case SaveType::NORMALEXIT:
               if (wxMessageBox(_("Unable to create intermediate backup.  Save database elsewhere or with another name?\n\nClick 'No' to exit without saving."),
                                _("Write Error"), wxYES_NO | wxICON_EXCLAMATION, this) == wxID_NO)
                 return PWScore::SUCCESS;
               else
                 return SaveAs();
 
-            case ST_SAVEIMMEDIATELY:
+            case SaveType::IMMEDIATELY:
               if (wxMessageBox(_("Unable to create intermediate backup.  Do you wish to save changes to your database without it?"),
                 _("Write Error"), wxYES_NO | wxICON_EXCLAMATION, this) == wxID_NO)
                 return PWScore::USER_CANCEL;
-            case ST_INVALID:
+            case SaveType::INVALID:
               // No particular end of PWS exit i.e. user clicked Save or
               // saving a changed database before opening another
               wxMessageBox(_("Unable to create intermediate backup."), _("Write Error"), wxOK|wxICON_ERROR, this);
               return PWScore::USER_CANCEL;
             default:
+              /*
+               * SaveType::ENDSESSIONEXIT
+               * SaveType::WTSLOGOFFEXIT
+               * SaveType::FAILSAFESAVE
+               */
               break;
           }
           wxMessageBox(_("Unable to create intermediate backup."), _("Write Error"), wxOK|wxICON_ERROR, this);
@@ -1002,7 +1039,7 @@ int PasswordSafeFrame::Save(SaveType st /* = ST_INVALID*/)
 //  }
 
   // Only refresh views if not existing
-  if (st != ST_NORMALEXIT)
+  if (savetype != SaveType::NORMALEXIT)
     RefreshViews();
 
   return PWScore::SUCCESS;
@@ -1089,7 +1126,7 @@ CItemData *PasswordSafeFrame::GetSelectedEntry() const
     // get selected from grid
     return m_grid->GetItem(m_grid->GetGridCursorRow());
   }
-  return NULL;
+  return nullptr;
 }
 
 // Following is "generalized" GetSelectedEntry to support section via RUE
@@ -1098,7 +1135,7 @@ CItemData *PasswordSafeFrame::GetSelectedEntry(const wxCommandEvent& evt, CItemD
   if (!IsRUEEvent(evt))
     return GetSelectedEntry();
   else
-    return m_RUEList.GetPWEntry(GetEventRUEIndex(evt), rueItem)? &rueItem: NULL;
+    return m_RUEList.GetPWEntry(GetEventRUEIndex(evt), rueItem)? &rueItem: nullptr;
 }
 
 /*!
@@ -1138,7 +1175,7 @@ void PasswordSafeFrame::OnCloseClick( wxCommandEvent& /* evt */ )
     ClearAppData();
 
     SetTitle(wxEmptyString);
-    m_sysTray->SetTrayStatus(SystemTray::TRAY_CLOSED);
+    m_sysTray->SetTrayStatus(SystemTray::TrayStatus::CLOSED);
     wxCommandEvent dummyEv;
     m_search->OnSearchClose(dummyEv); // fix github issue 375
     m_core.SetReadOnly(false);
@@ -1186,6 +1223,7 @@ int PasswordSafeFrame::Open(const wxString &fname)
     StringX password = pwdprompt.GetPassword();
     int retval = Load(password);
     if (retval == PWScore::SUCCESS) {
+      m_InitialTreeDisplayStatusAtOpen = true;
       Show();
       wxGetApp().recentDatabases().AddFileToHistory(fname);
     }
@@ -1233,8 +1271,8 @@ int PasswordSafeFrame::Open(const wxString &fname)
   m_core.SetAsker(&q);
   m_core.SetReporter(&r);
   rc = m_core.ReadFile(pszFilename, passkey);
-  m_core.SetAsker(NULL);
-  m_core.SetReporter(NULL);
+  m_core.SetAsker(nullptr);
+  m_core.SetReporter(nullptr);
   switch (rc) {
     case PWScore::SUCCESS:
       break;
@@ -1609,7 +1647,7 @@ void PasswordSafeFrame::OnEditBase(wxCommandEvent& /*evt*/)
   CItemData* item = GetSelectedEntry();
   if (item && item->IsDependent()) {
     item = m_core.GetBaseEntry(item);
-    ASSERT(item != NULL);
+    ASSERT(item != nullptr);
     DoEdit(*item);
     UpdateAccessTime(*item);
   }
@@ -1617,7 +1655,7 @@ void PasswordSafeFrame::OnEditBase(wxCommandEvent& /*evt*/)
 
 void PasswordSafeFrame::SelectItem(const CUUID& uuid)
 {
-    if (m_currentView == GRID) {
+    if (m_currentView == ViewType::GRID) {
       m_grid->SelectItem(uuid);
     }
     else {
@@ -1749,13 +1787,13 @@ void PasswordSafeFrame::FlattenTree(OrderedItemList& olist)
 // The logic is the same as DboxMain::OnContextMenu in src/ui/Windows/MainMenu.cpp
 void PasswordSafeFrame::OnContextMenu(const CItemData* item)
 {
-  if (item == NULL) {
+  if (item == nullptr) {
     wxMenu groupEditMenu;
     groupEditMenu.Append(wxID_ADD, _("Add &Entry"));
     groupEditMenu.Append(ID_ADDGROUP, _("Add &Group"));
     groupEditMenu.Append(ID_RENAME, _("&Rename Group"));
     groupEditMenu.Append(wxID_DELETE, _("&Delete Group"));
-    if (m_currentView == TREE)
+    if (IsTreeView())
       m_tree->PopupMenu(&groupEditMenu);
   } else {
     wxMenu itemEditMenu;
@@ -1836,7 +1874,7 @@ void PasswordSafeFrame::OnContextMenu(const CItemData* item)
       itemEditMenu.Delete(ID_RUNCOMMAND);
     }
 
-    if ( m_currentView == TREE )
+    if ( m_currentView == ViewType::TREE )
       m_tree->PopupMenu(&itemEditMenu);
     else
       m_grid->PopupMenu(&itemEditMenu);
@@ -1860,7 +1898,7 @@ CItemData* PasswordSafeFrame::GetBaseEntry(const CItemData *item) const
 //
 void PasswordSafeFrame::OnUpdateUI(wxUpdateUIEvent& evt)
 {
-  bool bGroupSelected(false), bFileIsReadOnly(false), bTreeView(m_currentView == TREE);
+  bool bGroupSelected(false), bFileIsReadOnly(false), bTreeView(IsTreeView());
   const CItemData *pci(nullptr), *pbci(nullptr);
 
   bFileIsReadOnly = m_core.IsReadOnly();
@@ -2017,13 +2055,13 @@ void PasswordSafeFrame::DatabaseModified(bool modified)
   }
   else if (m_core.HasDBChanged()) {  //"else if" => both DB and it's prefs can't change at the same time
     if (m_search) m_search->Invalidate();
-    if (m_currentView == TREE) {
-      if (m_grid != NULL)
+    if (IsTreeView()) {
+      if (m_grid != nullptr)
         m_grid->OnPasswordListModified();
     }
     else {
 #if 0
-    if (m_tree != NULL)
+    if (m_tree != nullptr)
       m_tree->???
 #endif
     }
@@ -2082,7 +2120,7 @@ void PasswordSafeFrame::UpdateGUI(UpdateGUICommand::GUI_Action ga,
   // TODO: bUpdateGUI processing in PasswordSafeFrame::UpdateGUI
   UNREFERENCED_PARAMETER(ft);
 
-  CItemData *pci(NULL);
+  CItemData *pci(nullptr);
 
   ItemListIter pos = m_core.Find(entry_uuid);
   if (pos != m_core.GetEntryEndIter()) {
@@ -2100,7 +2138,7 @@ void PasswordSafeFrame::UpdateGUI(UpdateGUICommand::GUI_Action ga,
 #endif
   switch (ga) {
     case UpdateGUICommand::GUI_ADD_ENTRY:
-      ASSERT(pci != NULL);
+      ASSERT(pci != nullptr);
       m_tree->AddItem(*pci);
       m_grid->AddItem(*pci);
       break;
@@ -2129,11 +2167,11 @@ void PasswordSafeFrame::UpdateGUI(UpdateGUICommand::GUI_Action ga,
       break;
 #endif
     case UpdateGUICommand::GUI_REFRESH_ENTRYFIELD:
-      ASSERT(pci != NULL);
+      ASSERT(pci != nullptr);
       RefreshEntryFieldInGUI(*pci, ft);
       break;
     case UpdateGUICommand::GUI_REFRESH_ENTRYPASSWORD:
-      ASSERT(pci != NULL);
+      ASSERT(pci != nullptr);
       RefreshEntryPasswordInGUI(*pci);
       break;
     case UpdateGUICommand::GUI_DB_PREFERENCES_CHANGED:
@@ -2160,7 +2198,7 @@ void PasswordSafeFrame::UpdateGUI(UpdateGUICommand::GUI_Action /*ga*/,
 }
 void PasswordSafeFrame::RefreshEntryFieldInGUI(const CItemData& item, CItemData::FieldType ft)
 {
-  if (m_currentView == GRID) {
+  if (m_currentView == ViewType::GRID) {
     m_grid->RefreshItemField(item.GetUUID(), ft);
   }
   else {
@@ -2172,7 +2210,7 @@ void PasswordSafeFrame::RefreshEntryFieldInGUI(const CItemData& item, CItemData:
 
 void PasswordSafeFrame::RefreshEntryPasswordInGUI(const CItemData& item)
 {
-  if (m_currentView == GRID) {
+  if (m_currentView == ViewType::GRID) {
     RefreshEntryFieldInGUI(item, CItemData::PASSWORD);
     //TODO: Update password history
   }
@@ -2188,10 +2226,10 @@ void PasswordSafeFrame::GUIRefreshEntry(const CItemData& item, bool bAllowFail)
   if (item.GetStatus() ==CItemData::ES_DELETED) {
     uuid_array_t uuid;
     item.GetUUID(uuid);
-    if (m_currentView == TREE) { m_tree->Remove(uuid); }
+    if (IsTreeView()) { m_tree->Remove(uuid); }
     else { m_grid->Remove(uuid); }
   } else {
-    if (m_currentView == TREE) { m_tree->UpdateItem(item); }
+    if (IsTreeView()) { m_tree->UpdateItem(item); }
     else { m_grid->UpdateItem(item); }
   }
 }
@@ -2245,12 +2283,12 @@ static void DisplayFileWriteError(int rc, const StringX &fname)
     cs_temp += _("Unknown error");
     break;
   }
-  wxMessageDialog(NULL, cs_temp, cs_title, wxOK | wxICON_ERROR);
+  wxMessageDialog(nullptr, cs_temp, cs_title, wxOK | wxICON_ERROR);
 }
 
-void PasswordSafeFrame::Execute(Command *pcmd, PWScore *pcore /*= NULL*/)
+void PasswordSafeFrame::Execute(Command *pcmd, PWScore *pcore /*= nullptr*/)
 {
-  if (pcore == NULL)
+  if (pcore == nullptr)
     pcore = &m_core;
   pcore->Execute(pcmd);
 }
@@ -2304,7 +2342,7 @@ int PasswordSafeFrame::New()
   }
   SetLabel(PWSUtil::NormalizeTTT(wxT("Password Safe - ") + cs_newfile).c_str());
 
-  m_sysTray->SetTrayStatus(SystemTray::TRAY_UNLOCKED);
+  m_sysTray->SetTrayStatus(SystemTray::TrayStatus::UNLOCKED);
   m_RUEList.ClearEntries();
   wxGetApp().recentDatabases().AddFileToHistory(towxstring(cs_newfile));
   // XXX TODO: Reset IdleLockTimer, as preference has reverted to default
@@ -2406,7 +2444,7 @@ void PasswordSafeFrame::CleanupAfterReloadFailure(bool tellUser)
     wxMessageBox(wxString(_("Could not re-load database: ")) << towxstring(m_core.GetCurFile()),
                      _("Error re-loading last database"), wxOK|wxICON_ERROR, this);
   }
-  m_sysTray->SetTrayStatus(SystemTray::TRAY_CLOSED);
+  m_sysTray->SetTrayStatus(SystemTray::TrayStatus::CLOSED);
 }
 
 /**
@@ -2427,7 +2465,7 @@ void PasswordSafeFrame::UnlockSafe(bool restoreUI, bool iconizeOnFailure)
   if (m_sysTray->IsLocked()) {
     if (VerifySafeCombination(password)) {
       if (ReloadDatabase(password)) {
-        m_sysTray->SetTrayStatus(SystemTray::TRAY_UNLOCKED);
+        m_sysTray->SetTrayStatus(SystemTray::TrayStatus::UNLOCKED);
       }
       else {
         CleanupAfterReloadFailure(true);
@@ -2468,7 +2506,7 @@ void PasswordSafeFrame::UnlockSafe(bool restoreUI, bool iconizeOnFailure)
 
 bool PasswordSafeFrame::VerifySafeCombination(StringX& password)
 {
-  CSafeCombinationPrompt scp(NULL, m_core, towxstring(m_core.GetCurFile()));
+  CSafeCombinationPrompt scp(nullptr, m_core, towxstring(m_core.GetCurFile()));
   if (scp.ShowModal() == wxID_OK) {
     password = scp.GetPassword();
     return true;
@@ -2498,7 +2536,7 @@ void PasswordSafeFrame::OnIconize(wxIconizeEvent& evt) {
   if (beingIconized) {
     const bool lockOnMinimize = PWSprefs::GetInstance()->GetPref(PWSprefs::DatabaseClear);
     // if not already locked, lock it if "lock on minimize" is set
-    if (m_sysTray->GetTrayStatus() == SystemTray::TRAY_UNLOCKED && lockOnMinimize) {
+    if (m_sysTray->GetTrayStatus() == SystemTray::TrayStatus::UNLOCKED && lockOnMinimize) {
       pws_os::Trace0(L"OnIconize: will LockDb()\n");
 #if wxCHECK_VERSION(2,9,5)
       CallAfter(&PasswordSafeFrame::LockDb);
@@ -2547,7 +2585,7 @@ void PasswordSafeFrame::HideUI(bool lock)
   m_guiInfo->Save(this);
   wxGetApp().SaveFrameCoords();
 
-  if (lock && m_sysTray->GetTrayStatus() == SystemTray::TRAY_UNLOCKED) {
+  if (lock && m_sysTray->GetTrayStatus() == SystemTray::TrayStatus::UNLOCKED) {
     LockDb();
   }
 
@@ -2576,17 +2614,17 @@ void PasswordSafeFrame::LockDb()
 
   m_guiInfo->Save(this);
   if (SaveAndClearDatabaseOnLock())
-    m_sysTray->SetTrayStatus(SystemTray::TRAY_LOCKED);
+    m_sysTray->SetTrayStatus(SystemTray::TrayStatus::LOCKED);
 }
 
 void PasswordSafeFrame::SetTrayStatus(bool locked)
 {
-  m_sysTray->SetTrayStatus(locked ? SystemTray::TRAY_LOCKED : SystemTray::TRAY_UNLOCKED);
+  m_sysTray->SetTrayStatus(locked ? SystemTray::TrayStatus::LOCKED : SystemTray::TrayStatus::UNLOCKED);
 }
 
 void PasswordSafeFrame::SetTrayClosed()
 {
-  m_sysTray->SetTrayStatus(SystemTray::TRAY_CLOSED);
+  m_sysTray->SetTrayStatus(SystemTray::TrayStatus::CLOSED);
 }
 
 void PasswordSafeFrame::ShowTrayIcon()
@@ -2666,7 +2704,7 @@ void PasswordSafeFrame::OnImportText(wxCommandEvent& evt)
   rpt.WriteLine(tostdstring(header));
   rpt.WriteLine();
 
-  Command *pcmd = NULL;
+  Command *pcmd = nullptr;
   int rc = m_core.ImportPlaintextFile(ImportedPrefix, tostringx(TxtFileName), fieldSeparator,
                                   delimiter, bImportPSWDsOnly,
                                   strError,
@@ -2696,7 +2734,7 @@ void PasswordSafeFrame::OnImportText(wxCommandEvent& evt)
       // deliberate fallthrough
     default:
     {
-      if (pcmd != NULL)
+      if (pcmd != nullptr)
         Execute(pcmd);
 
       rpt.WriteLine();
@@ -2773,7 +2811,7 @@ void PasswordSafeFrame::OnImportKeePass(wxCommandEvent& evt)
   int numImported, numSkipped, numRenamed;
   unsigned int uiReasonCode = 0;
   int rc;
-  Command *pcmd = NULL;
+  Command *pcmd = nullptr;
 
   if (ImportType == KeePassCSV)
     rc = m_core.ImportKeePassV1CSVFile(tostringx(KPsFileName), numImported, numSkipped, numRenamed,
@@ -2806,7 +2844,7 @@ void PasswordSafeFrame::OnImportKeePass(wxCommandEvent& evt)
     }
     case PWScore::SUCCESS:
     default: // deliberate fallthrough
-      if (pcmd != NULL)
+      if (pcmd != nullptr)
         Execute(pcmd);
       RefreshViews();
 #ifdef NOT_YET
@@ -2873,7 +2911,7 @@ void PasswordSafeFrame::OnImportXML(wxCommandEvent& evt)
   rpt.WriteLine(tostdstring(wxString::Format(_("%ls file being imported: %ls"), _("XML"), XMLFilename.c_str())));
   rpt.WriteLine();
   std::vector<StringX> vgroups;
-  Command *pcmd = NULL;
+  Command *pcmd = nullptr;
 
   int rc = m_core.ImportXMLFile(ImportedPrefix, std::wstring(XMLFilename),
                             tostdstring(XSDFilename.GetFullPath()), bImportPSWDsOnly,
@@ -2904,7 +2942,7 @@ void PasswordSafeFrame::OnImportXML(wxCommandEvent& evt)
     case PWScore::SUCCESS:
     case PWScore::OK_WITH_ERRORS:
       cs_title = rc == PWScore::SUCCESS ? _("Completed successfully") :  _("Completed but ....");
-      if (pcmd != NULL)
+      if (pcmd != nullptr)
         Execute(pcmd);
 
       if (!strXMLErrors.empty() ||
@@ -2978,7 +3016,7 @@ void PasswordSafeFrame::ViewReport(CReport& rpt)
   CViewReport vr(this, &rpt);
   vr.ShowModal();
 }
-
+ 
 void PasswordSafeFrame::OnExportVx(wxCommandEvent& evt)
 {
   int rc = PWScore::FAILURE;
@@ -3347,7 +3385,7 @@ void PasswordSafeFrame::UpdateStatusBar()
     text = m_bFilterActive ? wxT("[F]") : wxT("   ");
     m_statusBar->SetStatusText(text, CPWStatusBar::SB_FILTER);
   } else { // no open file
-    m_statusBar->SetStatusText(PWSprefs::GetDCAdescription(-1), CPWStatusBar::SB_DBLCLICK);
+    m_statusBar->SetStatusText(_(PWSprefs::GetDCAdescription(-1)), CPWStatusBar::SB_DBLCLICK);
     m_statusBar->SetStatusText(wxEmptyString, CPWStatusBar::SB_CLIPBOARDACTION);
     m_statusBar->SetStatusText(wxEmptyString, CPWStatusBar::SB_MODIFIED);
     m_statusBar->SetStatusText(wxEmptyString, CPWStatusBar::SB_READONLY);
@@ -3360,12 +3398,12 @@ void PasswordSafeFrame::UpdateSelChanged(const CItemData *pci)
 {
   int16 dca = -1;
 
-  if (pci != NULL) {
+  if (pci != nullptr) {
     pci->GetDCA(dca);
     if (dca == -1)
       dca = PWSprefs::GetInstance()->GetPref(PWSprefs::DoubleClickAction);
   }
-  m_statusBar->SetStatusText(PWSprefs::GetDCAdescription(dca), CPWStatusBar::SB_DBLCLICK);
+  m_statusBar->SetStatusText(_(PWSprefs::GetDCAdescription(dca)), CPWStatusBar::SB_DBLCLICK);
 }
 
 //-----------------------------------------------------------------

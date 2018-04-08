@@ -36,7 +36,7 @@ stringT pws_os::getexecdir()
 stringT pws_os::getcwd()
 {
   char curdir[PATH_MAX];
-  if (::getcwd(curdir, PATH_MAX) == NULL) {
+  if (::getcwd(curdir, PATH_MAX) == nullptr) {
     curdir[0] = '?'; curdir[1] = '\0';
   }
   stringT CurDir(pws_os::towc(curdir));
@@ -46,8 +46,8 @@ stringT pws_os::getcwd()
 bool pws_os::chdir(const stringT &dir)
 {
   assert(!dir.empty());
-  const char *szdir = NULL;
-  size_t N = std::wcstombs(NULL, dir.c_str(), 0) + 1;
+  const char *szdir = nullptr;
+  size_t N = std::wcstombs(nullptr, dir.c_str(), 0) + 1;
   assert(N > 0);
   szdir = new char[N];
   std::wcstombs(const_cast<char *>(szdir), dir.c_str(), N);
@@ -108,14 +108,14 @@ stringT pws_os::fullpath(const stringT &relpath)
   char full[PATH_MAX];
 
   // relpath -> char *path
-  size_t N = std::wcstombs(NULL, relpath.c_str(), 0) + 1;
+  size_t N = std::wcstombs(nullptr, relpath.c_str(), 0) + 1;
   assert(N > 0);
   char *path = new char[N];
   std::wcstombs(path, relpath.c_str(), N);
 
-  if (realpath(path, full) != NULL) {
+  if (realpath(path, full) != nullptr) {
     // full -> retval
-    size_t wfull_len = ::mbstowcs(NULL, full, 0) + 1;
+    size_t wfull_len = ::mbstowcs(nullptr, full, 0) + 1;
     wchar_t *wfull = new wchar_t[wfull_len];
     std::mbstowcs(wfull, full, wfull_len);
     retval = wfull;
@@ -129,7 +129,7 @@ static stringT createuserprefsdir(void)
 {
   stringT cfgdir = pws_os::getenv("HOME", true);
   if (!cfgdir.empty()) {
-    cfgdir += _S("/.pwsafe");
+    cfgdir += _S(".pwsafe");
     struct stat statbuf;
     switch (::lstat(pws_os::tomb(cfgdir).c_str(), &statbuf)) {
     case 0:
@@ -176,15 +176,17 @@ stringT pws_os::getxmldir(void)
 #ifdef __FreeBSD__
   return _S("/usr/local/share/pwsafe/xml/");
 #else
-  return _S("/usr/share/pwsafe/xml/");
+  return _S("/usr/share/passwordsafe/xml/");
 #endif
 }
 
 stringT pws_os::gethelpdir(void)
 {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) && !(defined(_DEBUG) || defined(DEBUG))
   return _S("/usr/local/share/doc/passwordsafe/help/");
+#elif defined(_DEBUG) || defined(DEBUG)
+  return _S("help/");
 #else
-  return _S("/usr/share/doc/passwordsafe/help/");
+  return _S("/usr/share/passwordsafe/help/");
 #endif
 }

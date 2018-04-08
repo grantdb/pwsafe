@@ -109,22 +109,33 @@ const wchar_t GROUP_SEP = L'.';
 class PWTreeItemData : public wxTreeItemData
 {
 public:
-  PWTreeItemData(): m_state(UNMODIFIED)
-  { pws_os::CUUID::NullUUID().GetARep(m_uuid); }
-  PWTreeItemData(bool): m_state(ADDED)
-  { pws_os::CUUID::NullUUID().GetARep(m_uuid); }
-  PWTreeItemData(const wxString& oldPath): m_state(EDITED), m_oldPath(oldPath)
-  { pws_os::CUUID::NullUUID().GetARep(m_uuid); }
-  PWTreeItemData(const CItemData &item): m_state(UNMODIFIED)
+  PWTreeItemData(): m_state(ItemState::UNMODIFIED)
+  { 
+    pws_os::CUUID::NullUUID().GetARep(m_uuid);
+  }
+  
+  PWTreeItemData(bool): m_state(ItemState::ADDED)
+  { 
+    pws_os::CUUID::NullUUID().GetARep(m_uuid);
+  }
+  
+  PWTreeItemData(const wxString& oldPath): m_state(ItemState::EDITED), m_oldPath(oldPath)
+  { 
+    pws_os::CUUID::NullUUID().GetARep(m_uuid);
+  }
+  
+  PWTreeItemData(const CItemData &item): m_state(ItemState::UNMODIFIED)
   {
     item.GetUUID(m_uuid);
   }
-  const uuid_array_t &GetUUID() const {return m_uuid;}
-  bool BeingAdded() const {return m_state == ADDED; }
-  bool BeingEdited() const {return m_state == EDITED; }
+  
+  const uuid_array_t &GetUUID() const { return m_uuid; }
+  bool BeingAdded() const { return m_state == ItemState::ADDED; }
+  bool BeingEdited() const { return m_state == ItemState::EDITED; }
   wxString GetOldPath() const { return m_oldPath; }
+  
 private:
-  typedef enum { UNMODIFIED, ADDED, EDITED } ItemState;
+  enum class ItemState { UNMODIFIED, ADDED, EDITED };
 
   uuid_array_t m_uuid;
   ItemState    m_state;
@@ -417,16 +428,16 @@ void PWSTreeCtrl::AddItem(const CItemData &item)
 CItemData *PWSTreeCtrl::GetItem(const wxTreeItemId &id) const
 {
   if (!id.IsOk())
-    return NULL;
+    return nullptr;
 
   auto *itemData = dynamic_cast<PWTreeItemData *>(GetItemData(id));
   // return if a group is selected
-  if (itemData == NULL)
-    return NULL;
+  if (itemData == nullptr)
+    return nullptr;
 
   auto itemiter = m_core.Find(itemData->GetUUID());
   if (itemiter == m_core.GetEntryEndIter())
-    return NULL;
+    return nullptr;
   return &itemiter->second;
 }
 
@@ -556,7 +567,7 @@ void PWSTreeCtrl::OnTreectrlItemActivated( wxTreeEvent& evt )
   }
   else {
     CItemData *ci = GetItem(item);
-    if (ci != NULL)
+    if (ci != nullptr)
       dynamic_cast<PasswordSafeFrame *>(GetParent())->
         DispatchDblClickAction(*ci);
   }
@@ -585,7 +596,7 @@ void PWSTreeCtrl::OnGetToolTip( wxTreeEvent& evt )
   if (PWSprefs::GetInstance()->GetPref(PWSprefs::ShowNotesAsTooltipsInViews)) {
     wxTreeItemId id = evt.GetItem();
     const CItemData *ci = GetItem(id);
-    if (ci != NULL) {
+    if (ci != nullptr) {
       const wxString note = ci->GetNotes().c_str();
       evt.SetToolTip(note);
     }
@@ -609,7 +620,7 @@ void PWSTreeCtrl::OnDBGUIPrefsChange(wxEvent& evt)
 {
   UNREFERENCED_PARAMETER(evt);
   auto *pwsframe = dynamic_cast<PasswordSafeFrame *>(GetParent());
-  wxASSERT(pwsframe != NULL);
+  wxASSERT(pwsframe != nullptr);
   if (pwsframe->IsTreeView())
     pwsframe->RefreshViews();
 }
@@ -818,4 +829,136 @@ void PWSTreeCtrl::SetFilterState(bool state)
   wxTreeItemId root = GetRootItem();
   if (root)
     ColourChildren(this, root, *colour);
+}
+
+/**
+ * Saves the state of all groups that have child items in tree view.
+ */
+void PWSTreeCtrl::SaveGroupDisplayState()
+{
+  auto groupstates = GetGroupDisplayState();
+  
+  if (!groupstates.empty()) {
+    m_core.SetDisplayStatus(groupstates);
+  }
+}
+
+/**
+ * Restores the state of each individual group in the tree.
+ * If the amount of groups in the tree view differs from the 
+ * amount of stored group states nothing will be done.
+ */
+void PWSTreeCtrl::RestoreGroupDisplayState()
+{
+  auto currentstates = GetGroupDisplayState();
+  auto groupstates   = m_core.GetDisplayStatus();
+  
+  if (currentstates.size() != groupstates.size()) {
+    return;
+  }
+  
+  if (!groupstates.empty()) {
+    SetGroupDisplayState(groupstates);
+  }
+}
+ 
+/**
+ * Collects the state of all group related items.
+ * 
+ * A group can be in state expanded or collapsed. The state for an expanded group item 
+ * is represented as <i>true</i>, whereas a collapsed group is reflected via <i>false</i>.
+ * 
+ * @note The booleans in the vector from first to last index represent the groups as
+ *       they appear in the tree from top to bottom.
+ * @return a vector of booleans representing the state of each group.
+ */
+std::vector<bool> PWSTreeCtrl::GetGroupDisplayState()
+{
+  std::vector<bool> groupstates;
+  
+  TraverseTree(
+    GetRootItem(), 
+    [&]
+    (wxTreeItemId itemId) -> void { 
+      groupstates.push_back(IsExpanded(itemId));
+    }
+  );
+  
+  return groupstates;
+}
+
+/**
+ * Sets the state of each individual group to be visually expanded or collapsed.
+ * 
+ * A boolean of <i>true</i> in the vector will lead to an expanded group, whereas 
+ * a boolean of <i>false</i> will trigger collapsing of a group.
+ * 
+ * @note The booleans in the vector from first to last index represent the groups as
+ *       they appear in the tree from top to bottom.
+ * @param groupstates a vector of booleans representing the state of each group.
+ */
+void PWSTreeCtrl::SetGroupDisplayState(const std::vector<bool> &groupstates)
+{
+  int groupIndex = 0;
+  
+  TraverseTree(
+    GetRootItem(), 
+    [&]
+    (wxTreeItemId itemId) -> void { 
+      if (groupIndex < groupstates.size())
+        groupstates[groupIndex++] ? Expand(itemId) : Collapse(itemId);
+    }
+  );
+}
+
+/**
+ * Sets the state for each individual group item to be visually expanded.
+ */
+void PWSTreeCtrl::SetGroupDisplayStateAllExpanded()
+{
+  auto groupstates = GetGroupDisplayState();
+  
+  for (auto &&state : groupstates) {
+    state = true;
+  }
+  
+  SetGroupDisplayState(groupstates);
+}
+
+/**
+ * Sets the state for each individual group item to be visually collapsed.
+ */
+void PWSTreeCtrl::SetGroupDisplayStateAllCollapsed()
+{
+  auto groupstates = GetGroupDisplayState();
+  
+  for (auto &&state : groupstates) {
+    state = false;
+  }
+  
+  SetGroupDisplayState(groupstates);
+}
+
+template<typename GroupItemConsumer>
+void PWSTreeCtrl::TraverseTree(wxTreeItemId itemId, GroupItemConsumer&& consumer)
+{
+  wxTreeItemIdValue cookie;
+  
+  if (itemId.IsOk()) {
+    
+    if (ItemHasChildren(itemId)) {
+      
+      // The root item is not one of the visible tree items.
+      // It is neither an group item nor an password related item.
+      // Hence, the root item shouldn't be processed, but the 
+      // traversal throught the tree should continue.
+      if (itemId.GetID() != GetRootItem().GetID()) {
+        consumer(itemId);
+      }
+      
+      TraverseTree(GetFirstChild(itemId, cookie), consumer);
+    }
+    
+    TraverseTree(GetNextSibling(itemId), consumer);
+  }
 }
