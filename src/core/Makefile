@@ -2,8 +2,8 @@
 # core library
 
 #CONFIG=debug
-#CONFIG=release
-CONFIG?=unicodedebug
+CONFIG=release
+#CONFIG?=unicodedebug
 #CONFIG=unicoderelease
 
 NAME=core
@@ -92,7 +92,6 @@ StringX.cpp: core_st.h
 clean:
 	@rm -f *~ $(OBJ) $(TEST) $(LIB)
 	@rm -rf $(DEPDIR)
-	@rm core_st.cpp core_st.h
 
 setup:
 	@mkdir -p $(OBJPATH) $(OBJPATH)/pugixml $(OBJPATH)/XML/Xerces $(LIBPATH) $(DEPDIR)
