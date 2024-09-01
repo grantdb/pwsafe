@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
@@ -9,24 +9,26 @@
 /** \file SafeCombinationCtrl.cpp
 * 
 */
+
 // For compilers that support precompilation, includes "wx/wx.h".
-#include "wx/wxprec.h"
-#include "../../core/PwsPlatform.h"
-#ifdef __BORLANDC__
-#pragma hdrstop
-#endif
+#include <wx/wxprec.h>
 
 #ifndef WX_PRECOMP
 #include "wx/wx.h"
 #endif
 
-#include "SafeCombinationCtrl.h"
-#include "./wxutils.h"
-#include "./ExternalKeyboardButton.h"
-
 #ifdef __WXMSW__
 #include <wx/msw/msvcrt.h>
 #endif
+
+#include "ExternalKeyboardButton.h"
+#include "SafeCombinationCtrl.h"
+#include "wxUtilities.h"
+
+#include <wx/bmpbuttn.h>
+
+#include "graphics/eye.xpm"         // https://www.pngrepo.com/svg/10151/eye
+#include "graphics/eye_close.xpm"   // https://www.pngrepo.com/svg/391829/eye-close
 
 /*
  * This serves to transfer the data from wxTextCtrl directly into a StringX.
@@ -36,11 +38,12 @@ class SafeCombinationValidator: public wxValidator
 {
   //no default ctor
   SafeCombinationValidator();
-//  DECLARE_NO_COPY_CLASS(SafeCombinationValidator)
+  //DECLARE_NO_COPY_CLASS(SafeCombinationValidator)
+
 public:
   SafeCombinationValidator(StringX* str): m_str(str), m_allowBlank(false) {}
-  virtual ~SafeCombinationValidator() { m_str = 0; }
-  
+  virtual ~SafeCombinationValidator() { m_str = nullptr; }
+
   virtual wxObject *Clone() const { return new SafeCombinationValidator(m_str); }
 
   // This function can pop up an error message.
@@ -53,6 +56,7 @@ public:
   virtual bool TransferFromWindow();
 
   void AllowEmptyCombinationOnce() {m_allowBlank = true;}
+  void ForbidEmptyCombinationOnce() {m_allowBlank = false;}
 
 private:
   StringX* m_str;
@@ -106,47 +110,109 @@ bool SafeCombinationValidator::TransferFromWindow()
   return true;
 }
 
-void CSafeCombinationCtrl::Init(wxWindow* parent, 
+void SafeCombinationCtrl::Init(wxWindow* parent, 
                                 wxWindowID textCtrlID /*= wxID_ANY*/,
                                 StringX* valPtr /*= 0*/,
                                 const wxPoint& pos /* = wxDefaultPosition*/,
                                 const wxSize& size /* = wxDefaultSize */)
 {
   SafeCombinationValidator scValidator(valPtr);
-  textCtrl = new wxTextCtrl(parent, textCtrlID, wxEmptyString, pos, size, 
+  m_textCtrl = new wxTextCtrl(parent, textCtrlID, wxEmptyString, pos, size, 
                                                 wxTE_PASSWORD,
                                                 scValidator);
-  ApplyPasswordFont(textCtrl);
-  Add(textCtrl, wxSizerFlags().Proportion(1).Expand());
-  
-  ExternalKeyboardButton* vkbdButton = new ExternalKeyboardButton(parent);
-  Add(vkbdButton, wxSizerFlags().Border(wxLEFT));
+  ApplyFontPreference(m_textCtrl, PWSprefs::StringPrefs::PasswordFont);
+  Add(m_textCtrl, wxSizerFlags().Proportion(1).Expand());
+
+  auto *showHideButton = new wxBitmapButton(parent, wxID_ANY, wxBitmap(eye_xpm), wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+  showHideButton->Bind(wxEVT_BUTTON, [&, showHideButton](wxCommandEvent& event) {
+    UpdatePasswordTextCtrl(this, m_textCtrl, m_textCtrl->GetValue(), nullptr, m_IsPasswordHidden ? 0 : wxTE_PASSWORD);
+    showHideButton->SetBitmapLabel(wxBitmap(m_IsPasswordHidden ? eye_close_xpm : eye_xpm));
+    showHideButton->SetToolTip(m_IsPasswordHidden ? _("Hide password") : _("Show password"));
+    m_IsPasswordHidden = !m_IsPasswordHidden;
+  });
+  Add(showHideButton, 0, wxLEFT|wxRIGHT|wxEXPAND, 5);
 }
 
-CSafeCombinationCtrl::~CSafeCombinationCtrl()
+SafeCombinationCtrl::~SafeCombinationCtrl()
 {
 }
 
-StringX CSafeCombinationCtrl::GetCombination() const
+StringX SafeCombinationCtrl::GetCombination() const
 {
-  return tostringx(textCtrl->GetValue());
+  return tostringx(m_textCtrl->GetValue());
 }
 
-void CSafeCombinationCtrl::SetValidatorTarget(StringX* str)
+void SafeCombinationCtrl::SetValidatorTarget(StringX* str)
 {
   SafeCombinationValidator scValidator(str);
-  textCtrl->SetValidator(scValidator);
+  m_textCtrl->SetValidator(scValidator);
 }
 
-void CSafeCombinationCtrl::SelectCombinationText() const
+void SafeCombinationCtrl::SelectCombinationText() const
 {
-  textCtrl->SetFocus();
-  textCtrl->SetSelection(-1,-1);
+  m_textCtrl->SetFocus();
+  m_textCtrl->SetSelection(-1,-1);
 }
 
-void CSafeCombinationCtrl::AllowEmptyCombinationOnce()
+void SafeCombinationCtrl::AllowEmptyCombinationOnce()
 {
-  SafeCombinationValidator *scValidator = dynamic_cast<SafeCombinationValidator *>(textCtrl->GetValidator());
+  SafeCombinationValidator *scValidator = dynamic_cast<SafeCombinationValidator *>(m_textCtrl->GetValidator());
   if (scValidator != nullptr)
     scValidator->AllowEmptyCombinationOnce();
+}
+
+void SafeCombinationCtrl::ForbidEmptyCombinationOnce()
+{
+  SafeCombinationValidator *scValidator = dynamic_cast<SafeCombinationValidator *>(m_textCtrl->GetValidator());
+  if (scValidator != nullptr)
+    scValidator->ForbidEmptyCombinationOnce();
+}
+
+/**
+ * Changes the textual representation of the password in the text entry field
+ * between asterisks and normal character representation.
+ * 
+ * @param secured if true, then textual input is represented by asterisks
+ *                else by normal characters.
+ * 
+ * @note Since changing the style an already created wxTextCtrl in runtime is 
+ *       not supported on all platforms, we replace the existing control with
+ *       a newly created one having the desired style.
+ */
+void SafeCombinationCtrl::SecureTextfield(bool secured)
+{
+  if (m_textCtrl) {
+
+    auto newTextCtrl = new wxTextCtrl(
+      m_textCtrl->GetParent(),
+      m_textCtrl->GetId(),
+      m_textCtrl->GetValue(),
+      m_textCtrl->GetPosition(),
+      m_textCtrl->GetSize(),
+      secured ? wxTE_PASSWORD : 0,
+      *(m_textCtrl->GetValidator())
+    );
+
+    Replace(m_textCtrl, newTextCtrl);
+
+    if (m_textCtrl->Destroy()) {
+      m_textCtrl = newTextCtrl;
+      ApplyFontPreference(m_textCtrl, PWSprefs::StringPrefs::PasswordFont);
+      Layout();
+    }
+    else {
+      pws_os::Trace(wxT("SafeCombinationCtrl - Couldn't destroy text entry control."));
+    }
+  }
+}
+
+void SafeCombinationCtrl::SetFocus() const
+{
+  m_textCtrl->SetFocus();
+}
+
+void SafeCombinationCtrl::DisableAndClear(bool disableClear)
+{
+  m_textCtrl->Enable(!disableClear);
+  m_textCtrl->Clear();
 }

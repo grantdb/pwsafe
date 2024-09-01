@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -37,6 +37,9 @@ class CommandInterface {
   virtual void DoAddEntry(const CItemData &item, const CItemAtt *att) = 0;
   virtual void DoDeleteEntry(const CItemData &item) = 0;
   virtual void DoReplaceEntry(const CItemData &old_ci, const CItemData &new_ci) = 0;
+  virtual void DoAddAttachment(const CItemAtt &att) = 0;
+  virtual void DoDeleteAttachment(const CItemAtt &att) = 0;
+  virtual void DoReplaceAttachment(const CItemAtt &old_att, const CItemAtt &new_att) = 0;
 
   // General routines for aliases and shortcuts
   virtual void DoAddDependentEntry(const pws_os::CUUID &base_uuid,
@@ -70,13 +73,16 @@ class CommandInterface {
   virtual void UndoChangeHeader(const StringX &sxOldValue, const PWSfile::HeaderType ht) = 0;
   virtual StringX GetHeaderItem(PWSfile::HeaderType ht) = 0;
 
-  virtual void AddChangedNodes(StringX path) = 0;
+  virtual void AddChangedNodes(const StringX &path) = 0;
+  virtual void AddChangedEmptyGroups(const StringX &path) = 0;
   
   virtual const CItemData *GetBaseEntry(const CItemData *pAliasOrSC) const = 0;
   virtual const ItemMMap &GetBase2AliasesMmap() const = 0;
   virtual void SetBase2AliasesMmap(ItemMMap &) = 0;
   virtual const ItemMMap &GetBase2ShortcutsMmap() const = 0;
   virtual void SetBase2ShortcutsMmap(ItemMMap &) = 0;
+  virtual const CItemAtt &GetAtt(const pws_os::CUUID &attuuid) const = 0;
+  virtual bool HasAtt(const pws_os::CUUID &attuuid) const = 0;
 
   virtual void NotifyGUINeedsUpdating(UpdateGUICommand::GUI_Action,
                                       const pws_os::CUUID &,
@@ -113,12 +119,17 @@ class CommandInterface {
   void SetModifiedNodes(const std::vector<StringX> &saved_vNodes_Modified)
   { m_vModifiedNodes = saved_vNodes_Modified; }
 
-  
+  std::vector<StringX> &GetModifiedEmptyGroups() { return m_vModifiedEmptyGroups; }
+  void SetModifiedEmptyGroups(const std::vector<StringX> &saved_vEmptyGroups_Modified)
+  { m_vModifiedEmptyGroups = saved_vEmptyGroups_Modified; }
+    
   virtual ~CommandInterface() {}
 
  protected:
   // Changed groups
   std::vector<StringX> m_vModifiedNodes;
+  // Changed empty groups
+  std::vector<StringX> m_vModifiedEmptyGroups;
 };
 
 #endif /* __COMMANDINTERFACE_H */

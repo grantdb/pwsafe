@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -20,7 +20,6 @@
 #include <shlwapi.h>
 
 #include <io.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <fstream>
 
@@ -40,7 +39,7 @@ bool pws_os::FileExists(const stringT &filename)
   int status;
 
   status = _tstat(filename.c_str(), &statbuf);
-  return (status == 0);
+  return (status == 0 && (statbuf.st_mode & _S_IFREG)); // stat() succeeded and we're a regular file (not a directory)
 }
 
 bool pws_os::FileExists(const stringT &filename, bool &bReadOnly)
@@ -48,7 +47,7 @@ bool pws_os::FileExists(const stringT &filename, bool &bReadOnly)
   bool retval;
   bReadOnly = false;
 
-  retval = (_taccess(filename.c_str(), R_OK) == 0);
+  retval = pws_os::FileExists(filename); // false if not found or if a directory
   if (retval) {
     bReadOnly = (_taccess(filename.c_str(), W_OK) != 0);
   }
@@ -109,15 +108,16 @@ static bool FileOP(const stringT &src, const stringT &dst,
   sfop.wFunc = wFunc;
   sfop.pFrom = szSource;
   sfop.pTo = szDestination;
-  sfop.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_SILENT | FOF_NOERRORUI;
+  sfop.fFlags = FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_SILENT | FOF_NOERRORUI | FOF_NOCOPYSECURITYATTRIBS;
 
-  return (SHFileOperation(&sfop) == 0);
+  int retval = SHFileOperation(&sfop);
+  return (retval == 0);
 }
 
 bool pws_os::RenameFile(const stringT &oldname, const stringT &newname)
 {
-  _tremove(newname.c_str()); // otherwise rename may fail if newname exists
-  return FileOP(oldname, newname, FO_MOVE);
+  DeleteFile(newname.c_str()); // otherwise rename may fail if newname exists
+  return FileOP(oldname, newname, FO_MOVE); // FO_RENAME fails across directories
 }
 
 extern bool pws_os::CopyAFile(const stringT &from, const stringT &to)
@@ -202,7 +202,7 @@ static void GetLocker(const stringT &lock_filename, stringT &locker)
   if (h2 != INVALID_HANDLE_VALUE) {
     DWORD bytesRead;
     (void)::ReadFile(h2, lockerStr, sizeof(lockerStr) - 1,
-                     &bytesRead, NULL);
+                     &bytesRead, nullptr);
     CloseHandle(h2);
     if (bytesRead > 0) {
       lockerStr[bytesRead / sizeof(TCHAR)] = TCHAR('\0');
@@ -245,8 +245,8 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker,
 
   BOOL brc(TRUE);
   if (dwerr == ERROR_FILE_NOT_FOUND || 
-      (dwAttrib != INVALID_FILE_ATTRIBUTES) &&
-      !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
+      ((dwAttrib != INVALID_FILE_ATTRIBUTES) &&
+      !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY))) {
     SECURITY_ATTRIBUTES secatt = {0};
     secatt.nLength = sizeof(secatt);
     brc = ::CreateDirectory(sNewDir.c_str(), &secatt);
@@ -285,13 +285,13 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker,
     default:
     {
       // Give detailed error message, if possible
-      LPTSTR lpMsgBuf = NULL;
+      LPTSTR lpMsgBuf = nullptr;
       if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-                        NULL,
+                        nullptr,
                         error,
                         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                         (LPTSTR)&lpMsgBuf,
-                        0, NULL) != 0) {
+                        0, nullptr) != 0) {
         locker = lpMsgBuf;
         LocalFree(lpMsgBuf);
       } else { // should never happen!
@@ -306,22 +306,22 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker,
     BOOL write_status;
     write_status = ::WriteFile(lockFileHandle,
                                user.c_str(), (DWORD)(user.length() * sizeof(TCHAR)),
-                               &sumWrit, NULL);
+                               &sumWrit, nullptr);
     write_status &= ::WriteFile(lockFileHandle,
                                 _T("@"), (DWORD)(sizeof(TCHAR)),
-                                &numWrit, NULL);
+                                &numWrit, nullptr);
     sumWrit += numWrit;
     write_status &= ::WriteFile(lockFileHandle,
                                 host.c_str(), (DWORD)(host.length() * sizeof(TCHAR)),
-                                &numWrit, NULL);
+                                &numWrit, nullptr);
     sumWrit += numWrit;
     write_status &= ::WriteFile(lockFileHandle,
                                 _T(":"), (DWORD)(sizeof(TCHAR)),
-                                &numWrit, NULL);
+                                &numWrit, nullptr);
     sumWrit += numWrit;
     write_status &= ::WriteFile(lockFileHandle,
                                 pid.c_str(), (DWORD)(pid.length() * sizeof(TCHAR)),
-                                &numWrit, NULL);
+                                &numWrit, nullptr);
     sumWrit += numWrit;
     ASSERT(sumWrit > 0);
     return (write_status == TRUE);
@@ -388,7 +388,11 @@ bool pws_os::IsLockedFile(const stringT &filename)
 std::FILE *pws_os::FOpen(const stringT &filename, const TCHAR *mode)
 {
   std::FILE *fd = NULL;
-  _tfopen_s(&fd, filename.c_str(), mode);
+  if (!filename.empty()) {
+	  _tfopen_s(&fd, filename.c_str(), mode);
+  } else { // set to stdin/stdout, depending on mode[0] (r/w/a)
+	  fd = mode[0] == L'r' ? stdin : stdout;
+  }
   return fd;
 }
 
@@ -428,13 +432,13 @@ int pws_os::FClose(std::FILE *fd, const bool &bIsWrite)
   }
 }
 
-ulong64 pws_os::fileLength(std::FILE *fp) {
-  if (fp != NULL) {
-    __int64 pos = _ftelli64(fp);
+size_t pws_os::fileLength(std::FILE *fp) {
+  if (fp != nullptr) {
+    auto pos = _ftelli64(fp);
     _fseeki64(fp, 0, SEEK_END);
-    __int64 len = _ftelli64(fp);
+    auto len = _ftelli64(fp);
     _fseeki64(fp, pos, SEEK_SET);
-    return ulong64(len);
+    return static_cast<size_t>(len);
   } else
     return 0;
 }
@@ -480,7 +484,7 @@ bool pws_os::SetFileTimes(const stringT &filename,
     OPEN_EXISTING, 0, NULL);
 
   if (hFile != INVALID_HANDLE_VALUE) {
-    SetFileTime(hFile, ctime != 0 ? &fctime : NULL, atime == 0 ? &fatime : NULL, mtime != 0 ? &fmtime : NULL);
+    SetFileTime(hFile, ctime != 0 ? &fctime : nullptr, atime == 0 ? &fatime : nullptr, mtime != 0 ? &fmtime : nullptr);
     CloseHandle(hFile);
     return true;
   } else {

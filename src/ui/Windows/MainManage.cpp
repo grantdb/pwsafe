@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -21,26 +21,20 @@
 #include "PasskeyChangeDlg.h"
 #include "PasskeyEntry.h"
 #include "Options_PropertySheet.h"
-#include "OptionsSystem.h"
-#include "OptionsSecurity.h"
-#include "OptionsDisplay.h"
-#include "OptionsPasswordHistory.h"
-#include "OptionsMisc.h"
-#include "OptionsBackup.h"
 #include "OptionsShortcuts.h"
 #include "AddEdit_DateTimes.h"
 #include "PasswordPolicyDlg.h"
 #include "ManagePSWDPols.h"
 #include "HKModifiers.h"
 #include "YubiCfgDlg.h"
+#include "winutils.h"
 
 #include "core/core.h"
 #include "core/pwsprefs.h"
 #include "core/PWSdirs.h"
-#include "core/PWSAuxParse.h"
+#include "core/PWSLog.h"
 
 #include "os/dir.h"
-#include "os/logit.h"
 
 using namespace std;
 
@@ -81,7 +75,7 @@ int DboxMain::BackupSafe()
   CString cs_temp, cs_title;
 
   std::wstring dir;
-  if (m_core.GetCurFile().empty())
+  if (!m_core.IsDbOpen())
     dir = PWSdirs::GetSafeDir();
   else {
     std::wstring cdrive, cdir, dontCare;
@@ -106,13 +100,6 @@ int DboxMain::BackupSafe()
 
     rc = fd.DoModal();
 
-    if (m_inExit) {
-      // If U3ExitNow called while in CPWFileDialog,
-      // PostQuitMessage makes us return here instead
-      // of exiting the app. Try resignalling 
-      PostQuitMessage(0);
-      return PWScore::USER_CANCEL;
-    }
     if (rc == IDOK) {
       tempname = fd.GetPathName();
       break;
@@ -160,7 +147,7 @@ int DboxMain::RestoreSafe()
   cs_text.LoadString(IDS_PICKRESTORE);
 
   std::wstring dir;
-  if (m_core.GetCurFile().empty())
+  if (!m_core.IsDbOpen())
     dir = PWSdirs::GetSafeDir();
   else {
     std::wstring cdrive, cdir, dontCare;
@@ -184,13 +171,6 @@ int DboxMain::RestoreSafe()
 
     INT_PTR rc2 = fd.DoModal();
 
-    if (m_inExit) {
-      // If U3ExitNow called while in CPWFileDialog,
-      // PostQuitMessage makes us return here instead
-      // of exiting the app. Try resignalling 
-      PostQuitMessage(0);
-      return PWScore::USER_CANCEL;
-    }
     if (rc2 == IDOK) {
       sx_backup = fd.GetPathName();
       break;
@@ -253,6 +233,8 @@ int DboxMain::RestoreSafe()
   ChangeOkUpdate();
   RefreshViews();
 
+  UpdateForceAllowCaptureHandling();
+
   return PWScore::SUCCESS;
 }
 
@@ -267,7 +249,6 @@ void DboxMain::OnOptions()
 
   // Save current Window transparency in case we have to change it
   const BYTE byteOldPercentTransparency = (BYTE)prefs->GetPref(PWSprefs::WindowTransparency);
-  const bool bOldTransparancyEnabled = prefs->GetPref(PWSprefs::EnableWindowTransparency);
 
   // Save Hotkey info
   BOOL bAppHotKeyEnabled;
@@ -413,13 +394,12 @@ void DboxMain::OnOptions()
 
       for (iter = m_MapMenuShortcuts.begin(); iter != m_MapMenuShortcuts.end();
            iter++) {
-        // User should not have these sub-entries in their config file
-        if (iter->first == ID_MENUITEM_GROUPENTER  ||
-            iter->first == ID_MENUITEM_VIEWENTRY   || 
-            iter->first == ID_MENUITEM_DELETEENTRY ||
-            iter->first == ID_MENUITEM_DELETEGROUP ||
-            iter->first == ID_MENUITEM_RENAMEENTRY ||
-            iter->first == ID_MENUITEM_RENAMEGROUP) {
+
+        // User should not have these in their config file
+        // See SetUpInitialMenuStrings() for rationale
+
+        if (std::find(m_ExcludedMenuItems.begin(), m_ExcludedMenuItems.end(), iter->first) != m_ExcludedMenuItems.end())
+        { // yes, I know this is O(m * n).
           continue;
         }
 
@@ -643,9 +623,11 @@ void DboxMain::OnOptions()
   // Just in case we reset this being enabled
   prefs->SetPref(PWSprefs::HotKeyEnabled, bAppHotKeyEnabled == TRUE);
 
+  UpdateForceAllowCaptureHandling();
+
   // Update Minidump user streams
   app.SetMinidumpUserStreams(m_bOpen, !IsDBReadOnly(), usPrefs);
-  
+
   // Delete Options Property page
   delete pOptionsPS;
 }

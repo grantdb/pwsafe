@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -17,8 +17,6 @@
 #include "Options_PropertySheet.h"
 
 #include "GeneralMsgBox.h"
-
-#include "core/PwsPlatform.h"
 
 #include "resource.h"
 #include "resource3.h"  // String resources
@@ -38,11 +36,12 @@ IMPLEMENT_DYNAMIC(COptionsPasswordHistory, COptions_PropertyPage)
 
 COptionsPasswordHistory::COptionsPasswordHistory(CWnd *pParent, st_Opt_master_data *pOPTMD)
   : COptions_PropertyPage(pParent, COptionsPasswordHistory::IDD, pOPTMD),
-  m_PWHAction(0), mApplyToProtected(BST_UNCHECKED)
+  mApplyToProtected(BST_UNCHECKED), m_PWHAction(0)
 {
   m_SavePWHistory = M_SavePWHistory();
   m_PWHistoryNumDefault = M_PWHistoryNumDefault();
   m_PWHAction = M_PWHAction();
+  m_PWHDefExpDays = M_PWHDefExpDays();
 }
 
 void COptionsPasswordHistory::DoDataExchange(CDataExchange* pDX)
@@ -53,6 +52,7 @@ void COptionsPasswordHistory::DoDataExchange(CDataExchange* pDX)
   DDX_Check(pDX, IDC_SAVEPWHISTORY, m_SavePWHistory);
   DDX_Check(pDX, IDC_UPDATEPROTECTEDPWH, mApplyToProtected);
   DDX_Text(pDX, IDC_DEFPWHNUM, m_PWHistoryNumDefault);
+  DDX_Text(pDX, IDC_DEFEXPIRYDAYS, m_PWHDefExpDays);
   DDX_Radio(pDX, IDC_PWHISTORYNOACTION, m_PWHAction);
 
   DDX_Control(pDX, IDC_SAVEPWHISTORY, m_chkbox);
@@ -116,6 +116,13 @@ BOOL COptionsPasswordHistory::OnInitDialog()
   pspin->SetBase(10);
   pspin->SetPos(m_PWHistoryNumDefault);
 
+  pspin = (CSpinButtonCtrl *)GetDlgItem(IDC_DEDSPIN);
+  pspin->SetBuddy(GetDlgItem(IDC_DEFEXPIRYDAYS));
+  pspin->SetRange(static_cast<short>(PWSprefs::GetInstance()->GetPrefMinVal(PWSprefs::DefaultExpiryDays)),
+                  static_cast<short>(PWSprefs::GetInstance()->GetPrefMaxVal(PWSprefs::DefaultExpiryDays)));
+  pspin->SetBase(10);
+  pspin->SetPos(m_PWHDefExpDays);
+
   // Disable text re: PWHistory changes on existing entries to start
   GetDlgItem(IDC_STATIC_UPDATEPWHISTORY)->EnableWindow(FALSE);
   GetDlgItem(IDC_UPDATEPROTECTEDPWH)->EnableWindow(FALSE);
@@ -158,7 +165,8 @@ LRESULT COptionsPasswordHistory::OnQuerySiblings(WPARAM wParam, LPARAM )
     case PP_DATA_CHANGED:
       if (M_SavePWHistory()        != m_SavePWHistory        ||
           (m_SavePWHistory         == TRUE &&
-           M_PWHistoryNumDefault() != m_PWHistoryNumDefault))
+           M_PWHistoryNumDefault() != m_PWHistoryNumDefault) ||
+          M_PWHDefExpDays()        != m_PWHDefExpDays)
         return 1L;
       break;
     case PP_UPDATE_VARIABLES:
@@ -177,6 +185,7 @@ BOOL COptionsPasswordHistory::OnApply()
   M_SavePWHistory() = m_SavePWHistory;
   M_PWHistoryNumDefault() = m_PWHistoryNumDefault;
   M_PWHAction() = m_PWHAction * (mApplyToProtected == 0 ? 1 : -1);
+  M_PWHDefExpDays() = m_PWHDefExpDays;
 
   return COptions_PropertyPage::OnApply();
 }

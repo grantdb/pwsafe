@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -154,9 +154,9 @@ void CAboutDlg::CheckNewVer()
   m_newVerStatus.LoadString(IDS_TRYING2CONTACT_SERVER);
   UpdateData(FALSE);
   std::wstring latest;
-  wchar_t *html_redfont = L"<b><font color=\"red\">";
-  wchar_t *html_greenfont = L"<b><font color=\"green\">";
-  wchar_t *html_endfont = L"</font></b>";
+  const wchar_t *html_redfont = L"<b><font color=\"red\">";
+  const wchar_t *html_greenfont = L"<b><font color=\"green\">";
+  const wchar_t *html_endfont = L"</font></b>";
   switch (CheckLatestVersion(latest)) {
     case CheckVersion::CheckStatus::CANT_CONNECT:
       m_newVerStatus.Format(IDS_CANT_CONTACT_SERVER, html_redfont, html_endfont);
@@ -168,7 +168,7 @@ void CAboutDlg::CheckNewVer()
       {
       CGeneralMsgBox gmb;
       CString newer;
-      newer.Format(SysInfo::IsUnderU3() ? IDS_NEWER_AVAILABLE_U3 : IDS_NEWER_AVAILABLE,
+      newer.Format(IDS_NEWER_AVAILABLE,
                    static_cast<LPCWSTR>(m_appversion),
                    static_cast<LPCWSTR>(latest.c_str()));
       m_newVerStatus.Format(IDS_NEWER_AVAILABLE_SHORT, html_redfont, html_endfont);

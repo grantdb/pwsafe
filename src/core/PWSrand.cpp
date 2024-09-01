@@ -1,11 +1,11 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
 * http://www.opensource.org/licenses/artistic-license-2.0.php
 */
-#include <limits.h>
+#include <limits>
 #include "os/rand.h"
 
 #include "PwsPlatform.h"
@@ -28,7 +28,7 @@ void PWSrand::DeleteInstance()
 }
 
 PWSrand::PWSrand()
-  : ibRandomData(SHA256::HASHLEN)
+  : R{}, rgbRandomData{}, ibRandomData(SHA256::HASHLEN)
 {
   m_IsInternalPRNG = !pws_os::InitRandomDataFunction();
 
@@ -91,7 +91,7 @@ void PWSrand::GetRandomData( void * const buffer, unsigned long length )
   unsigned char *pb = static_cast<unsigned char *>(buffer);
   while (length > SHA256::HASHLEN) {
     NextRandBlock();
-    for (int j = 0; j < SHA256::HASHLEN; j++)
+    for (unsigned int j = 0; j < SHA256::HASHLEN; j++)
       pb[j] = (m_IsInternalPRNG) ? R[j] : pb[j] ^ R[j];
     length -= SHA256::HASHLEN;
     pb += SHA256::HASHLEN;
@@ -136,7 +136,7 @@ unsigned int PWSrand::RangeRand(size_t len)
 {
   if (len != 0) {
     unsigned int      r;
-    const size_t ceil = UINT_MAX - (UINT_MAX % len) - 1;
+    const size_t ceil = std::numeric_limits<unsigned int>::max()- (std::numeric_limits<unsigned int>::max() % len) - 1;
     while ((r = RandUInt()) > ceil)
       ;
     return(r%len);

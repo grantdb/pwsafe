@@ -1,0 +1,33 @@
+image: debian/oldstable
+arch: amd64
+triggers:
+    - action: email
+      condition: failure
+      to: build@pwsafe.org
+
+artifacts:
+- pwsafe/build/pwsafe-debianoldstable-xx-amd64.deb
+sources:
+    - https://git.sr.ht/~ronys/pwsafe
+tasks:
+    - setup: |
+        sudo apt-get update
+        sudo pwsafe/Misc/setup-linux-dev-env.sh
+        cd pwsafe
+        mkdir build build-dbg
+        cd build
+        cmake -D CMAKE_BUILD_TYPE=Release ..
+        cd ../build-dbg
+        cmake -D CMAKE_BUILD_TYPE=Debug ..
+
+    - build-dbg: |
+        cd pwsafe/build-dbg
+        make
+    - test: |
+        cd pwsafe/build-dbg
+        LC_ALL=C.UTF-8 make test
+    - release: |
+        cd pwsafe/build
+        make
+        cpack -G DEB ..
+        mv *.deb pwsafe-debianoldstable-xx-amd64.deb

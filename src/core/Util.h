@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -11,19 +11,20 @@
 // Util.h
 //-----------------------------------------------------------------------------
 
-#include "sha256.h"
+#include "crypto/sha256.h"
 #include "StringX.h"
 #include "StringXStream.h"
-#include "Fish.h"
+#include "crypto/Fish.h"
 #include "PwsPlatform.h"
-#include "UTF8Conv.h"
 
-#include "../os/debug.h"
-#include "../os/typedefs.h"
-#include "../os/mem.h"
+#include "os/debug.h"
+#include "os/typedefs.h"
+#include "os/mem.h"
 
 #include <sstream>
 #include <stdarg.h>
+
+class Fish;
 
 // For V1V2 and file encryption, NOT for V3 and later:
 #define SaltLength 20
@@ -38,6 +39,8 @@
 #define V10 0
 #define V15 1
 
+class CUTF8Conv;
+
 extern void trashMemory(void *buffer, size_t length);
 extern void trashMemory(LPTSTR buffer, size_t length);
 extern void burnStack(unsigned long len); // borrowed from libtomcrypt
@@ -48,6 +51,8 @@ extern void ConvertPasskey(const StringX &text,
 extern void GenRandhash(const StringX &passkey,
                         const unsigned char *m_randstuff,
                         unsigned char *m_randhash);
+
+extern size_t readcbc1st(FILE* fp, size_t& record_size, Fish* Algorithm, unsigned char* cbcbuffer, bool isAboveThreshold = false);
 
 // buffer is allocated by _readcbc, *** delete[] is responsibility of caller ***
 extern size_t _readcbc(FILE *fp, unsigned char * &buffer,
@@ -62,10 +67,17 @@ extern size_t _readcbc(FILE *fp, unsigned char *buffer,
                        const size_t buffer_len, Fish *Algorithm,
                        unsigned char *cbcbuffer);
 
-// _writecbc will throw(EIO) iff a write fail occurs!
-extern size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length,
-                        unsigned char type, Fish *Algorithm,
-                        unsigned char *cbcbuffer);
+// _writecbc* will throw(EIO) iff a write fail occurs!
+// version used to write records:
+extern size_t _writecbc(FILE* fp, const unsigned char* buffer, size_t length,
+  unsigned char type, Fish* Algorithm, unsigned char* cbcbuffer);
+
+// externalized implementation of above for whole-file encryption:
+extern size_t _writecbc1st(FILE* fp, const unsigned char** buffer, size_t* length, unsigned char type,
+  Fish* Algorithm, unsigned char* cbcbuffer, bool isAboveThreshold = false);
+extern size_t _writecbcRest(FILE* fp, const unsigned char* buffer, size_t length,
+  Fish* Algorithm, unsigned char* cbcbuffer);
+
 
 // typeless version for V4 content:
 extern size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length,
@@ -247,7 +259,14 @@ inline void byteswap(unsigned char * begin, unsigned char * end) {
     }
 }
 
+template<class T>
+inline void byteswap(T& v) {
+  unsigned char* a = reinterpret_cast<unsigned char*>(&v);
+  byteswap(a, a + sizeof(v) - 1);
+}
+
 namespace PWSUtil {
+
   // namespace of common utility functions
 
   // For Windows implementation, hide Unicode abstraction,
@@ -257,7 +276,7 @@ namespace PWSUtil {
   // Time conversion result formats:
   enum TMC {TMC_ASC_UNKNOWN, TMC_ASC_NULL, TMC_EXPORT_IMPORT, TMC_XML,
             TMC_LOCALE, TMC_LOCALE_DATE_ONLY};
-  StringX ConvertToDateTimeString(const time_t &t, TMC result_format);
+  StringX ConvertToDateTimeString(const time_t &t, TMC result_format, bool convert_epoch = false, bool utc_time = false);
   stringT GetNewFileName(const stringT &oldfilename, const stringT &newExtn);
   extern const TCHAR *UNKNOWN_ASC_TIME_STR, *UNKNOWN_XML_TIME_STR;
   void GetTimeStamp(stringT &sTimeStamp, const bool bShort = false);
@@ -269,7 +288,8 @@ namespace PWSUtil {
                      const StringX &value, CUTF8Conv &utf8conv,
                      const char *tabs = "\t\t");
   std::string GetXMLTime(int indent, const char *name,
-                         time_t t, CUTF8Conv &utf8conv);
+                         time_t t, CUTF8Conv &utf8conv,
+                         bool convert_epoch = false, bool utc_time = false);
 
   StringX DeDupString(StringX &in_string);
   stringT GetSafeXMLString(const StringX &sxInString);
@@ -277,6 +297,9 @@ namespace PWSUtil {
   bool pull_time(time_t &t, const unsigned char *data, size_t len);
   // load file to stream
   bool loadFile(const StringX &filename, StringXStream &stream);
+
+  bool GetLockerData(const stringT& locker, stringT& username, stringT& hostname, int& pid);
+  bool HasValidLockerData(const stringT& locker);
 }
 
 ///////////////////////////////////////////////////////
@@ -299,12 +322,27 @@ class dereference {
     const value_type& operator()(const_iterator itr) const { return *itr; }
 };
 
-extern unsigned int GetStringBufSize(const TCHAR *fmt, va_list args);
-
 bool FindNoCase( const StringX& src, const StringX& dest);
 
 
 std::string toutf8(const std::wstring &w);
+
+template<class T>
+StringX ToStringX(T v) {
+  oStringXStream os;
+  os << v;
+  return os.str();
+}
+
+template<class T>
+StringX IntegralToStringX(T v) {
+  // For consistency for all integers, and specifically forcing single byte
+  // integrals (char, uint8_t, etc.) to be converted as integers to string
+  // rather than as single characters. Good for values between LLONG_MIN to
+  // LLONG_MAX, inclusive. Beyond that range, use ToStringX directly with
+  // appropriate type.
+  return ToStringX(static_cast<long long>(v));
+}
 
 #endif /* __UTIL_H */
 //-----------------------------------------------------------------------------

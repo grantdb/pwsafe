@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -21,10 +21,10 @@ enum {PWH_OK = 0, PWH_IGNORE, PWH_INVALID_HDR, PWH_INVALID_STATUS,
       PWH_INVALID_NUM, PWH_INVALID_DATETIME, PWH_PSWD_LENGTH_NOTHEX,
       PWH_INVALID_PSWD_LENGTH, PWH_TOO_SHORT, PWH_TOO_LONG,
       PWH_INVALID_FIELD_LENGTH, PWH_INVALID_CHARACTER};
-bool VerifyASCDateTimeString(const stringT &time_str, time_t &t);
-bool VerifyXMLDateTimeString(const stringT &time_str, time_t &t);
+bool VerifyASCDateTimeString(const stringT &time_str, time_t &t, bool utc_time = false);
+bool VerifyXMLDateTimeString(const stringT &time_str, time_t &t, bool utc_time = false);
 bool VerifyXMLDateString(const stringT &time_str, time_t &t);
-bool VerifyImportDateTimeString(const stringT &time_str, time_t &t);
+bool VerifyImportDateTimeString(const stringT &time_str, time_t &t, bool utc_time = false);
 int VerifyTextImportPWHistoryString(const StringX &PWHistory, StringX &newPWHistory,
                                     stringT &strErrors);
 int VerifyXMLImportPWHistoryString(const StringX &PWHistory, StringX &newPWHistory,

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2013-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -13,9 +13,9 @@
 //-----------------------------------------------------------------------------
 
 #include "PWSfile.h"
-#include "TwoFish.h"
-#include "sha256.h"
-#include "hmac.h"
+#include "crypto/TwoFish.h"
+#include "crypto/sha256.h"
+#include "crypto/hmac.h"
 #include "UTF8Conv.h"
 
 #include <vector>
@@ -96,7 +96,7 @@ public:
     KeyBlock &at(unsigned i) {return m_kbs.at(i);}
     const KeyBlock &at(unsigned i) const {return m_kbs.at(i);}
     bool empty() const {return m_kbs.empty();}
-    unsigned size() const {return (unsigned)m_kbs.size();}
+    unsigned size() const {return static_cast<unsigned>(m_kbs.size());}
     const size_t KBLEN = PWSaltLength + sizeof(uint32) + KWLEN + KWLEN;
   };
 

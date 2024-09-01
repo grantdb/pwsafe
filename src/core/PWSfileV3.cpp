@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -12,12 +12,11 @@
 #include "PWScore.h"
 #include "PWSFilters.h"
 #include "PWSdirs.h"
-#include "PWSprefs.h"
+#include "PWSLog.h"
 #include "core.h"
 
 #include "os/debug.h"
 #include "os/file.h"
-#include "os/logit.h"
 
 #include "XML/XMLDefs.h"  // Required if testing "USE_XML_LIBRARY"
 
@@ -54,9 +53,10 @@ using pws_os::CUUID;
  *         V3.29           0x030B
  *         V3.29Y          0x030C
  *         V3.30           0x030D
+ *         V3.47           0x030E
 */
 
-const short VersionNum = 0x030D;
+const short VersionNum = 0x030E;
 
 static unsigned char TERMINAL_BLOCK[TwoFish::BLOCKSIZE] = {
   'P', 'W', 'S', '3', '-', 'E', 'O', 'F',
@@ -123,12 +123,12 @@ int PWSfileV3::Close()
     size_t fret;
     fret = fwrite(TERMINAL_BLOCK, sizeof(TERMINAL_BLOCK), 1, m_fd);
     if (fret != 1) {
-      PWSfile::Close();
+      (void)PWSfile::Close();
       return FAILURE;
     }
     fret = fwrite(digest, sizeof(digest), 1, m_fd);
     if (fret != 1) {
-      PWSfile::Close();
+      (void)PWSfile::Close();
       return FAILURE;
     }
     return PWSfile::Close();
@@ -136,11 +136,11 @@ int PWSfileV3::Close()
     // We're here *after* TERMINAL_BLOCK has been read
     // and detected (by _readcbc) - just read hmac & verify
     unsigned char d[SHA256::HASHLEN];
-    fread(d, sizeof(d), 1, m_fd);
-    if (memcmp(d, digest, SHA256::HASHLEN) == 0)
+    if (fread(d, sizeof(d), 1, m_fd) == 1 &&
+        memcmp(d, digest, SHA256::HASHLEN) == 0)
       return PWSfile::Close();
     else {
-      PWSfile::Close();
+      (void)PWSfile::Close();
       return BAD_DIGEST;
     }
   }
@@ -190,7 +190,7 @@ int PWSfileV3::SanityCheck(FILE *stream)
     goto err;
   }
   if (memcmp(eof_block, TERMINAL_BLOCK, sizeof(TERMINAL_BLOCK)) != 0)
-    retval = TRUNCATED_FILE;
+    retval = SUCCESS; // because this is a sanity check: We might still be able to recover some data
 
 err:
   fseek(stream, pos, SEEK_SET);
@@ -221,10 +221,16 @@ int PWSfileV3::CheckPasskey(const StringX &filename,
 
   fseek(fd, sizeof(V3TAG), SEEK_SET); // skip over tag
   unsigned char salt[PWSaltLength];
-  fread(salt, 1, sizeof(salt), fd);
+  if (fread(salt, 1, sizeof(salt), fd) != sizeof(salt)) {
+    retval = READ_FAIL;
+    goto err;
+  }
 
   unsigned char Nb[sizeof(uint32)];
-  fread(Nb, 1, sizeof(Nb), fd);
+  if (fread(Nb, 1, sizeof(Nb), fd) != sizeof(Nb)) {
+    retval = READ_FAIL;
+    goto err;
+  }
   { // block to shut up compiler warning w.r.t. goto
     const uint32 N = getInt32(Nb);
 
@@ -243,7 +249,10 @@ int PWSfileV3::CheckPasskey(const StringX &filename,
   H.Update(usedPtag, SHA256::HASHLEN);
   H.Final(HPtag);
   unsigned char readHPtag[SHA256::HASHLEN];
-  fread(readHPtag, 1, sizeof(readHPtag), fd);
+  if (fread(readHPtag, 1, sizeof(readHPtag), fd) != sizeof(readHPtag)) {
+    retval = READ_FAIL;
+    goto err;
+  }
   if (memcmp(readHPtag, HPtag, sizeof(readHPtag)) != 0) {
     retval = WRONG_PASSWORD;
     goto err;
@@ -285,7 +294,7 @@ size_t PWSfileV3::ReadCBC(unsigned char &type, unsigned char* &data,
   size_t numRead = PWSfile::ReadCBC(type, data, length);
 
   if (numRead > 0) {
-    m_hmac.Update(data, reinterpret_cast<unsigned long &>(length));
+    m_hmac.Update(data, static_cast<unsigned long>(length));
   }
 
   return numRead;
@@ -461,6 +470,13 @@ int PWSfileV3::WriteHeader()
   if (numWritten <= 0) { m_status = FAILURE; goto end; }
   m_hdr.m_whenlastsaved = time_now;
 
+  // Write out last master password change time, if set
+  if (m_hdr.m_whenpwdlastchanged != 0) {
+    putInt32(buf, static_cast<int32>(m_hdr.m_whenpwdlastchanged));
+    numWritten = WriteCBC(HDR_LASTPWDUPDATETIME, buf, sizeof(buf));
+    if (numWritten <= 0) { m_status = FAILURE; goto end; }
+  }
+
   // Write out who saved it!
   {
     const SysInfo *si = SysInfo::GetInstance();
@@ -595,7 +611,10 @@ int PWSfileV3::ReadHeader()
 
   unsigned char B1B2[sizeof(m_key)];
   ASSERT(sizeof(B1B2) == 32); // Generalize later
-  fread(B1B2, 1, sizeof(B1B2), m_fd);
+  if (fread(B1B2, 1, sizeof(B1B2), m_fd) != sizeof(B1B2)) {
+    Close();
+    return READ_FAIL;
+  }
   TwoFish TF(Ptag, sizeof(Ptag));
   TF.Decrypt(B1B2, m_key);
   TF.Decrypt(B1B2 + 16, m_key + 16);
@@ -603,13 +622,19 @@ int PWSfileV3::ReadHeader()
   unsigned char L[32]; // for HMAC
   unsigned char B3B4[sizeof(L)];
   ASSERT(sizeof(B3B4) == 32); // Generalize later
-  fread(B3B4, 1, sizeof(B3B4), m_fd);
+  if (fread(B3B4, 1, sizeof(B3B4), m_fd) != sizeof(B3B4)) {
+    Close();
+    return READ_FAIL;
+  }
   TF.Decrypt(B3B4, L);
   TF.Decrypt(B3B4 + 16, L + 16);
 
   m_hmac.Init(L, sizeof(L));
 
-  fread(m_ipthing, 1, sizeof(m_ipthing), m_fd);
+  if (fread(m_ipthing, 1, sizeof(m_ipthing), m_fd) != sizeof(m_ipthing)) {
+    Close();
+    return READ_FAIL;
+  }
 
   m_fish = new TwoFish(m_key, sizeof(m_key));
 
@@ -706,7 +731,14 @@ int PWSfileV3::ReadHeader()
       }
       break;
 
-      case HDR_LASTUPDATEUSERHOST: /* and by whom */
+    case HDR_LASTPWDUPDATETIME: /* when was master password last changed */
+      m_hdr.m_whenpwdlastchanged = 0;
+      if (!PWSUtil::pull_time(m_hdr.m_whenpwdlastchanged, utf8, utf8Len)) {
+        pws_os::Trace0(_T("Failed to pull_time(m_whenpwdlastchanged)\n"));
+      }
+      break;
+
+    case HDR_LASTUPDATEUSERHOST: /* who last saved */
         // DEPRECATED, but we still know how to read this
         if (!found0302UserHost) { // if new fields also found, don't overwrite
           if (utf8 != nullptr) utf8[utf8Len] = '\0';
@@ -758,52 +790,53 @@ int PWSfileV3::ReadHeader()
         m_hdr.m_DB_Description = text;
         break;
 
+      case HDR_FILTERS:
+        if (utf8 != nullptr) utf8[utf8Len] = '\0';
+        if (utf8Len == 0) break;
+        utf8status = m_utf8conv.FromUTF8(utf8, utf8Len, text);
+        if (utf8Len > 0) {
+          stringT strErrors;
 #if !defined(USE_XML_LIBRARY) || (!defined(_WIN32) && USE_XML_LIBRARY == MSXML)
-        // Don't support importing XML from non-Windows platforms
-        // using Microsoft XML libraries
-        // Will be treated as an 'unknown header field' by the 'default' clause below
+          // Using PUGI XML we do not need XDS File
+          stringT XSDFilename = _T("");
 #else
-    case HDR_FILTERS:
-      if (utf8 != nullptr) utf8[utf8Len] = '\0';
-      utf8status = m_utf8conv.FromUTF8(utf8, utf8Len, text);
-      if (utf8Len > 0) {
-        stringT strErrors;
-        stringT XSDFilename = PWSdirs::GetXMLDir() + _T("pwsafe_filter.xsd");
-        if (!pws_os::FileExists(XSDFilename)) {
-          // No filter schema => user won't be able to access stored filters
-          // Inform her of the fact (probably an installation problem).
-          stringT message, message2;
-          Format(message, IDSC_MISSINGXSD, L"pwsafe_filter.xsd");
-          LoadAString(message2, IDSC_FILTERSKEPT);
-          message += stringT(_T("\n\n")) + message2;
-          if (m_pReporter != nullptr)
-            (*m_pReporter)(message);
+          stringT XSDFilename = PWSdirs::GetXMLDir() + _T("pwsafe_filter.xsd");
+          if (!pws_os::FileExists(XSDFilename)) {
+            // No filter schema => user won't be able to access stored filters
+            // Inform her of the fact (probably an installation problem).
+            stringT message, message2;
+            Format(message, IDSC_MISSINGXSD, L"pwsafe_filter.xsd");
+            LoadAString(message2, IDSC_FILTERSKEPT);
+            message += stringT(_T("\n\n")) + message2;
+            if (m_pReporter != nullptr)
+              (*m_pReporter)(message);
 
-          // Treat it as an Unknown field!
-          // Maybe user used a later version of PWS
-          // and we don't want to lose anything
-          UnknownFieldEntry unkhfe(fieldType, utf8Len, utf8);
-          m_UHFL.push_back(unkhfe);
-          break;
-        }
-        int rc = m_MapDBFilters.ImportFilterXMLFile(FPOOL_DATABASE, text.c_str(), _T(""),
-                                                    XSDFilename.c_str(),
-                                                    strErrors, m_pAsker);
-        if (rc != PWScore::SUCCESS) {
-          // Can't parse it - treat as an unknown field,
-          // Notify user that filter won't be available
-          stringT message;
-          LoadAString(message, IDSC_CANTPROCESSDBFILTERS);
-          if (m_pReporter != nullptr)
-            (*m_pReporter)(message);
-          pws_os::Trace(L"Error while parsing header filters.\n\tData: %ls\n\tErrors: %ls\n",
-                        text.c_str(), strErrors.c_str());
-          UnknownFieldEntry unkhfe(fieldType, utf8Len, utf8);
-          m_UHFL.push_back(unkhfe);
-        }
-      }
-      break;
+            // Treat it as an Unknown field!
+            // Maybe user used a later version of PWS
+            // and we don't want to lose anything
+            UnknownFieldEntry unkhfe(fieldType, utf8Len, utf8);
+            m_UHFL.push_back(unkhfe);
+            break;
+          }
 #endif
+          int rc = m_MapDBFilters.ImportFilterXMLFile(FPOOL_DATABASE, text.c_str(), _T(""),
+                                                      XSDFilename.c_str(),
+                                                      strErrors, m_pAsker);
+          if (rc != PWScore::SUCCESS) {
+            // Can't parse it - treat as an unknown field,
+            // Notify user that filter won't be available
+            stringT message;
+            LoadAString(message, IDSC_CANTPROCESSDBFILTERS);
+            if (m_pReporter != nullptr)
+              (*m_pReporter)(message);
+            pws_os::Trace(L"Error while parsing header filters.\n\tData: %ls\n\tErrors: %ls\n",
+                          text.c_str(), strErrors.c_str());
+            UnknownFieldEntry unkhfe(fieldType, utf8Len, utf8);
+            m_UHFL.push_back(unkhfe);
+          }
+        }
+        break;
+
       case HDR_RUE:
         {
           if (utf8 != nullptr) utf8[utf8Len] = '\0';
@@ -969,8 +1002,12 @@ int PWSfileV3::ReadHeader()
 
     ASSERT(fd != nullptr);
     char tag[sizeof(V3TAG)];
-    fread(tag, 1, sizeof(tag), fd);
+    auto nread = fread(tag, 1, sizeof(tag), fd);
     fclose(fd);
+    if (nread != sizeof(tag)) {
+      v = UNKNOWN_VERSION;
+      return false;
+    }
 
     if (memcmp(tag, V3TAG, sizeof(tag)) == 0) {
       v = V30;

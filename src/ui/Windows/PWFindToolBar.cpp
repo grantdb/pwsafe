@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -16,6 +16,7 @@
 #include "PWFindToolBar.h"
 #include "ControlExtns.h"
 #include "Fonts.h"
+#include "winutils.h"
 
 #include "resource.h"
 #include "resource2.h"
@@ -23,6 +24,7 @@
 
 #include <vector>
 #include <algorithm>
+
 
 // CPWFindToolBar
 
@@ -38,8 +40,6 @@
 * Also, the Case Sensitive bitmap must be the last bitmap in the arrays.
 */
 
-#define EDITCTRL_WIDTH 100    // width of Edit control for Search Text
-#define FINDRESULTS_WIDTH 400 // width of Edit control for Search Results
 
 const UINT CPWFindToolBar::m_FindToolBarIDs[] = {
   ID_TOOLBUTTON_CLOSEFIND,
@@ -137,17 +137,17 @@ exit:
 IMPLEMENT_DYNAMIC(CPWFindToolBar, CToolBar)
 
 CPWFindToolBar::CPWFindToolBar()
-  : m_bitmode(1), m_bVisible(true), 
-  m_bCaseSensitive(false), m_bAdvanced(false),
+  : m_bitmode(1), m_iFindDirection(FIND_DOWN), m_bVisible(true),
+  m_bCaseSensitive(false), m_bAdvanced(false), m_bFontSet(false),
+  m_last_cs_search(false), m_last_search_text(L""),
+  m_subgroup_name(L""), m_last_subgroup_name(L""),
+  m_subgroup_bset(false), m_last_subgroup_bset(false),
+  m_subgroup_object(CItemData::GROUP), m_last_subgroup_object(CItemData::GROUP), 
+  m_subgroup_function(0), m_last_subgroup_function(0),
   m_lastshown(size_t(-1)), m_numFound(size_t(-1)),
-  m_last_search_text(L""), m_last_cs_search(false),
-  m_subgroup_name(L""), m_subgroup_bset(false),
-  m_subgroup_object(CItemData::GROUP), m_subgroup_function(0),
-  m_last_subgroup_name(L""), m_last_subgroup_bset(false),
-  m_last_subgroup_object(CItemData::GROUP), m_last_subgroup_function(0),
-  m_iCase_Insensitive_BM_offset(-1), m_iCase_Sensitive_BM_offset(-1),
-  m_iAdvanced_BM_offset(-1), m_iAdvancedOn_BM_offset(-1),
-  m_iFindDirection(FIND_DOWN), m_bFontSet(false), m_bUseSavedFindValues(false)
+  m_iCase_Insensitive_BM_offset(-1), m_iAdvanced_BM_offset(-1),
+  m_iCase_Sensitive_BM_offset(-1), m_iAdvancedOn_BM_offset(-1),
+  m_bUseSavedFindValues(false)
 {
   m_last_bsFields.reset();
   m_last_bsAttFields.reset();
@@ -257,6 +257,8 @@ BOOL CPWFindToolBar::PreTranslateMessage(MSG *pMsg)
 void CPWFindToolBar::Init(const int NumBits, int iWMSGID,
                           st_SaveAdvValues *pst_SADV)
 {
+  const int EDITCTRL_WIDTH = 100;    // unscaled width of Edit control for Search Text
+  const int FINDRESULTS_WIDTH = 400; // unscaled width of Edit control for Search Results
   ASSERT(pst_SADV != NULL);
   
   int i, j;
@@ -274,15 +276,39 @@ void CPWFindToolBar::Init(const int NumBits, int iWMSGID,
     m_bitmode = 2;
   }
 
-  CBitmap bmTemp;
-  m_ImageLists[0].Create(16, 16, iClassicFlags, m_iNum_Bitmaps, 2);
-  m_ImageLists[1].Create(16, 16, iNewFlags1, m_iNum_Bitmaps, 2);
-  m_ImageLists[2].Create(16, 16, iNewFlags2, m_iNum_Bitmaps, 2);
+  // Scale for DPI stuff
+  int origX = 16, origY = 16; // original toolbar button sizes
+
+  // from https://docs.microsoft.com/en-us/windows/win32/hidpi/high-dpi-desktop-application-development-on-windows
+  int dpi = WinUtil::GetDPI(); // can't use ForWindow(m_Hwnd) as we don't have a valid one when this is called.
+  int dpiScaledX = MulDiv(origX, dpi, WinUtil::defDPI);
+  int dpiScaledY = MulDiv(origY, dpi, WinUtil::defDPI);
+
+  m_editCtrlWidth = MulDiv(EDITCTRL_WIDTH, dpi, WinUtil::defDPI);
+  m_findResultsWidth = MulDiv(FINDRESULTS_WIDTH, dpi, WinUtil::defDPI);
+
+  int btnX = 24, btnY = 22; // original toolbar button dimensions
+  int dpiScaledBtnX = MulDiv(btnX, dpi, WinUtil::defDPI);
+  int dpiScaledBtnY = MulDiv(btnY, dpi, WinUtil::defDPI);
+
+  GetToolBarCtrl().SetButtonSize(CSize(dpiScaledBtnX, dpiScaledBtnY));
+
+  m_ImageLists[0].Create(dpiScaledX, dpiScaledY, iClassicFlags, m_iNum_Bitmaps, 2);
+  m_ImageLists[1].Create(dpiScaledX, dpiScaledY, iNewFlags1, m_iNum_Bitmaps, 2);
+  m_ImageLists[2].Create(dpiScaledX, dpiScaledY, iNewFlags2, m_iNum_Bitmaps, 2);
+
+  CBitmap bmTemp, bmTempScaled;
+  BITMAP bm;
 
   for (i = 0; i < m_iNum_Bitmaps; i++) {
     bmTemp.LoadBitmap(m_FindToolBarClassicBMs[i]);
-    m_ImageLists[0].Add(&bmTemp, crClassicBackground);
+    bmTemp.GetBitmap(&bm);
+    int dpiScaledWidth = MulDiv(bm.bmWidth, dpi, WinUtil::defDPI);
+    int dpiScaledHeight = MulDiv(bm.bmHeight, dpi, WinUtil::defDPI);
+    WinUtil::ResizeBitmap(bmTemp, bmTempScaled, dpiScaledWidth, dpiScaledHeight);
     bmTemp.DeleteObject();
+    m_ImageLists[0].Add(&bmTempScaled, crClassicBackground);
+    bmTempScaled.DeleteObject();
     if (m_FindToolBarClassicBMs[i] == IDB_FINDCASE_I_CLASSIC)
       m_iCase_Insensitive_BM_offset = i;
     if (m_FindToolBarClassicBMs[i] == IDB_FINDCASE_S_CLASSIC)
@@ -295,14 +321,24 @@ void CPWFindToolBar::Init(const int NumBits, int iWMSGID,
 
   for (i = 0; i < m_iNum_Bitmaps; i++) {
     bmTemp.LoadBitmap(m_FindToolBarNewBMs[i]);
-    m_ImageLists[1].Add(&bmTemp, crNewBackground);
+    bmTemp.GetBitmap(&bm);
+    int dpiScaledWidth = MulDiv(bm.bmWidth, dpi, WinUtil::defDPI);
+    int dpiScaledHeight = MulDiv(bm.bmHeight, dpi, WinUtil::defDPI);
+    WinUtil::ResizeBitmap(bmTemp, bmTempScaled, dpiScaledWidth, dpiScaledHeight);
     bmTemp.DeleteObject();
+    m_ImageLists[1].Add(&bmTempScaled, crNewBackground);
+    bmTempScaled.DeleteObject();
   }
 
   for (i = 0; i < m_iNum_Bitmaps; i++) {
     bmTemp.LoadBitmap(m_FindToolBarNewBMs[i]);
-    m_ImageLists[2].Add(&bmTemp, crNewBackground);
+    bmTemp.GetBitmap(&bm);
+    int dpiScaledWidth = MulDiv(bm.bmWidth, dpi, WinUtil::defDPI);
+    int dpiScaledHeight = MulDiv(bm.bmHeight, dpi, WinUtil::defDPI);
+    WinUtil::ResizeBitmap(bmTemp, bmTempScaled, dpiScaledWidth, dpiScaledHeight);
     bmTemp.DeleteObject();
+    m_ImageLists[2].Add(&bmTempScaled, crNewBackground);
+    bmTempScaled.DeleteObject();
   }
 
   j = 0;
@@ -429,12 +465,12 @@ void CPWFindToolBar::AddExtraControls()
   }
 
   // Convert that button to a separator
-  SetButtonInfo(index, ID_TOOLBUTTON_FINDEDITCTRL, TBBS_SEPARATOR, EDITCTRL_WIDTH);
+  SetButtonInfo(index, ID_TOOLBUTTON_FINDEDITCTRL, TBBS_SEPARATOR, m_editCtrlWidth);
 
   // Note: "ES_WANTRETURN | ES_MULTILINE".  This is to allow the return key to be
   // trapped by PreTranslateMessage and treated as if the Find button had been
   // pressed
-  rect = CRect(0, 0, EDITCTRL_WIDTH, iHeight);
+  rect = CRect(0, 0, m_editCtrlWidth, iHeight);
   VERIFY(m_edtFindText.Create(WS_CHILD | WS_VISIBLE |
                            ES_AUTOHSCROLL | ES_LEFT | ES_WANTRETURN | ES_MULTILINE,
                            CRect(rect.left + 2, rect.top, rect.right - 2, rect.bottom),
@@ -459,9 +495,9 @@ void CPWFindToolBar::AddExtraControls()
   }
 
   // Convert that button to a separator
-  SetButtonInfo(index, ID_TOOLBUTTON_FINDRESULTS, TBBS_SEPARATOR, FINDRESULTS_WIDTH);
+  SetButtonInfo(index, ID_TOOLBUTTON_FINDRESULTS, TBBS_SEPARATOR, m_findResultsWidth);
 
-  rect = CRect(0, 0, FINDRESULTS_WIDTH, iHeight);
+  rect = CRect(0, 0, m_findResultsWidth, iHeight);
   VERIFY(m_stcFindResults.Create(L"", WS_CHILD | WS_VISIBLE |
                               SS_LEFTNOWORDWRAP | SS_CENTERIMAGE,
                               CRect(rect.left + 2, rect.top, rect.right - 2, rect.bottom),
@@ -508,13 +544,13 @@ void CPWFindToolBar::ShowFindToolBar(bool bShow)
 
     SetHeight(iBtnHeight + 4);  // Add border
     m_edtFindText.ChangeColour();
-    m_edtFindText.SetWindowPos(NULL, 0, 0, EDITCTRL_WIDTH, iBtnHeight,
+    m_edtFindText.SetWindowPos(NULL, 0, 0, m_editCtrlWidth, iBtnHeight,
                             SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOMOVE);
 
     m_edtFindText.SetSel(0, -1);  // Select all text
     m_edtFindText.Invalidate();
 
-    m_stcFindResults.SetWindowPos(NULL, 0, 0, FINDRESULTS_WIDTH, iBtnHeight,
+    m_stcFindResults.SetWindowPos(NULL, 0, 0, m_findResultsWidth, iBtnHeight,
                                SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOMOVE);
   }
 

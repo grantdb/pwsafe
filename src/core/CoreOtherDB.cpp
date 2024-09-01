@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -35,8 +35,6 @@ using pws_os::CUUID;
 typedef std::wifstream ifstreamT;
 typedef std::wofstream ofstreamT;
 typedef std::vector<stringT>::iterator viter;
-
-extern const TCHAR *GROUPTITLEUSERINCHEVRONS;
 
 static void CompareField(CItemData::FieldType field,
                          const CItemData::FieldBits &bsTest,
@@ -118,7 +116,7 @@ void PWScore::Compare(PWScore *pothercore,
       st_data.user = currentItem.GetUser();
 
       StringX sx_original;
-      Format(sx_original, GROUPTITLEUSERINCHEVRONS,
+      Format(sx_original, PWScore::GROUPTITLEUSERINCHEVRONS,
                 st_data.group.c_str(), st_data.title.c_str(), st_data.user.c_str());
 
       // Update the Wizard page
@@ -163,28 +161,92 @@ void PWScore::Compare(PWScore *pothercore,
          Fourth byte
          1... ....  POLICYNAME [0x18] - not checked by default
          .1.. ....  KBSHORTCUT [0x19] - not checked by default
+         ..1. ....  ATTREF     [0x1a] - not checked by default
+         ...1 ....  TWOFACTORKEY [0x1b] - not checked by default
+         .... 1...  CCNUM      [0x1c] - not checked by default
+         .... .1..  CCEXP      [0x1d] - not checked by default
+         .... ..1.  CCVV       [0x1e] - not checked by default
+         .... ...1  CCPIN      [0x1f] - not checked by default
+
+         Fifth byte
+         1... ....  N/A        [0x20]
+         .1.. ....  TOTPCONFIG [0x21]
+         ..1. ....  TOTPLENGTH [0x22]
+         ...1 ....  TOTPTIMESTEP [0x23]
+         .... 1...  TOTPSTARTTIME [0x24]
+         .... .1..  N/A        [0x25]
+         .... ..1.  N/A        [0x26]
+         .... ...1  N/A        [0x27]
 
         */
         bsConflicts.reset();
         StringX sxCurrentPassword, sxComparisonPassword;
+        StringX sxCurrentTwoFactorKey, sxComparisonTwoFactorKey;
+        StringX sxCurrentTotpConfig, sxComparisonTotpConfig;
+        StringX sxCurrentTotpStartTime, sxComparisonTotpStartTime;
+        StringX sxCurrentTotpTimeStep, sxComparisonTotpTimeStep;
+        StringX sxCurrentTotpLength, sxComparisonTotpLength;
+
 
         const CItemData &compItem = pothercore->GetEntry(foundPos);
 
         if (currentItem.IsDependent()) {
           CItemData *pci_base = GetBaseEntry(&currentItem);
           sxCurrentPassword = pci_base->GetPassword();
-        } else
+          sxCurrentTwoFactorKey = pci_base->GetTwoFactorKey();
+          sxCurrentTotpConfig = pci_base->GetTotpConfig();
+          sxCurrentTotpStartTime = pci_base->GetTotpStartTime();
+          sxCurrentTotpTimeStep = pci_base->GetTotpTimeStepSeconds();
+          sxCurrentTotpLength = pci_base->GetTotpLength();
+        } else {
           sxCurrentPassword = currentItem.GetPassword();
+          sxCurrentTwoFactorKey = currentItem.GetTwoFactorKey();
+          sxCurrentTotpConfig = currentItem.GetTotpConfig();
+          sxCurrentTotpStartTime = currentItem.GetTotpStartTime();
+          sxCurrentTotpTimeStep = currentItem.GetTotpTimeStepSeconds();
+          sxCurrentTotpLength = currentItem.GetTotpLength();
+        }
 
         if (compItem.IsDependent()) {
           CItemData *pci_base = pothercore->GetBaseEntry(&compItem);
           sxComparisonPassword = pci_base->GetPassword();
-        } else
+          sxComparisonTwoFactorKey = pci_base->GetTwoFactorKey();
+          sxComparisonTotpConfig = pci_base->GetTotpConfig();
+          sxComparisonTotpStartTime = pci_base->GetTotpStartTime();
+          sxComparisonTotpTimeStep = pci_base->GetTotpTimeStepSeconds();
+          sxComparisonTotpLength = pci_base->GetTotpLength();
+        } else {
           sxComparisonPassword = compItem.GetPassword();
+          sxComparisonTwoFactorKey = compItem.GetTwoFactorKey();
+          sxComparisonTotpConfig = compItem.GetTotpConfig();
+          sxComparisonTotpStartTime = compItem.GetTotpStartTime();
+          sxComparisonTotpTimeStep = compItem.GetTotpTimeStepSeconds();
+          sxComparisonTotpLength = compItem.GetTotpLength();
+        }
 
         if (bsFields.test(CItemData::PASSWORD) &&
-            sxCurrentPassword != sxComparisonPassword)
+          sxCurrentPassword != sxComparisonPassword)
           bsConflicts.flip(CItemData::PASSWORD);
+
+        if (bsFields.test(CItemData::TWOFACTORKEY) &&
+          sxCurrentTwoFactorKey != sxComparisonTwoFactorKey)
+          bsConflicts.flip(CItemData::TWOFACTORKEY);
+
+        if (bsFields.test(CItemData::TOTPCONFIG) &&
+          sxCurrentTotpConfig != sxComparisonTotpConfig)
+          bsConflicts.flip(CItemData::TOTPCONFIG);
+
+        if (bsFields.test(CItemData::TOTPSTARTTIME) &&
+          sxCurrentTotpStartTime != sxComparisonTotpStartTime)
+          bsConflicts.flip(CItemData::TOTPSTARTTIME);
+
+        if (bsFields.test(CItemData::TOTPTIMESTEP) &&
+          sxCurrentTotpTimeStep != sxComparisonTotpTimeStep)
+          bsConflicts.flip(CItemData::TOTPTIMESTEP);
+
+        if (bsFields.test(CItemData::TOTPLENGTH) &&
+          sxCurrentTotpLength != sxComparisonTotpLength)
+          bsConflicts.flip(CItemData::TOTPLENGTH);
 
         CompareField(CItemData::NOTES, bsFields, currentItem, compItem,
                      bsConflicts, bTreatWhiteSpaceasEmpty);
@@ -292,7 +354,7 @@ void PWScore::Compare(PWScore *pothercore,
       st_data.user = compItem.GetUser();
 
       StringX sx_compare;
-      Format(sx_compare, GROUPTITLEUSERINCHEVRONS,
+      Format(sx_compare, PWScore::GROUPTITLEUSERINCHEVRONS,
                 st_data.group.c_str(), st_data.title.c_str(), st_data.user.c_str());
 
       // Update the Wizard page
@@ -320,9 +382,9 @@ void PWScore::Compare(PWScore *pothercore,
   }
 }
 
-// Return whether first '«g» «t» «u»' is greater than the second '«g» «t» «u»'
+// Return whether first 'Â«gÂ» Â«tÂ» Â«uÂ»' is greater than the second 'Â«gÂ» Â«tÂ» Â«uÂ»'
 // used in std::sort below.
-// Need this as '»' is not in the correct lexical order for blank fields in entry
+// Need this as 'Â»' is not in the correct lexical order for blank fields in entry
 bool MergeSyncGTUCompare(const StringX &elem1, const StringX &elem2)
 {
   StringX g1, t1, u1, g2, t2, u2, tmp1, tmp2;
@@ -378,7 +440,8 @@ bool PWScore::MatchGroupName(const StringX &stValue, const StringX &subgroup_nam
 #define MRG_SYMBOLS    0x0010
 #define MRG_SHIFTDCA   0x0008
 #define MRG_POLICYNAME 0x0004
-#define MRG_UNUSED     0x0003
+#define MRG_TOTP       0x0002 // anything TOTP related (i.e., Two Factor Key, TOTP Parameters, etc.).
+#define MRG_UNUSED     0x0001
 
 stringT PWScore::Merge(PWScore *pothercore,
                        const bool &subgroup_bset,
@@ -464,7 +527,7 @@ stringT PWScore::Merge(PWScore *pothercore,
     const StringX sx_otherUser = otherItem.GetUser();
 
     StringX sxMergedEntry;
-    Format(sxMergedEntry, GROUPTITLEUSERINCHEVRONS,
+    Format(sxMergedEntry, PWScore::GROUPTITLEUSERINCHEVRONS,
                 sx_otherGroup.c_str(), sx_otherTitle.c_str(), sx_otherUser.c_str());
 
     ItemListConstIter foundPos = Find(sx_otherGroup, sx_otherTitle, sx_otherUser);
@@ -488,6 +551,36 @@ stringT PWScore::Merge(PWScore *pothercore,
       if (otherItem.GetPassword() != curItem.GetPassword()) {
         diff_flags |= MRG_PASSWORD;
         LoadAString(str_temp, IDSC_FLDNMPASSWORD);
+        str_diffs += str_temp + _T(", ");
+      }
+
+      if (otherItem.GetTwoFactorKey() != curItem.GetTwoFactorKey()) {
+        diff_flags |= MRG_TOTP;
+        LoadAString(str_temp, IDSC_FLDNMTWOFACTORKEY);
+        str_diffs += str_temp + _T(", ");
+      }
+
+      if (otherItem.GetTotpConfigAsByte() != curItem.GetTotpConfigAsByte()) {
+        diff_flags |= MRG_TOTP;
+        LoadAString(str_temp, IDSC_FLDNMTOTPCONFIG);
+        str_diffs += str_temp + _T(", ");
+      }
+
+      if (otherItem.GetTotpStartTimeAsTimeT() != curItem.GetTotpStartTimeAsTimeT()) {
+        diff_flags |= MRG_TOTP;
+        LoadAString(str_temp, IDSC_FLDNMTOTPSTARTTIME);
+        str_diffs += str_temp + _T(", ");
+      }
+
+      if (otherItem.GetTotpTimeStepSecondsAsByte() != curItem.GetTotpTimeStepSecondsAsByte()) {
+        diff_flags |= MRG_TOTP;
+        LoadAString(str_temp, IDSC_FLDNMTOTPTIMESTEP);
+        str_diffs += str_temp + _T(", ");
+      }
+
+      if (otherItem.GetTotpLengthAsByte() != curItem.GetTotpLengthAsByte()) {
+        diff_flags |= MRG_TOTP;
+        LoadAString(str_temp, IDSC_FLDNMTOTPLENGTH);
         str_diffs += str_temp + _T(", ");
       }
 
@@ -652,7 +745,7 @@ stringT PWScore::Merge(PWScore *pothercore,
           ItemListIter iter = Find(kbshortcut_uuid);
           if (iter != m_pwlist.end()) {
             StringX sxTemp, sxExistingEntry;
-            Format(sxExistingEntry, GROUPTITLEUSERINCHEVRONS,
+            Format(sxExistingEntry, PWScore::GROUPTITLEUSERINCHEVRONS,
                 iter->second.GetGroup().c_str(), iter->second.GetTitle().c_str(),
                 iter->second.GetUser().c_str());
             Format(sxTemp, IDSC_KBSHORTCUT_REMOVED, sx_merged.c_str(), sxMergedEntry.c_str(),
@@ -700,7 +793,7 @@ stringT PWScore::Merge(PWScore *pothercore,
         ItemListIter iter = Find(kbshortcut_uuid);
         if (iter != m_pwlist.end()) {
           StringX sxTemp, sxExistingEntry;
-          Format(sxExistingEntry, GROUPTITLEUSERINCHEVRONS,
+          Format(sxExistingEntry, PWScore::GROUPTITLEUSERINCHEVRONS,
                 iter->second.GetGroup().c_str(), iter->second.GetTitle().c_str(),
                 iter->second.GetUser().c_str());
           Format(sxTemp, IDSC_KBSHORTCUT_REMOVED, sx_merged.c_str(), sxMergedEntry.c_str(),
@@ -715,7 +808,7 @@ stringT PWScore::Merge(PWScore *pothercore,
       pmulticmds->Add(pcmd);
 
       StringX sx_added;
-      Format(sx_added, GROUPTITLEUSERINCHEVRONS,
+      Format(sx_added, PWScore::GROUPTITLEUSERINCHEVRONS,
                 sx_otherGroup.c_str(), sx_otherTitle.c_str(), sx_otherUser.c_str());
       vs_added.push_back(sx_added);
 
@@ -895,7 +988,7 @@ int PWScore::MergeDependents(PWScore *pothercore, MultiCommands *pmulticmds,
       ASSERT(0);
 
     StringX sx_added;
-    Format(sx_added, GROUPTITLEUSERINCHEVRONS,
+    Format(sx_added, PWScore::GROUPTITLEUSERINCHEVRONS,
                 ci_temp.GetGroup().c_str(), ci_temp.GetTitle().c_str(),
                 ci_temp.GetUser().c_str());
     vs_added.push_back(sx_added);
@@ -976,7 +1069,7 @@ void PWScore::Synchronize(PWScore *pothercore,
     const StringX sx_otherUser = otherItem.GetUser();
 
     StringX sx_mergedentry;
-    Format(sx_mergedentry, GROUPTITLEUSERINCHEVRONS,
+    Format(sx_mergedentry, PWScore::GROUPTITLEUSERINCHEVRONS,
                 sx_otherGroup.c_str(), sx_otherTitle.c_str(), sx_otherUser.c_str());
 
     ItemListConstIter foundPos = Find(sx_otherGroup, sx_otherTitle, sx_otherUser);
@@ -1025,7 +1118,7 @@ void PWScore::Synchronize(PWScore *pothercore,
       updItem.SetStatus(CItemData::ES_MODIFIED);
 
       StringX sx_updated;
-      Format(sx_updated, GROUPTITLEUSERINCHEVRONS,
+      Format(sx_updated, PWScore::GROUPTITLEUSERINCHEVRONS,
                 sx_otherGroup.c_str(), sx_otherTitle.c_str(), sx_otherUser.c_str());
       vs_updated.push_back(sx_updated);
 
@@ -1086,7 +1179,7 @@ Command *PWScore::ProcessPolicyName(PWScore *pothercore, CItemData &updtEntry,
                                     std::map<StringX, StringX> &mapRenamedPolicies,
                                     std::vector<StringX> &vs_PoliciesAdded,
                                     StringX &sxOtherPolicyName, bool &bUpdated,
-                                    const StringX &sxDateTime, const UINT &IDS_MESSAGE)
+                                    const StringX &sxDateTime, const UINT &ids_message)
 {
   Command *pcmd(nullptr);
 
@@ -1119,7 +1212,7 @@ Command *PWScore::ProcessPolicyName(PWScore *pothercore, CItemData &updtEntry,
       if (st_to_pp != st_from_pp) {
         // But with different values - make new one unique and add
         StringX sxNewPolicyName(sxOtherPolicyName);
-        MakePolicyUnique(mapRenamedPolicies, sxNewPolicyName, sxDateTime, IDS_MESSAGE);
+        MakePolicyUnique(mapRenamedPolicies, sxNewPolicyName, sxDateTime, ids_message);
         pcmd = DBPolicyNamesCommand::Create(this, sxNewPolicyName, st_from_pp);
         bUpdated = true;
         updtEntry.SetPolicyName(sxNewPolicyName);

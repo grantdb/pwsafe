@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -16,8 +16,6 @@
 #include "Options_PropertyPage.h"
 #include "MenuShortcuts.h"
 #include "SHCTListCtrl.h"
-#include "PWHdrCtrlNoChng.h"
-#include "ControlExtns.h"
 #include "TBMStatic.h"
 
 #include "core/coredefs.h"

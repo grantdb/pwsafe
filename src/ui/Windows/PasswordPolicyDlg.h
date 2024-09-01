@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -54,7 +54,7 @@ protected:
   BOOL m_PWEasyVision, m_oldPWEasyVision;
   BOOL m_PWMakePronounceable, m_oldPWMakePronounceable;
   BOOL m_UseNamedPolicy, m_oldUseNamedPolicy;
-  int m_PWDefaultLength, m_oldPWDefaultLength;
+  int m_PWLength, m_oldPWLength;
   int m_PWDigitMinLength, m_oldPWDigitMinLength;
   int m_PWLowerMinLength, m_oldPWLowerMinLength;
   int m_PWSymbolMinLength, m_oldPWSymbolMinLength;
@@ -64,8 +64,6 @@ protected:
   PWPolicy m_default_pwp;
   CSecString m_password;
   CSecEditExtn m_ex_password;
-
-  CTBMStatic m_Help1;
   
   CString m_Symbols, m_oldSymbols;
   CString m_policyname, m_oldpolicyname;

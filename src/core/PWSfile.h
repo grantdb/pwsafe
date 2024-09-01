@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -13,17 +13,16 @@
 // Abstract the gory details of reading and writing an encrypted database
 //-----------------------------------------------------------------------------
 
-#include <stdio.h> // for FILE *
+#include <cstdio> // for FILE *
 #include <vector>
 
 #include "ItemData.h"
-#include "os/UUID.h"
 #include "UnknownField.h"
 #include "PWSFilters.h"
 #include "StringX.h"
 #include "PWSfileHeader.h"
 #include "Proxy.h"
-#include "sha256.h"
+#include "crypto/sha256.h"
 
 #include "coredefs.h"
 
@@ -93,6 +92,7 @@ public:
                    HDR_PSWDPOLICIES          = 0x10,     // added in format 0x030A
                    HDR_EMPTYGROUP            = 0x11,     // added in format 0x030B
                    HDR_YUBI_SK               = 0x12,     // Yubi-specific: format 0x030c
+                   HDR_LASTPWDUPDATETIME     = 0x13,     // added in format 0x030E
                    HDR_LAST,                             // Start of unknown fields!
                    HDR_END                   = 0xff};    // header field types, per formatV{2,3}.txt
 
@@ -107,6 +107,7 @@ public:
   // Following for 'legacy' use of pwsafe as file encryptor/decryptor
   static bool Encrypt(const stringT &fn, const StringX &passwd, stringT &errmess);
   static bool Decrypt(const stringT &fn, const StringX &passwd, stringT &errmess);
+  static size_t fileThresholdSize; // files this size and above encrypted differently - configurable for testing
 
   virtual ~PWSfile();
 
@@ -161,7 +162,7 @@ protected:
                           size_t length);
   virtual size_t ReadCBC(unsigned char &type, unsigned char* &data,
                          size_t &length);
-  
+
   static void HashRandom256(unsigned char *p256); // when we don't want to expose our RNG
 
   const StringX m_filename;
@@ -187,7 +188,7 @@ protected:
   Reporter *m_pReporter;
 
 private:
-  PWSfile& operator=(const PWSfile&); // Do not implement
+  PWSfile& operator=(const PWSfile&) = delete; // Do not implement
 };
 
 // A quick way to determine if two files are equal,

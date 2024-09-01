@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -9,6 +9,7 @@
 #include <afxadv.h>
 
 #include "PWSRecentFileList.h"
+#include "winutils.h"
 #include "core/PWSprefs.h"
 #include "os/file.h"
 #include "resource2.h" // for ID_FILE_MRU_*
@@ -32,22 +33,23 @@ void CPWSRecentFileList::ReadList()
   if (pref->IsUsingRegistry()) {
     CRecentFileList::ReadList();
   } else {
-    const int nMRUItems = pref->GetPref(PWSprefs::MaxMRUItems);
+    int nMRUItems = pref->GetPref(PWSprefs::MaxMRUItems);
     ASSERT(nMRUItems == m_nSize);
-    std::wstring *arrNames = new std::wstring[nMRUItems];
+    std::vector<stringT> arrNames;
+    arrNames.reserve(nMRUItems);
     pref->GetMRUList(arrNames);
+    if (nMRUItems > arrNames.size()) // can happen, e.g., if cfg file is missing
+      nMRUItems = static_cast<int>(arrNames.size());
     for (int i = 0; i < nMRUItems; i++) {
       std::wstring path = arrNames[i].c_str();
       pws_os::AddDrive(path);
       m_arrNames[i] = path.c_str();
     }
-    delete[] arrNames;
   }
 }
 
 void CPWSRecentFileList::WriteList()
 {
-  extern void RelativizePath(std::wstring &);
   PWSprefs *pref = PWSprefs::GetInstance();
   // writes to registry or config file
   if (pref->IsUsingRegistry()) {
@@ -55,18 +57,18 @@ void CPWSRecentFileList::WriteList()
   } else {
     const int num_MRU = GetSize();
     const int max_MRU = ID_FILE_MRU_ENTRYMAX - ID_FILE_MRU_ENTRY1;
-    std::wstring *sMRUFiles = new std::wstring[num_MRU];
+    std::vector<stringT> sMRUFiles;
+    sMRUFiles.reserve(num_MRU);
 
     for (int i = 0; i < num_MRU; i++) {
-      sMRUFiles[i] = (*this)[i];
+      sMRUFiles.push_back((*this)[i].GetString());
       if (!sMRUFiles[i].empty()) {
         Trim(sMRUFiles[i]);
-        RelativizePath(sMRUFiles[i]);
+        WinUtil::RelativizePath(sMRUFiles[i]);
       }
     }
 
-    pref->SetMRUList(sMRUFiles, num_MRU, max_MRU);
-    delete[] sMRUFiles;
+    pref->SetMRUList(sMRUFiles, max_MRU);
   }
 }
 

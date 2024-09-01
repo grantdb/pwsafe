@@ -1,5 +1,5 @@
       /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -91,7 +91,7 @@ BOOL CFilterDCADlg::OnInitDialog()
     cs_dca.LoadString(ui_dca);
     cs_text.Format(IDSC_CURRENTDEFAULTDCA, static_cast<LPCWSTR>(cs_dca));
     iItem = m_cbxDCA.AddString(cs_text);
-    m_cbxDCA.SetItemData(iItem, (DWORD)-1);  // Default!
+    m_cbxDCA.SetItemData(iItem, static_cast<DWORD_PTR>(-1));  // Default!
 
     cs_text.LoadString(IDSC_DCACOPYPASSWORD);
     iItem = m_cbxDCA.AddString(cs_text);
@@ -139,14 +139,32 @@ BOOL CFilterDCADlg::OnInitDialog()
     }
   }
 
+  // TODO: Add PRESENT and NOTPRESENT as possible selection
+  if(m_rule == PWSMatch::MR_PRESENT) {
+    m_rule = PWSMatch::MR_ISNOT;
+    m_DCA = -1;
+  }
+  else if(m_rule == PWSMatch::MR_NOTPRESENT) {
+    m_rule = PWSMatch::MR_IS;
+    m_DCA = -1;
+  }
+
   int isel = m_rule2selection[(int)m_rule];
   if (isel == -1)
     m_rule = PWSMatch::MR_INVALID;
 
   if (m_rule != PWSMatch::MR_INVALID) {
     m_cbxRule.SetCurSel(isel);
-  } else
+    // Set DCA according actual value
+    if(m_DCA >= -1 && m_DCA < (m_cbxDCA.GetCount() - 1))
+      m_cbxDCA.SetCurSel(m_DCA + 1);
+    else
+      m_cbxDCA.SetCurSel(-1);
+  }
+  else {
     m_cbxRule.SetCurSel(-1);
+    m_cbxDCA.SetCurSel(-1);
+  }
 
   UpdateData(FALSE);
 

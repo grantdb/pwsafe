@@ -72,6 +72,16 @@
 #define IDSC_FLDNMPWPOLICYNAME          3072
 #define IDSC_FLDNMKBSHORTCUT            3073
 #define IDSC_FLDNMATTREF                3074
+#define IDSC_FLDNMCCNUM                 3075
+#define IDSC_FLDNMCCEXP                 3076
+#define IDSC_FLDNMCCVV                  3077
+#define IDSC_FLDNMCCPIN                 3078
+#define IDSC_FLDNMTWOFACTORKEY          3079
+#define IDSC_FLDNMTWOFACTORKEY_UI       3080
+#define IDSC_FLDNMTOTPCONFIG            3081
+#define IDSC_FLDNMTOTPLENGTH            3082
+#define IDSC_FLDNMTOTPTIMESTEP          3083
+#define IDSC_FLDNMTOTPSTARTTIME         3084
 
 #define IDSC_CONFIG_NONE                3230
 #define IDSC_CONFIG_REGISTRY            3231
@@ -104,7 +114,7 @@
 #define IDSC_IMPORTLINESKIPPED          3259
 #define IDSC_IMPORTKNOWNHDRS            3260
 #define IDSC_IMPORTEMPTYLINESKIPPED     3261
-#define IDSC_PWHERRORLINE               3262
+#define IDSC_UNKNOWNHDRS                3262
 #define IDSC_PWHISTORYSKIPPED           3263
 #define IDSC_IMPORTCONFLICTS1           3264
 #define IDSC_IMPORTCONFLICTS2           3265
@@ -265,7 +275,6 @@
 #define IDSC_VALIDATE_EMPTYTITLE        3437
 #define IDSC_VALIDATE_EMPTYPSWD         3438
 #define IDSC_VALIDATE_DUPUUID           3439
-#define IDSC_RPTVALIDATE                3440
 #define IDSC_VALIDATE_DEPS              3441
 #define IDSC_VALIDATE_ERRORS            3442
 #define IDSC_VALIDATE_WARNINGS          3443
@@ -287,6 +296,14 @@
 #define IDSC_IMPORTEDEMPTYGROUPS        3459
 #define IDSC_FILTERSEXPORTEDTODB        3460
 #define IDSC_FOUNDENTRIESFILTER         3461
+#define IDSC_IMPORTINVALIDDELIMITER     3462
+
+#define IDSC_TOTP_ERROR_SUCCESS               3500
+#define IDSC_TOTP_ERROR_UNKNOWN               3501
+#define IDSC_TOTP_ERROR_INVALID_CONFIG        3502
+#define IDSC_TOTP_ERROR_KEY_NOT_FOUND         3503
+#define IDSC_TOTP_ERROR_KEY_INVALID_CHARS      3504
+#define IDSC_TOTP_ERROR_BASE32_DECODE_FAILURE 3505
 
 // Keep DCA together
 #define IDSC_CURRENTDEFAULTDCA          4000
@@ -330,3 +347,27 @@
 #define IDSC_PPRONOUNCEABLE             4112
 #define IDSC_PHEXADECIMAL               4113
 #define IDSC_DEFAULT_POLICY             4114
+#define IDSC_ATLEASTIGNORED             4115
+#define IDSC_INVALIDLOCKER              4116
+
+#define IDSC_COMPARESTATISTICS          5356
+#define IDSC_COMPARESTATS               5359
+#define IDSC_DRAGNUMBER                 5411
+#define IDSC_RPTCOMPARE                 5532
+#define IDSC_RPTFIND                    5533
+#define IDSC_RPTIMPORTTEXT              5534
+#define IDSC_RPTIMPORTXML               5535
+#define IDSC_RPTMERGE                   5536
+#define IDSC_RPTVALIDATE                5537
+#define IDSC_SEARCHRESULTS1             5538
+#define IDSC_SEARCHRESULTS2             5539
+#define IDSC_RPTSYNCH                   5749
+#define IDSC_RPTEXPORTTEXT              5805
+#define IDSC_RPTEXPORTXML               5806
+#define IDSC_RPTIMPORTKPV1TXT           5868
+#define IDSC_RPTIMPORTKPV1CSV           5869
+#define IDSC_DRAGPOLICY                 5907
+#define IDSC_RPTEXPORTDB                5965
+
+#define IDSC_RELATIVE_SMALL             5968
+#define IDSC_AND_SMALL                  5969

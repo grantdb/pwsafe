@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -13,6 +13,7 @@
 #include "ShowCompareDlg.h"
 #include "DboxMain.h"
 #include "InfoDisplay.h"
+#include "winutils.h"
 
 #include "core/ItemData.h"
 #include "core/Util.h"
@@ -28,10 +29,11 @@ static char THIS_FILE[] = __FILE__;
 CShowCompareDlg::CShowCompareDlg(CItemData *pci, CItemData *pci_other, CWnd *pParent,
                                  const bool bDifferentDB)
   : CPWDialog(CShowCompareDlg::IDD, pParent),
-  m_pci(pci), m_pci_other(pci_other), m_ShowIdenticalFields(BST_UNCHECKED),
-  m_pNotesDisplay(NULL), m_bDifferentDB(bDifferentDB)
+  m_ShowIdenticalFields(BST_UNCHECKED),
+  m_pci(pci), m_pci_other(pci_other), 
+  m_pNotesDisplay(nullptr), m_bDifferentDB(bDifferentDB)
 {
-  ASSERT(m_pci != NULL && m_pci_other != NULL && pParent != NULL);
+  ASSERT(m_pci != nullptr && m_pci_other != nullptr && pParent != nullptr);
 
   // Set up DCA to string values
   m_DCA.resize(PWSprefs::maxDCA + 1);
@@ -52,7 +54,7 @@ CShowCompareDlg::~CShowCompareDlg()
 {
   // Don't do the following, as CInfoDisplay::PostNcDestroy()
   // does 'delete this' (ugh).
-  // delete m_pNotesDisplay;
+  // delete m_pInfoDisplay;
 }
 
 void CShowCompareDlg::DoDataExchange(CDataExchange *pDX)
@@ -132,6 +134,7 @@ void CShowCompareDlg::PopulateResults(bool bShowAll)
   const int iFields[] = {
     CItemData::NAME,                        // Special processing
     CItemData::PASSWORD,                    // Special processing
+    CItemData::TWOFACTORKEY,
     CItemData::ENTRYTYPE,                   // Special processing
     CItemData::URL, CItemData::AUTOTYPE,
     CItemData::RUNCMD, CItemData::EMAIL,
@@ -139,18 +142,19 @@ void CShowCompareDlg::PopulateResults(bool bShowAll)
     CItemData::PROTECTED, CItemData::SYMBOLS,
     CItemData::POLICY, CItemData::POLICYNAME, CItemData::KBSHORTCUT, CItemData::ATTREF,
     CItemData::CTIME, CItemData::PMTIME, CItemData::ATIME, CItemData::XTIME,
-    CItemData::RMTIME, CItemData::XTIME_INT, CItemData::PWHIST, CItemData::NOTES
+    CItemData::RMTIME, CItemData::XTIME_INT, CItemData::PWHIST, CItemData::NOTES,
+    CItemData::CCNUM, CItemData::CCEXP, CItemData::CCVV, CItemData::CCPIN,
   };
 
   // Check we have considered all user fields
   // Too convoluted to change this process to a switch statement where the compiler can
   // produce an error if any of the CItemData::FieldType enum values is missing!
 
-  // Exclude 5: UUID/GROUP/TITLE/USERNAME & RESERVED (01,02,03,04,0B) but
+  // Exclude 6: UUID/GROUP/TITLE/USERNAME, RESERVED & 2FAK (01,02,03,04,0B,1B) but
   // Include 1: ENTRYTYPE
   // The developer will still need to ensure new fields are processed below
   // Put in compilation check as this may not be regression tested every time
-  static_assert((sizeof(iFields) / sizeof(iFields[0]) == (CItem::LAST_USER_FIELD - 5 + 1)),
+  static_assert((sizeof(iFields) / sizeof(iFields[0]) == (CItem::LAST_USER_FIELD - 11 + 2)),
     "Check user comparison items - there are some missing! They must be before LAST_USER_FIELD");
 
   StringX sxDefPolicyStr;
@@ -336,6 +340,18 @@ void CShowCompareDlg::PopulateResults(bool bShowAll)
     else
       sxValue2 = pci_other->GetFieldValue((CItemData::FieldType)i);
 
+    if (i == CItemData::TWOFACTORKEY) {
+      if (m_pci->IsAlias())
+        sxValue1 = pci_base->GetFieldValue(CItemData::TWOFACTORKEY);
+      else
+        sxValue1 = pci->GetFieldValue(CItemData::TWOFACTORKEY);
+
+      if (m_pci_other->IsAlias())
+        sxValue2 = pci_other_base->GetFieldValue(CItemData::TWOFACTORKEY);
+      else
+        sxValue2 = pci_other->GetFieldValue(CItemData::TWOFACTORKEY);
+    }
+
     if (i == CItemData::POLICY && m_bDifferentDB) {
       // If different databases and both policies are their respective defaults
       // If these are not the same, force the difference to be shown by making one different
@@ -452,18 +468,8 @@ void CShowCompareDlg::PopulateResults(bool bShowAll)
         }
       }
       if (i == CItemData::PWHIST) {
-        size_t num_err1, num_err2, MaxPWHistory1, MaxPWHistory2;
-        PWHistList pwhistlist1, pwhistlist2;
-        bool status1 = CreatePWHistoryList(sxValue1,
-                                      MaxPWHistory1,
-                                      num_err1,
-                                      pwhistlist1,
-                                      PWSUtil::TMC_EXPORT_IMPORT);
-        bool status2 = CreatePWHistoryList(sxValue2,
-                                      MaxPWHistory2,
-                                      num_err2,
-                                      pwhistlist2,
-                                      PWSUtil::TMC_EXPORT_IMPORT);
+        PWHistList pwhistlist1(sxValue1, PWSUtil::TMC_EXPORT_IMPORT);
+        PWHistList pwhistlist2(sxValue2, PWSUtil::TMC_EXPORT_IMPORT);
 
         // If any password history value is different - it must be red
         if (sxValue1 != sxValue2)
@@ -475,8 +481,8 @@ void CShowCompareDlg::PopulateResults(bool bShowAll)
         // Now add sub-fields
         iPos++;
 
-        sxValue1 = status1 ? sxYes : sxNo;
-        sxValue2 = status2 ? sxYes : sxNo;
+        sxValue1 = pwhistlist1.isSaving() ? sxYes : sxNo;
+        sxValue2 = pwhistlist2.isSaving() ? sxYes : sxNo;
         if (bShowAll || sxValue1 != sxValue2) {
           LoadAString(sFieldName, IDS_PWHACTIVE);
           iPos = m_ListCtrl.InsertItem(iPos, sFieldName.c_str());
@@ -489,8 +495,8 @@ void CShowCompareDlg::PopulateResults(bool bShowAll)
           iPos++;
         }
 
-        Format(sxValue1, L"%d", MaxPWHistory1);
-        Format(sxValue2, L"%d", MaxPWHistory2);
+        Format(sxValue1, L"%d", pwhistlist1.getMax());
+        Format(sxValue2, L"%d", pwhistlist2.getMax());
         if (bShowAll || sxValue1 != sxValue2) {
           LoadAString(sFieldName, IDS_PWHMAX);
           iPos = m_ListCtrl.InsertItem(iPos, sFieldName.c_str());
@@ -658,7 +664,7 @@ bool CShowCompareDlg::SetNotesWindow(const CPoint ptClient, const bool bVisible)
       return false;
   }
 
-  ptScreen.y += ::GetSystemMetrics(SM_CYCURSOR) / 2; // half-height of cursor
+  ptScreen.y += WinUtil::GetSystemMetrics(SM_CYCURSOR, m_hWnd) / 2; // half-height of cursor
 
   if (!sx_notes.empty()) {
     Replace(sx_notes, StringX(L"\r\n"), StringX(L"\n"));

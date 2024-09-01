@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -10,9 +10,10 @@
 
 #include "PWScore.h"
 #include "core.h"
-#include "TwoFish.h"
+#include "crypto/TwoFish.h"
 #include "PWSprefs.h"
 #include "PWHistory.h"
+#include "PWSLog.h"
 #include "PWSrand.h"
 #include "Util.h"
 #include "SysInfo.h"
@@ -38,8 +39,45 @@
 #include <algorithm>
 #include <set>
 #include <iterator>
+#include <map>
 
-extern const TCHAR *GROUPTITLEUSERINCHEVRONS;
+const TCHAR *PWScore::GROUPTITLEUSERINCHEVRONS = _T("\xab%ls\xbb \xab%ls\xbb \xab%ls\xbb");
+
+stringT PWScore::StatusText(int s)
+{
+  const std::map<int, stringT> StatusTexts = {
+   {SUCCESS, _T("Success")},
+   {FAILURE, _T("Failure")},
+   {USER_DECLINED_SAVE, _T("User declined save")},
+   {CANT_GET_LOCK, _T("Couldn't acquire lock")},
+   {DB_HAS_CHANGED, _T("Database has changed")},
+   {CANT_OPEN_FILE, _T("Can't open file")},
+   {USER_CANCEL, _T("User cancelled")},
+   {WRONG_PASSWORD, _T("Wrong password")},
+   {BAD_DIGEST, _T("Bad digest")},
+   {TRUNCATED_FILE, _T("Truncated file")},
+   {READ_FAIL, _T("File read error")},
+   {WRITE_FAIL, _T("File write error")},
+   {UNKNOWN_VERSION, _T("Unknown version")},
+   {NOT_SUCCESS, _T("Not successful")},
+   {ALREADY_OPEN, _T("Already open")},
+   {INVALID_FORMAT, _T("Invalid format")},
+   {USER_EXIT, _T("User exited")},
+   {XML_FAILED_VALIDATION, _T("XML failed validation")},
+   {XML_FAILED_IMPORT, _T("XML failed import")},
+   {LIMIT_REACHED, _T("Limit reached")},
+   {UNIMPLEMENTED, _T("Unimplemented (yet)")},
+   {NO_ENTRIES_EXPORTED, _T("No entries were exported")},
+   {DB_HAS_DUPLICATES, _T("Database has duplicates")},
+   {OK_WITH_ERRORS, _T("OK with errors")},
+   {OK_WITH_VALIDATION_ERRORS, _T("OK with validation errors")},
+   {OPEN_NODB, _T("Open without database")},
+   {MAX_SIZE_EXCEEDED, _T("Maximum size exceeded")},
+  };
+
+  auto iter = StatusTexts.find(s);
+  return iter != StatusTexts.end() ? iter->second : _T("Unknown Status");
+}
 
 using pws_os::CUUID;
 
@@ -138,7 +176,6 @@ PWScore::PWScore() :
                      m_bNotifyDB(false),
                      m_bIsOpen(false),
                      m_nRecordsWithUnknownFields(0),
-                     m_pUIIF(nullptr),
                      m_DBCurrentState(CLEAN),
                      m_pFileSig(nullptr),
                      m_iAppHotKey(0)
@@ -170,6 +207,7 @@ PWScore::~PWScore()
 
   m_UHFL.clear();
   m_vModifiedNodes.clear();
+  m_vModifiedEmptyGroups.clear();
 
   delete m_pFileSig;
 }
@@ -271,6 +309,11 @@ void PWScore::DoAddEntry(const CItemData &item, const CItemAtt *att)
       m_attlist.insert(std::make_pair(att->GetUUID(), *att));
     m_attlist[att->GetUUID()].IncRefcount();
   }
+  else if(item.HasAttRef()) { // In case of duplicate or drag and drop
+    const pws_os::CUUID uuid = item.GetAttUUID();
+    if (m_attlist.find(uuid) != m_attlist.end()) // Just to be sure the entry exists
+      m_attlist[uuid].IncRefcount();
+  }
 
   int32 iKBShortcut;
   item.GetKBShortcut(iKBShortcut);
@@ -279,7 +322,7 @@ void PWScore::DoAddEntry(const CItemData &item, const CItemAtt *att)
     VERIFY(AddKBShortcut(iKBShortcut, item.GetUUID()));
 }
 
-bool PWScore::ConfirmDelete(const CItemData *pci)
+bool PWScore::ConfirmDelete(const CItemData *pci, StringX sxGroup)
 {
   ASSERT(pci != nullptr);
   if (pci->IsBase() && m_pAsker != nullptr) {
@@ -296,6 +339,25 @@ bool PWScore::ConfirmDelete(const CItemData *pci)
 
     size_t num_dependents = dependentslist.size();
     ASSERT(num_dependents > 0); // otherwise pci shouldn't be a base!
+      // Check if depending entry are located beneath group to be deleted, those must be not taken into account
+    if (!sxGroup.empty()) {
+      UUIDVectorIter iter;
+      size_t length = sxGroup.length(); // plus 1 to include trailling 0 byte
+      for (iter = dependentslist.begin(); iter != dependentslist.end(); ++iter) {
+        ItemListIter objiter = Find(*iter);
+        if (objiter != m_pwlist.end()) {
+          StringX iterGroup = objiter->second.GetGroup();
+          if((iterGroup.length() > length) && (iterGroup[length] == '.'))
+            iterGroup = iterGroup.substr(0, length);
+          if (!CompareCase(iterGroup, sxGroup)) {
+            // Same group as object to be deleted, so we must not take care on that item
+            dependentslist.erase(iter);
+            --iter; // at the end of the loop ++iter will reallocate to the same position
+            --num_dependents;
+          }
+        }
+      }
+    }
     if (num_dependents > 0) {
       StringX sxDependents;
       SortDependents(dependentslist, sxDependents);
@@ -417,21 +479,31 @@ void PWScore::DoReplaceEntry(const CItemData &old_ci, const CItemData &new_ci)
   }
 }
 
-#if 0
+void PWScore::DoAddAttachment(const CItemAtt &att)
+{
+  if (HasAtt(att.GetUUID())) {
+    GetAtt(att.GetUUID()).IncRefcount();
+  }
+  else {
+    PutAtt(att);
+  }
+}
 
-void PWScore::DoDeleteAtt(const CItemAtt &att)
+void PWScore::DoDeleteAttachment(const CItemAtt &att)
 {
   /**
    * Note that we do NOT erase reference uuid in owner record(s)
    */
 
-  // Make sure att's there
-  auto pos = m_attlist.find(att.GetUUID());
-  ASSERT(pos != m_attlist.end());
-
-  m_attlist.erase(pos);
+  RemoveAtt(att.GetUUID());
 }
-#endif
+
+void PWScore::DoReplaceAttachment(const CItemAtt &old_cia, const CItemAtt &new_cia)
+{
+  // Assumes that old_uuid == new_uuid
+  ASSERT(old_cia.GetUUID() == new_cia.GetUUID());
+  m_attlist[old_cia.GetUUID()] = new_cia;
+}
 
 void PWScore::ClearDBData()
 {
@@ -473,6 +545,7 @@ void PWScore::ClearDBData()
 
   // Clear changed nodes
   m_vModifiedNodes.clear();
+  m_vModifiedEmptyGroups.clear();
 
   // Clear expired password entries
   m_ExpireCandidates.clear();
@@ -508,12 +581,14 @@ void PWScore::NewFile(const StringX &passkey)
 {
   ClearDBData();
   SetPassKey(passkey);
+  time(&m_hdr.m_whenpwdlastchanged); // update master password changed timestamp
   m_ReadFileVersion = PWSfile::VCURRENT;
 }
 
 // functor object type for for_each:
 // Writes out all records to a PasswordSafe database of any version
 struct RecordWriter {
+  RecordWriter(const RecordWriter&) = default;
   RecordWriter(PWSfile *pout, PWScore *pcore, PWSfile::VERSION version)
     : m_pout(pout), m_pcore(pcore), m_version(version) {}
 
@@ -536,7 +611,7 @@ struct RecordWriter {
   }
 
 private:
-  RecordWriter& operator=(const RecordWriter&); // Do not implement
+  RecordWriter& operator=(const RecordWriter&) = delete; // Do not implement
   PWSfile *m_pout;
   PWScore *m_pcore;
   const PWSfile::VERSION m_version;
@@ -678,9 +753,9 @@ int PWScore::WriteFile(const StringX &filename, PWSfile::VERSION version,
 // Writes out subset of records to a PasswordSafe database at the current version
 // Used by Export entry or Export Group
 struct ExportRecordWriter {
-  ExportRecordWriter(PWSfile *pout, PWScore *pcore, std::vector<pws_os::CUUID> &vuuidAddedBases,
+  ExportRecordWriter(PWSfile *pout, PWScore * /*pcore*/, std::vector<pws_os::CUUID> &vuuidAddedBases,
     CReport *pRpt) :
-    m_pout(pout), m_pcore(pcore), m_pRpt(pRpt), m_vuuidAddedBases(vuuidAddedBases) {}
+    m_pout(pout), /*m_pcore(pcore),*/ m_pRpt(pRpt), m_vuuidAddedBases(vuuidAddedBases) {}
 
   void operator()(CItemData &item)
   {
@@ -713,7 +788,7 @@ struct ExportRecordWriter {
 
     if (m_pRpt != nullptr && bAddToReport) {
       StringX sx_exported;
-      Format(sx_exported, GROUPTITLEUSERINCHEVRONS,
+      Format(sx_exported, PWScore::GROUPTITLEUSERINCHEVRONS,
         item.GetGroup().c_str(), item.GetTitle().c_str(), item.GetUser().c_str());
       m_pRpt->WriteLine(sx_exported.c_str(), true);
     }
@@ -721,7 +796,7 @@ struct ExportRecordWriter {
 
 private:
   PWSfile *m_pout;
-  PWScore *m_pcore;
+  /*PWScore *m_pcore; // variable not used */
   CReport *m_pRpt;
   std::vector<pws_os::CUUID> m_vuuidAddedBases;
 };
@@ -850,6 +925,7 @@ void PWScore::SetInitialValues()
 
   // Clear changed nodes
   m_vModifiedNodes.clear();
+  m_vModifiedEmptyGroups.clear();
 }
 
 int PWScore::Execute(Command *pcmd)
@@ -1277,9 +1353,7 @@ int PWScore::ReadFile(const StringX &a_filename, const StringX &a_passkey,
   std::sort(m_InitialEmptyGroups.begin(), m_InitialEmptyGroups.end());
 
   if (pRpt != nullptr) {
-    std::wstring cs_title;
-    LoadAString(cs_title, IDSC_RPTVALIDATE);
-    pRpt->StartReport(cs_title.c_str(), m_currfile.c_str());
+    pRpt->StartReport(IDSC_RPTVALIDATE, m_currfile.c_str());
   }
 
   do {
@@ -1295,11 +1369,11 @@ int PWScore::ReadFile(const StringX &a_filename, const StringX &a_passkey,
           stringT cs_msg, cs_caption;
           LoadAString(cs_caption, IDSC_READ_ERROR);
           Format(cs_msg, IDSC_ENCODING_PROBLEM, ci_temp.GetTitle().c_str());
-          cs_msg = cs_caption + _S(": ") + cs_caption;
+          cs_msg = cs_caption + _T(": ") + cs_msg;
           (*m_pReporter)(cs_msg);
         }
       }
-      // deliberate fall-through
+      //[[fallthrough]];
       case PWSfile::SUCCESS:
         ProcessReadEntry(ci_temp, vGTU_INVALID_UUID, vGTU_DUPLICATE_UUID, st_vr);
         break;
@@ -1361,6 +1435,22 @@ int PWScore::ReadFile(const StringX &a_filename, const StringX &a_passkey,
   return closeStatus;
 }
 
+static const StringX MakeDateTimeString()
+{
+  time_t now;
+  time(&now);
+   StringX cs_datetime = PWSUtil::ConvertToDateTimeString(now,
+    PWSUtil::TMC_EXPORT_IMPORT);
+  const StringX retval = cs_datetime.substr(0, 4) +  // YYYY
+    cs_datetime.substr(5, 2) +  // MM
+    cs_datetime.substr(8, 2) +  // DD
+    StringX(_T("_")) +
+    cs_datetime.substr(11, 2) +  // HH
+    cs_datetime.substr(14, 2) +  // MM
+    cs_datetime.substr(17, 2);   // SS
+  return retval;
+}
+
 static void ManageIncBackupFiles(const stringT &cs_filenamebase,
                                  size_t maxnumincbackups, stringT &cs_newname)
 {
@@ -1369,10 +1459,8 @@ static void ManageIncBackupFiles(const stringT &cs_filenamebase,
    * and return the base name of the next backup file
    * (sans the suffix, which will be added by caller)
    *
-   * The current solution breaks when maxnumincbackups >= 999.
-   * Best solution is to delete by modification time,
-   * but that requires a bit too much for the cost/benefit.
-   * So for now we're "good enough" - limiting maxnumincbackups to <= 998
+   * When the _999.ibak file exists, we switch to date-time filename format in response to BR1547.
+   * TODO: maintain maxnumincbackups for date-time files as well.
    */
 
   if (maxnumincbackups >= 999) {
@@ -1390,9 +1478,8 @@ static void ManageIncBackupFiles(const stringT &cs_filenamebase,
 
   pws_os::FindFiles(cs_filenamemask, files);
 
-  for (vector<stringT>::iterator iter = files.begin();
-       iter != files.end(); iter++) {
-    stringT ibak_number_str = iter->substr(iter->length() - 8, 3);
+  for (auto iter : files) {
+    stringT ibak_number_str = iter.substr(iter.length() - 8, 3);
     if (ibak_number_str.find_first_not_of(_T("0123456789")) != stringT::npos)
       continue;
     istringstreamT is(ibak_number_str);
@@ -1407,28 +1494,25 @@ static void ManageIncBackupFiles(const stringT &cs_filenamebase,
   }
 
   sort(file_nums.begin(), file_nums.end());
+  size_t num_found = file_nums.size();
 
   // nnn is the number of the file in the returned value: cs_filebasename_nnn
   size_t nnn = file_nums.back();
   nnn++;
   if (nnn > 999) {
-    // as long as there's a _999 file, we set n starting from 001
-    nnn = 1;
-    size_t x = file_nums.size() - maxnumincbackups;
-    while (file_nums[x++] == nnn && x < file_nums.size())
-      nnn++;
-    // Now we need to determine who to delete.
-    size_t next = 999 - (maxnumincbackups - nnn);
-    unsigned int m = 1;
-    for (x = 0; x < file_nums.size(); x++)
-      if (file_nums[x] < next)
-        file_nums[x] = (unsigned long)(next <= 999 ? next++ : m++);
+    /**
+     * If we have a _999 file, there's no elegant solution, especially if the user chose to save 999 backups [BR1547]
+     * So in that case we switch to date/time format, both in returned value and in the preference.
+     */
+
+    Format(cs_newname, L"%ls_%ls", cs_filenamebase.c_str(), MakeDateTimeString().c_str());
+    PWSprefs::GetInstance()->SetPref(PWSprefs::BackupSuffix, PWSprefs::BKSFX_DateTime);
+    return;
   }
 
   Format(cs_newname, L"%ls_%03d", cs_filenamebase.c_str(), nnn);
 
   int i = 0;
-  size_t num_found = file_nums.size();
   stringT excess_file;
   while (num_found >= maxnumincbackups) {
     nnn = file_nums[i];
@@ -1487,19 +1571,9 @@ bool PWScore::BackupCurFile(unsigned int maxNumIncBackups, int backupSuffix,
   switch (backupSuffix) { // case values from order in listbox.
     case 1: // YYYYMMDD_HHMMSS suffix
       {
-        time_t now;
-        time(&now);
-        StringX cs_datetime = PWSUtil::ConvertToDateTimeString(now,
-                                                               PWSUtil::TMC_EXPORT_IMPORT);
         cs_temp += _T("_");
-        StringX nf = cs_temp.c_str() +
-                     cs_datetime.substr( 0, 4) +  // YYYY
-                     cs_datetime.substr( 5, 2) +  // MM
-                     cs_datetime.substr( 8, 2) +  // DD
-                     StringX(_T("_")) +
-                     cs_datetime.substr(11, 2) +  // HH
-                     cs_datetime.substr(14, 2) +  // MM
-                     cs_datetime.substr(17, 2);   // SS
+        StringX nf = cs_temp.c_str() + MakeDateTimeString();
+                     
         bu_fname = nf.c_str();
         break;
       }
@@ -1522,6 +1596,7 @@ bool PWScore::BackupCurFile(unsigned int maxNumIncBackups, int backupSuffix,
 void PWScore::ChangePasskey(const StringX &newPasskey)
 {
   SetPassKey(newPasskey);
+  time(&m_hdr.m_whenpwdlastchanged); // update master password changed timestamp
   WriteCurFile(); // Save immediately!
 }
 
@@ -1533,6 +1608,7 @@ struct FieldsMatch {
             m_title == item.GetTitle() &&
             m_user  == item.GetUser());
   }
+  FieldsMatch(const FieldsMatch&) = default;
   FieldsMatch(const StringX &a_group, const StringX &a_title,
               const StringX &a_user) :
   m_group(a_group), m_title(a_title), m_user(a_user) {}
@@ -1559,6 +1635,7 @@ struct TitleMatch {
     return (m_title == item.GetTitle());
   }
 
+  TitleMatch(const TitleMatch&) = default;
   TitleMatch(const StringX &a_title) :
     m_title(a_title) {}
 
@@ -1603,6 +1680,7 @@ struct GroupTitle_TitleUserMatch {
             (m_gt == item.GetTitle() && m_tu == item.GetUser()));
   }
 
+  GroupTitle_TitleUserMatch(const GroupTitle_TitleUserMatch&) = default;
   GroupTitle_TitleUserMatch(const StringX &a_grouptitle,
                             const StringX &a_titleuser) :
                             m_gt(a_grouptitle),  m_tu(a_titleuser) {}
@@ -1877,7 +1955,7 @@ private:
 
 void PWScore::MakePolicyUnique(std::map<StringX, StringX> &mapRenamedPolicies,
                                StringX &sxPolicyName, const StringX &sxDateTime,
-                               const UINT IDS_MESSAGE)
+                               const UINT ids_message)
 {
   // 'mapRenamedPolicies' contains those policies already renamed. It will be
   // updated with any new name generated.
@@ -1894,7 +1972,7 @@ void PWScore::MakePolicyUnique(std::map<StringX, StringX> &mapRenamedPolicies,
   }
 
   StringX sxNewPolicyName;
-  Format(sxNewPolicyName, IDS_MESSAGE, sxPolicyName.c_str(), sxDateTime.c_str());
+  Format(sxNewPolicyName, ids_message, sxPolicyName.c_str(), sxDateTime.c_str());
 
   // Verify new policy name not already in this database
   if (m_MapPSWDPLC.find(sxNewPolicyName) != m_MapPSWDPLC.end())
@@ -1914,6 +1992,7 @@ void PWScore::MakePolicyUnique(std::map<StringX, StringX> &mapRenamedPolicies,
 // functor object type for for_each:
 // Updates vector with entries using named password policy
 struct AddEntry {
+  AddEntry(const AddEntry&) = default;
   AddEntry(const StringX sxPolicyName, std::vector<st_GroupTitleUser> &ventries)
     : m_sxPolicyName(sxPolicyName), m_pventries(&ventries) {}
 
@@ -1930,7 +2009,7 @@ struct AddEntry {
   }
 
 private:
-  AddEntry& operator=(const AddEntry&); // Do not implement
+  AddEntry& operator=(const AddEntry&) = delete; // Do not implement
   StringX m_sxPolicyName;
   std::vector<st_GroupTitleUser> *m_pventries;
 };
@@ -2242,6 +2321,7 @@ bool PWScore::Validate(const size_t iMAXCHARS, CReport *pRpt, st_ValidateResults
   }
 
   // Check for orphan attachments (6.2)
+  std::vector<pws_os::CUUID> orphans;
   for (auto att_iter = m_attlist.begin(); att_iter != m_attlist.end(); att_iter++) {
     if (sAtts.find(att_iter->first) == sAtts.end()) {
       st_AttTitle_Filename stATFN;
@@ -2249,9 +2329,16 @@ bool PWScore::Validate(const size_t iMAXCHARS, CReport *pRpt, st_ValidateResults
       stATFN.filename = att_iter->second.GetFileName();
       vOrphanAtt.push_back(stATFN);
       st_vr.num_orphan_att++;
-      // NOT removing attachment for now. Add support for exporting orphans later.
+      // we will remove the orphan since the user may not see the report, so the alternative
+      // is to leave sensitive data floating around on the user's disk.
+      orphans.push_back(att_iter->first);
     }
   }
+
+  // actually remove orphans, since we can't do it while traversing m_attlist
+  for (auto &orphan : orphans)
+    m_attlist.erase(orphan);
+
 
 #if 0 // XXX We've separated alias/shortcut processing from Validate - reconsider this!
   // See if we have any entries with passwords that imply they are an alias
@@ -2494,7 +2581,7 @@ bool PWScore::ValidateKBShortcut(int32 &iKBShortcut)
 }
 
 StringX PWScore::GetUniqueTitle(const StringX &group, const StringX &title,
-                                const StringX &user, const int IDS_MESSAGE)
+                                const StringX &user, const int ids_messsage)
 {
   StringX new_title(title);
   if (Find(group, title, user) != m_pwlist.end()) {
@@ -2504,7 +2591,7 @@ StringX PWScore::GetUniqueTitle(const StringX &group, const StringX &title,
     StringX s_copy;
     do {
       i++;
-      Format(s_copy, IDS_MESSAGE, i);
+      Format(s_copy, ids_messsage, i);
       new_title = title + s_copy;
       listpos = Find(group, new_title, user);
     } while (listpos != m_pwlist.end());
@@ -2578,7 +2665,7 @@ bool PWScore::InitialiseUUID(UUIDSet &setUUID)
 
 bool PWScore::MakeEntryUnique(GTUSet &setGTU,
                               const StringX &sxgroup, StringX &sxtitle,
-                              const StringX &sxuser, const int IDS_MESSAGE)
+                              const StringX &sxuser, const int ids_message)
 {
   StringX sxnewtitle(_T(""));
   GTUSetPair pr_gtu;
@@ -2593,7 +2680,7 @@ bool PWScore::MakeEntryUnique(GTUSet &setGTU,
     StringX s_copy;
     do {
       i++;
-      Format(s_copy, IDS_MESSAGE, i);
+      Format(s_copy, ids_message, i);
       sxnewtitle = sxtitle + s_copy;
       pr_gtu =  setGTU.insert(st_GroupTitleUser(sxgroup, sxnewtitle, sxuser));
     } while (!pr_gtu.second);
@@ -3090,7 +3177,7 @@ bool PWScore::ParseBaseEntryPWD(const StringX &Password, BaseEntryParms &pl)
       (Password[Password.length() - 1] == _T(']')) &&
       num_colonsP1 <= 3) {
     StringX tmp;
-    ItemListIter iter;
+    ItemListIter iter = m_pwlist.end();
     switch (num_colonsP1) {
       case 1:
         // [X] - OK if unique entry [g:X:u], [g:X:], [:X:u] or [:X:] exists for any value of g or u
@@ -3170,24 +3257,23 @@ CItemData *PWScore::GetBaseEntry(const CItemData *pAliasOrSC)
   return nullptr;
 }
 
-bool PWScore::SetUIInterFace(UIInterFace *pUIIF, size_t numsupported,
-                             std::bitset<UIInterFace::NUM_SUPPORTED> bsSupportedFunctions)
+const CItemData* PWScore::GetCredentialEntry(const CItemData* pAny) const
 {
-  bool brc(true);
-  m_pUIIF = pUIIF;
-  ASSERT(numsupported == UIInterFace::NUM_SUPPORTED);
+  return const_cast<PWScore*>(this)->GetCredentialEntry(pAny);
+}
 
-  m_bsSupportedFunctions.reset();
-  if (numsupported == UIInterFace::NUM_SUPPORTED) {
-    m_bsSupportedFunctions = bsSupportedFunctions;
-  } else {
-    size_t minsupported = std::min(numsupported, size_t(UIInterFace::NUM_SUPPORTED));
-    for (size_t i = 0; i < minsupported; i++) {
-      m_bsSupportedFunctions.set(i, bsSupportedFunctions.test(i));
-    }
-    brc = false;
-  }
-  return brc;
+CItemData* PWScore::GetCredentialEntry(const CItemData* pAny)
+{
+  ASSERT(pAny != nullptr);
+  if (!pAny)
+    return nullptr;
+  const CUUID uuidCredential = pAny->IsDependent() ? pAny->GetBaseUUID() : pAny->GetUUID();
+  auto iter = Find(uuidCredential);
+  if (iter != GetEntryEndIter())
+    return &iter->second;
+  pws_os::Trace(_T("PWScore::GetCredentialEntry - Find(base_uuid) failed!\n"));
+  ASSERT(FALSE);
+  return nullptr;
 }
 
 /*
@@ -3199,9 +3285,11 @@ void PWScore::NotifyDBModified()
   // This allows the core to provide feedback to the UI that the Database
   // has changed particularly to invalidate any current Find results and
   // to populate message during Vista and later shutdowns
-  if (m_bNotifyDB && m_pUIIF != nullptr &&
-      m_bsSupportedFunctions.test(UIInterFace::DATABASEMODIFIED))
-    m_pUIIF->DatabaseModified(HasDBChanged());
+  if (m_bNotifyDB) {
+    for(auto& observer : m_Observers) {
+      observer->DatabaseModified(HasDBChanged());
+    }
+  }
 }
 
 void PWScore::NotifyGUINeedsUpdating(UpdateGUICommand::GUI_Action ga,
@@ -3210,9 +3298,9 @@ void PWScore::NotifyGUINeedsUpdating(UpdateGUICommand::GUI_Action ga,
 {
   // This allows the core to provide feedback to the UI that the GUI needs
   // updating due to a field having its value changed
-  if (m_pUIIF != nullptr &&
-      m_bsSupportedFunctions.test(UIInterFace::UPDATEGUI))
-    m_pUIIF->UpdateGUI(ga, entry_uuid, ft);
+  for(auto& observer : m_Observers) {
+    observer->UpdateGUI(ga, entry_uuid, ft);
+  }
 }
 
 void PWScore::NotifyGUINeedsUpdating(UpdateGUICommand::GUI_Action ga,
@@ -3220,18 +3308,18 @@ void PWScore::NotifyGUINeedsUpdating(UpdateGUICommand::GUI_Action ga,
 {
   // This allows the core to provide feedback to the UI that the GUI needs
   // updating due to a field having its value changed
-  if (m_pUIIF != nullptr &&
-      m_bsSupportedFunctions.test(UIInterFace::UPDATEGUIGROUPS))
-    m_pUIIF->UpdateGUI(ga, vGroups);
+  for(auto& observer : m_Observers) {
+    observer->UpdateGUI(ga, vGroups);
+  }
 }
 
 void PWScore::GUIRefreshEntry(const CItemData &ci, bool bAllowFail)
 {
   // This allows the core to provide feedback to the UI that a particular
   // entry has been modified
-  if (m_pUIIF != nullptr &&
-      m_bsSupportedFunctions.test(UIInterFace::GUIREFRESHENTRY))
-    m_pUIIF->GUIRefreshEntry(ci, bAllowFail);
+  for(auto& observer : m_Observers) {
+    observer->GUIRefreshEntry(ci, bAllowFail);
+  }
 }
 
 void PWScore::UpdateWizard(const stringT &s)
@@ -3242,9 +3330,9 @@ void PWScore::UpdateWizard(const stringT &s)
   // string gives the full 'group, title, user' of the entry.
   // It is expected that the UI will implement a pointer or other reference to
   // this control so that it can update the text displayed there (see MFC implementation).
-  if (m_pUIIF != nullptr &&
-      m_bsSupportedFunctions.test(UIInterFace::UPDATEWIZARD))
-    m_pUIIF->UpdateWizard(s);
+  for(auto& observer : m_Observers) {
+    observer->UpdateWizard(s);
+  }
 }
 
 /*
@@ -3269,8 +3357,12 @@ void PWScore::UnlockFile(const stringT &filename)
 
 void PWScore::SafeUnlockCurFile()
 {
-  const std::wstring filename(GetCurFile().c_str());
+  const stringT filename(GetCurFile().c_str());
+  SafeUnlockFile(filename);
+}
 
+void PWScore::SafeUnlockFile(const stringT &filename)
+{
   // The only way we're the locker is if it's locked & we're !readonly
   if (!filename.empty() && !IsReadOnly() && IsLockedFile(filename))
     UnlockFile(filename);
@@ -3298,13 +3390,27 @@ bool PWScore::IsNodeModified(StringX &path) const
   }
 }
 
-void PWScore::AddChangedNodes(StringX path)
+void PWScore::AddChangedNodes(const StringX &path)
 {
   StringX nextpath(path);
   while (!nextpath.empty()) {
     if (std::find(m_vModifiedNodes.begin(), m_vModifiedNodes.end(), nextpath) ==
         m_vModifiedNodes.end())
       m_vModifiedNodes.push_back(nextpath);
+    size_t i = nextpath.find_last_of(_T('.'));
+    if (i == nextpath.npos)
+      i = 0;
+    nextpath = nextpath.substr(0, i);
+  }
+}
+
+void PWScore::AddChangedEmptyGroups(const StringX &path)
+{
+  StringX nextpath(path);
+  while (!nextpath.empty()) {
+    if (std::find(m_vModifiedEmptyGroups.begin(), m_vModifiedEmptyGroups.end(), nextpath) ==
+        m_vModifiedEmptyGroups.end())
+        m_vModifiedEmptyGroups.push_back(nextpath);
     size_t i = nextpath.find_last_of(_T('.'));
     if (i == nextpath.npos)
       i = 0;
@@ -3603,6 +3709,14 @@ void PWScore::GetDBProperties(st_DBProperties &st_dbp)
     st_dbp.whenlastsaved = PWSUtil::ConvertToDateTimeString(twls, PWSUtil::TMC_EXPORT_IMPORT);
   }
 
+  time_t tpwdlc = m_hdr.m_whenpwdlastchanged;
+  if (tpwdlc == 0) {
+    LoadAString(st_dbp.whenpwdlastchanged, IDSC_UNKNOWN);
+  } else {
+    st_dbp.whenpwdlastchanged = PWSUtil::ConvertToDateTimeString(tpwdlc, PWSUtil::TMC_EXPORT_IMPORT);
+  }
+  
+
   if (m_hdr.m_lastsavedby.empty() && m_hdr.m_lastsavedon.empty()) {
     LoadAString(st_dbp.wholastsaved, IDSC_UNKNOWN);
   } else {
@@ -3689,7 +3803,7 @@ void PWScore::UpdateExpiryEntry(const CUUID &uuid, const CItemData::FieldType ft
   ExpiredList::iterator iter;
 
   iter = std::find_if(m_ExpireCandidates.begin(), m_ExpireCandidates.end(),
-                      std::bind2nd(std::equal_to<pws_os::CUUID>(), uuid));
+                      [uuid](pws_os::CUUID v){return v == uuid;});
   if (iter == m_ExpireCandidates.end())
     return;
 
@@ -3943,6 +4057,7 @@ bool PWScore::RenameEmptyGroupPaths(const StringX &sxOldPath, const StringX &sxN
       if (m_vEmptyGroups[ig].length() > len && m_vEmptyGroups[ig].substr(0, len) == sxOldPath2) {
         m_vEmptyGroups[ig].replace(0, len - 1, sxNewPath);
         bChanged = true;
+        AddChangedEmptyGroups(m_vEmptyGroups[ig]);
       }
     }
 

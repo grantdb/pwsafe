@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -11,12 +11,16 @@
 
 #include "stdafx.h"
 #include "PWToolBar.h"
+#include "PWSprefs.h"
+
+#include "winutils.h" // for ResizeBitmap
 #include "resource.h"
 #include "resource2.h"
 
 #include <map>
 #include <algorithm>
 #include <iterator>
+
 
 // CPWToolBarX
 
@@ -25,8 +29,8 @@
   1. Design new bitmaps (1 x 'Classic', 1 x 'New' designs & 1 x 'New Disabled' 
      design).  All have a background colour of RGB(192, 192, 192).  Note: Create
      the 'New Disabled' from the 'New' by using a program to convert the bitmap
-     to 8-bit greyscale.
-  2. Add them to PaswordSafe.rc as BITMAPs
+     to 8-bit greyscale. 'Classic' handles disabled by itself.
+  2. Add them to PasswordSafe.rc as BITMAPs
   3. Assign new resource Bitmap IDs to these i.e. "IDB_<new name>_CLASSIC",
      "IDB_<new name>_NEW" and "IDB_<new name>_NEW_D"
   4. Assign a new resource ID for the corresponding button e.g. 
@@ -35,7 +39,7 @@
      the command is on the menu only (not on the toolbar). The record contains
      a text name for the command, the command ID and bitmap resource IDs as defined above.
   6. Add the new resource ID ("ID_TOOLBUTTON_<new name>" or "ID_MENUITEM_<name>")
-     in PasswordSafe.rc2 "Toolbar Tooltips" section as these are used during ToolBar
+     in res/PasswordSafe2.rc2 "Toolbar Tooltips" section as these are used during ToolBar
      customization to describe the button in the standard Customization dialog.
     
   NOTE: In message handlers, the toolbar control ALWAYS asks for information based 
@@ -60,6 +64,8 @@ const CPWToolBarX::GuiRecord CPWToolBarX::MainGuiInfo[] =
     {L"~", ID_SEPARATOR, 0, 0, 0},
     {L"copypassword", ID_MENUITEM_COPYPASSWORD, IDB_COPYPASSWORD_CLASSIC, IDB_COPYPASSWORD_NEW, IDB_COPYPASSWORD_NEW_D},
     {L"copyuser", ID_MENUITEM_COPYUSERNAME, IDB_COPYUSER_CLASSIC, IDB_COPYUSER_NEW, IDB_COPYUSER_NEW_D},
+    {L"copyauthcode", ID_MENUITEM_COPY2FAAUTHCODE, IDB_COPY2FAAUTHCODE_CLASSIC, IDB_COPY2FAAUTHCODE_NEW, IDB_COPY2FAAUTHCODE_NEW_D},
+    {L"viewauthcode", ID_MENUITEM_VIEW2FAAUTHCODE, IDB_VIEW2FAAUTHCODE_CLASSIC, IDB_VIEW2FAAUTHCODE_NEW, IDB_VIEW2FAAUTHCODE_NEW_D},
     {L"copynotes", ID_MENUITEM_COPYNOTESFLD, IDB_COPYNOTES_CLASSIC, IDB_COPYNOTES_NEW, IDB_COPYNOTES_NEW_D},
     {L"clearclipboard", ID_MENUITEM_CLEARCLIPBOARD, IDB_CLEARCLIPBOARD_CLASSIC, IDB_CLEARCLIPBOARD_NEW, IDB_CLEARCLIPBOARD_NEW_D},
     {L"~", ID_SEPARATOR, 0, 0, 0},
@@ -95,6 +101,7 @@ const CPWToolBarX::GuiRecord CPWToolBarX::MainGuiInfo[] =
     {L"redo", ID_MENUITEM_REDO, IDB_REDO_CLASSIC, IDB_REDO_NEW, IDB_REDO_NEW_D},
     {L"passwordsubset", ID_MENUITEM_PASSWORDSUBSET, IDB_PASSWORDCHARS_CLASSIC, IDB_PASSWORDCHARS_NEW, IDB_PASSWORDCHARS_NEW_D},
     {L"browse+autotype", ID_MENUITEM_BROWSEURLPLUS, IDB_BROWSEURLPLUS_CLASSIC, IDB_BROWSEURLPLUS_NEW, IDB_BROWSEURLPLUS_NEW_D},
+    {L"browsealt", ID_MENUITEM_BROWSEURLALT, IDB_BROWSEALT_CLASSIC, IDB_BROWSEALT_NEW, IDB_BROWSEALT_NEW_D},
     {L"runcommand", ID_MENUITEM_RUNCOMMAND, IDB_RUNCMD_CLASSIC, IDB_RUNCMD_NEW, IDB_RUNCMD_NEW_D},
     {L"sendemail", ID_MENUITEM_SENDEMAIL, IDB_SENDEMAIL_CLASSIC, IDB_SENDEMAIL_NEW, IDB_SENDEMAIL_NEW_D},
     {L"listtree", ID_TOOLBUTTON_LISTTREE, IDB_LISTTREE_CLASSIC, IDB_LISTTREE_NEW, IDB_LISTTREE_NEW_D},
@@ -127,7 +134,7 @@ const CPWToolBarX::GuiRecord CPWToolBarX::OtherGuiInfo[] =
     {L"", ID_MENUITEM_REPORT_MERGE, IDB_MERGE_CLASSIC, IDB_MERGE_NEW, IDB_MERGE_NEW_D},
     {L"", ID_MENUITEM_REPORT_SYNCHRONIZE, IDB_SYNCHRONIZE_CLASSIC, IDB_SYNCHRONIZE_NEW, IDB_SYNCHRONIZE_NEW_D},
     {L"", ID_MENUITEM_REPORT_VALIDATE, IDB_VALIDATE_CLASSIC, IDB_VALIDATE_NEW, IDB_VALIDATE_NEW_D},
-    {L"", ID_MENUITEM_CHANGECOMBO, IDB_CHANGECOMBO_CLASSIC, IDB_CHANGECOMBO_NEW, IDB_CHANGECOMBO_NEW_D},
+    {L"", ID_MENUITEM_CHANGEMSTPWD, IDB_CHANGECOMBO_CLASSIC, IDB_CHANGECOMBO_NEW, IDB_CHANGECOMBO_NEW_D},
     {L"", ID_MENUITEM_BACKUPSAFE, IDB_BACKUPSAFE_CLASSIC, IDB_BACKUPSAFE_NEW, IDB_BACKUPSAFE_NEW_D},
     {L"", ID_MENUITEM_RESTORESAFE, IDB_RESTORE_CLASSIC, IDB_RESTORE_NEW, IDB_RESTORE_NEW_D},
     {L"", ID_MENUITEM_EXIT, IDB_EXIT_CLASSIC, IDB_EXIT_NEW, IDB_EXIT_NEW_D},
@@ -161,7 +168,7 @@ const CPWToolBarX::GuiRecord CPWToolBarX::OtherGuiInfo[] =
 IMPLEMENT_DYNAMIC(CPWToolBarX, CToolBar)
 
 CPWToolBarX::CPWToolBarX()
-:  m_bitmode(1), m_iBrowseURL_BM_offset(-1), m_iSendEmail_BM_offset(-1)
+:  m_bitmode(1)
 {
   m_pOriginalTBinfo = new TBBUTTON[_countof(MainGuiInfo)];
   m_iNum_Bitmaps = _countof(MainGuiInfo) + _countof(OtherGuiInfo);
@@ -272,23 +279,28 @@ void CPWToolBarX::Init(const int NumBits, bool bRefresh)
     m_bitmode = 2;
   }
 
-  m_ImageLists[0].Create(16, 16, iClassicFlags, m_iNum_Bitmaps, 2);
-  m_ImageLists[1].Create(16, 16, iNewFlags1, m_iNum_Bitmaps, 2);
-  m_ImageLists[2].Create(16, 16, iNewFlags2, m_iNum_Bitmaps, 2);
-  m_DisabledImageLists[0].Create(16, 16, iNewFlags1, m_iNum_Bitmaps, 2);
-  m_DisabledImageLists[1].Create(16, 16, iNewFlags2, m_iNum_Bitmaps, 2);
+  // Scale for DPI stuff
+  int origX = 16, origY = 16; // original toolbar button sizes
+
+  // from https://docs.microsoft.com/en-us/windows/win32/hidpi/high-dpi-desktop-application-development-on-windows
+  int dpi = WinUtil::GetDPI(); // can't use ForWindow(m_Hwnd) as we don't have a valid one when this is called.
+  int dpiScaledX = MulDiv(origX, dpi, WinUtil::defDPI);
+  int dpiScaledY = MulDiv(origY, dpi, WinUtil::defDPI);
+
+  int btnX = 24, btnY = 22; // original toolbar button dimensions
+  int dpiScaledBtnX = MulDiv(btnX, dpi, WinUtil::defDPI);
+  int dpiScaledBtnY = MulDiv(btnY, dpi, WinUtil::defDPI);
+
+  GetToolBarCtrl().SetButtonSize(CSize(dpiScaledBtnX, dpiScaledBtnY));
+
+  m_ImageLists[0].Create(dpiScaledX, dpiScaledY, iClassicFlags, m_iNum_Bitmaps, 2);
+  m_ImageLists[1].Create(dpiScaledX, dpiScaledY, iNewFlags1, m_iNum_Bitmaps, 2);
+  m_ImageLists[2].Create(dpiScaledX, dpiScaledY, iNewFlags2, m_iNum_Bitmaps, 2);
+  m_DisabledImageLists[0].Create(dpiScaledX, dpiScaledY, iNewFlags1, m_iNum_Bitmaps, 2);
+  m_DisabledImageLists[1].Create(dpiScaledX, dpiScaledY, iNewFlags2, m_iNum_Bitmaps, 2);
 
   int iNum_Main = _countof(MainGuiInfo);
   int iNum_Other = _countof(OtherGuiInfo);
-
-  for (i = 0; i < iNum_Main; i++) {
-    if (MainGuiInfo[i].classicBM == IDB_BROWSEURL_CLASSIC) {
-      m_iBrowseURL_BM_offset = i;
-      break;
-    }
-  }
-
-  m_iSendEmail_BM_offset = iNum_Main;  // First of the "Others"
 
   SetupImageList(MainGuiInfo, &GuiRecord::GetClassicBM, NULL, iNum_Main, 0);
   SetupImageList(OtherGuiInfo, &GuiRecord::GetClassicBM, NULL, iNum_Other, 0);
@@ -305,9 +317,11 @@ void CPWToolBarX::Init(const int NumBits, bool bRefresh)
   j = 0;
   m_csDefaultButtonString.Empty();
   m_iNumDefaultButtons = _countof(MainGuiInfo);
+  bool bShowMenuSeparator = PWSprefs::GetInstance()->GetPref(PWSprefs::ShowMenuSeparator);
   for (i = 0; i < _countof(MainGuiInfo); i++) {
     bool bIsSeparator = MainGuiInfo[i].ID == ID_SEPARATOR;
     BYTE fsStyle = bIsSeparator ? TBSTYLE_SEP : TBSTYLE_BUTTON;
+    if(bIsSeparator && !bShowMenuSeparator) continue;
     fsStyle &= ~BTNS_SHOWTEXT;
     if (!bIsSeparator) {
       fsStyle |= TBSTYLE_AUTOSIZE;
@@ -556,49 +570,17 @@ void CPWToolBarX::SetupImageList(const GuiRecord *guiInfo,
     if (bmID == 0)
       continue; // skip over separator
 
-    VERIFY(bmNormal.Attach(::LoadImage(::AfxFindResourceHandle(MAKEINTRESOURCE(bmID), RT_BITMAP),
-                                       MAKEINTRESOURCE(bmID), IMAGE_BITMAP, 0, 0,
-                                       (LR_DEFAULTSIZE | LR_CREATEDIBSECTION))));
-    SetBitmapBackground(bmNormal, crCOLOR_3DFACE);
+    WinUtil::LoadScaledBitmap(bmNormal, bmID);
+
     m_ImageLists[nImageList].Add(&bmNormal, crCOLOR_3DFACE);
     bmNormal.DeleteObject();
 
     if (nImageList != 0) {
       bmID = CALL_MEMBER_FN(guiInfo[i], GetDisBM)();
-      bmDisabled.Attach(::LoadImage(::AfxFindResourceHandle(MAKEINTRESOURCE(bmID), RT_BITMAP),
-                                    MAKEINTRESOURCE(bmID), IMAGE_BITMAP, 0, 0,
-                                    (LR_DEFAULTSIZE | LR_CREATEDIBSECTION)));
-      SetBitmapBackground(bmDisabled, crCOLOR_3DFACE);
+      WinUtil::LoadScaledBitmap(bmDisabled, bmID);
+
       m_DisabledImageLists[nImageList - 1].Add(&bmDisabled, crCOLOR_3DFACE);
       bmDisabled.DeleteObject();
-    }
-  }
-}
-
-void CPWToolBarX::SetBitmapBackground(CBitmap &bm, const COLORREF newbkgrndColour)
-{
-  // Get how many pixels in the bitmap
-  BITMAP bmInfo;
-  bm.GetBitmap(&bmInfo);
-
-  const UINT numPixels(bmInfo.bmHeight * bmInfo.bmWidth);
-
-  // get a pointer to the pixels
-  DIBSECTION ds;
-  VERIFY(bm.GetObject(sizeof(DIBSECTION), &ds) == sizeof(DIBSECTION));
-
-  RGBTRIPLE *pixels = reinterpret_cast<RGBTRIPLE*>(ds.dsBm.bmBits);
-  ASSERT(pixels != NULL);
-
-  const RGBTRIPLE newbkgrndColourRGB = {GetBValue(newbkgrndColour),
-    GetGValue(newbkgrndColour),
-    GetRValue(newbkgrndColour)};
-
-  for (UINT i = 0; i < numPixels; ++i) {
-    if (pixels[i].rgbtBlue  == 192 &&
-        pixels[i].rgbtGreen == 192 &&
-        pixels[i].rgbtRed   == 192) {
-      pixels[i] = newbkgrndColourRGB;
     }
   }
 }

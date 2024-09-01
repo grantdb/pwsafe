@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
@@ -9,24 +9,24 @@
 /** \file ExternalKeyboardButton.cpp
 * 
 */
+
 // For compilers that support precompilation, includes "wx/wx.h".
 #include "wx/wxprec.h"
-#include "../../core/PwsPlatform.h"
-#ifdef __BORLANDC__
-#pragma hdrstop
-#endif
 
 #ifndef WX_PRECOMP
 #include "wx/wx.h"
 #endif
 
-#include "./ExternalKeyboardButton.h"
-
-#include "./graphics/vkbd.xpm"
-
 #ifdef __WXMSW__
 #include <wx/msw/msvcrt.h>
 #endif
+
+#include "os/file.h"
+
+#include "ExternalKeyboardButton.h"
+#include "wxUtilities.h"
+
+#include "graphics/vkbd.xpm"
 
 ExternalKeyboardButton::ExternalKeyboardButton( wxWindow* parent, 
                                                 wxWindowID id, 
@@ -44,9 +44,10 @@ ExternalKeyboardButton::ExternalKeyboardButton( wxWindow* parent,
                                                                                        name)
 {
   //Create an event table entry in this class for the button's id
-  Connect(GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ExternalKeyboardButton::HandleCommandEvent));
+  Bind(wxEVT_COMMAND_BUTTON_CLICKED, &ExternalKeyboardButton::HandleCommandEvent, this, GetId());
   //hook into the button so that we actually get events
   //PushEventHandler(this);
+  SetToolTip(_("Virtual Keyboard"));
 }
 
 ExternalKeyboardButton::~ExternalKeyboardButton()
@@ -66,7 +67,13 @@ void ExternalKeyboardButton::HandleCommandEvent(wxCommandEvent& evt)
   int xwinid = GDK_WINDOW_XWINDOW(window);
 #endif
   wxString command = wxString(wxT("xvkbd"));
-  
+
+  if (!pws_os::ProgramExists(tostdstring(command))) {
+    wxMessageBox(_("Could not launch xvkbd.  Please make sure it's installed and in your PATH"), 
+                  _("Could not launch external onscreen keyboard"), wxOK | wxICON_ERROR);
+    return;
+  }
+
   switch(wxExecute(command, wxEXEC_ASYNC, nullptr)) //nullptr => we don't want a wxProcess as callback
   {
     case 0:
@@ -83,4 +90,20 @@ void ExternalKeyboardButton::HandleCommandEvent(wxCommandEvent& evt)
       break;
   }
 #endif
+
+#ifdef __WXOSX__
+  // If we can't open the virtual keyboard, at least open the settings app so the user can do it for us!
+  wxString command = wxString("open x-apple.systempreferences:com.apple.preference.universalaccess?Keyboard");
+
+  if ( wxExecute(command, wxEXEC_ASYNC, nullptr) > 0) {
+    wxMessageBox(_("Please enable the Accessibility Keyboard in System Settings; the on-screen keyboard should then appear."), "", wxOK | wxICON_INFORMATION);
+  } else {
+    wxMessageBox(_("Could not launch the MacOS Settings App"),
+                  _("Could not launch external onscreen keyboard"), wxOK | wxICON_ERROR);
+  }
+#endif
+
+  if (m_TargetSafeCombinationCtrl != nullptr) {
+    m_TargetSafeCombinationCtrl->SetFocus();
+  }
 }

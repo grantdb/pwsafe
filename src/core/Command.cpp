@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -56,14 +56,15 @@ Command::~Command()
 
 void Command::SaveDBInformation()
 {
-  // Currently only modified nodes are dealt with - could add any other DB information
-  // at a later date if required
+  // Currently handles only modified nodes and empty groups - could add any other DB
+  // information at a later date if required
   // right predicate's only relevant for nested MultiCommands
   if (!InMultiCommand() || (dynamic_cast<MultiCommands *>(this) != nullptr)) {
     // Only do this if executed outside a MultiCommand or it is the Multicommand itself
     // We could change an entry and so here is where we save DB information
-    // just in case.  Currently only modified nodes.
+    // just in case.  Currently only modified nodes and empty groups.
     m_vSavedModifiedNodes = m_pcomInt->GetModifiedNodes();
+    m_vSavedModifiedEmptyGroups = m_pcomInt->GetModifiedEmptyGroups();
   }
 }
 
@@ -76,15 +77,19 @@ void Command::RestoreDBInformation()
   if (!InMultiCommand() || (dynamic_cast<MultiCommands *>(this) != nullptr)) {
     // Get current modified nodes vector
     std::vector<StringX> vModifiedNodes = m_pcomInt->GetModifiedNodes();
+    std::vector<StringX> vModifiedEmptyGroups = m_pcomInt->GetModifiedEmptyGroups();
 
     // Only do this if executed outside a MultiCommand
     // We could change an entry and so here is where we save DB information
     // just in case.  Currently only modified nodes.
     m_pcomInt->SetModifiedNodes(m_vSavedModifiedNodes);
+    m_pcomInt->SetModifiedEmptyGroups(m_vSavedModifiedEmptyGroups);
 
     // We now have to refresh those modified groups now no longer modified
     std::sort(vModifiedNodes.begin(), vModifiedNodes.end());
+    std::sort(vModifiedEmptyGroups.begin(), vModifiedEmptyGroups.end());
     std::sort(m_vSavedModifiedNodes.begin(), m_vSavedModifiedNodes.end());
+    std::sort(m_vSavedModifiedEmptyGroups.begin(), m_vSavedModifiedEmptyGroups.end());
 
     // Remove those modified nodes that were modified before we executed this command
     std::vector<StringX> vChangedNodes;
@@ -173,6 +178,8 @@ void MultiCommands::Undo()
       break;
     }
   }
+    
+  m_pcomInt->NotifyGUINeedsUpdating(UpdateGUICommand::GUI_REFRESH_TREE, pws_os::CUUID::NullUUID());
 }
 
 void MultiCommands::Add(Command *pcmd)
@@ -291,7 +298,7 @@ void DBPrefsCommand::Undo()
 // ------------------------------------------------
 
 DBPolicyNamesCommand::DBPolicyNamesCommand(CommandInterface *pcomInt,
-                                           PSWDPolicyMap &MapPSWDPLC,
+                                           const PSWDPolicyMap &MapPSWDPLC,
                                            Function function)
   : Command(pcomInt), m_NewMapPSWDPLC(MapPSWDPLC), m_function(function),
   m_bSingleAdd(false)
@@ -300,8 +307,8 @@ DBPolicyNamesCommand::DBPolicyNamesCommand(CommandInterface *pcomInt,
 }
 
 DBPolicyNamesCommand::DBPolicyNamesCommand(CommandInterface *pcomInt,
-                                           StringX &sxPolicyName,
-                                           PWPolicy &st_pp)
+                                           const StringX &sxPolicyName,
+                                           const PWPolicy &st_pp)
   : Command(pcomInt), m_sxPolicyName(sxPolicyName), m_st_ppp(st_pp),
   m_bSingleAdd(true)
 {
@@ -399,18 +406,23 @@ DBEmptyGroupsCommand::DBEmptyGroupsCommand(CommandInterface *pcomInt,
 int DBEmptyGroupsCommand::Execute()
 {
   if (!m_pcomInt->IsReadOnly()) {
+    SaveDBInformation();
+      
     bool bChanged(false);
     if (m_bSingleGroup) {
       // Single Empty Group functions
       switch (m_function) {
         case EG_ADD:
           bChanged = m_pcomInt->AddEmptyGroup(m_sxEmptyGroup);
+          m_pcomInt->AddChangedEmptyGroups(m_sxEmptyGroup);
           break;
         case EG_DELETE:
           bChanged = m_pcomInt->RemoveEmptyGroup(m_sxEmptyGroup);
+          // m_pcomInt->AddChangedEmptyGroups(m_sxEmptyGroup);
           break;
         case EG_RENAME:
           bChanged = m_pcomInt->RenameEmptyGroup(m_sxOldGroup, m_sxNewGroup);
+          m_pcomInt->AddChangedEmptyGroups(m_sxNewGroup);
           break;
         default:
           // Ignore multi-group functions
@@ -426,6 +438,7 @@ int DBEmptyGroupsCommand::Execute()
           for (size_t n = 0; n < m_vNewEmptyGroups.size(); n++) {
             if (m_pcomInt->AddEmptyGroup(m_vNewEmptyGroups[n]))
               count++;
+            m_pcomInt->AddChangedEmptyGroups(m_vNewEmptyGroups[n]);
           }
           bChanged = count > 0;
           break;
@@ -494,6 +507,7 @@ void DBEmptyGroupsCommand::Undo()
           break;
       }
     }
+    RestoreDBInformation();
     if (m_bNotifyGUI) {
       m_pcomInt->NotifyGUINeedsUpdating(UpdateGUICommand::GUI_REFRESH_TREE,
         CUUID::NullUUID());
@@ -647,8 +661,16 @@ int DeleteEntryCommand::Execute()
     m_pcomInt->NotifyGUINeedsUpdating(UpdateGUICommand::GUI_DELETE_ENTRY,
                                       m_ci.GetUUID());
   }
-  // XXX if entry has an attachment, find and store it in m_att for undo.
-  // XXX as well as removing it / decrementing its refcount
+  // If entry has an attachment, find and store it in m_att for undo
+  // as well as removing it / decrementing its refcount
+  if (m_ci.HasAttRef() && m_pcomInt->HasAtt(m_ci.GetAttUUID())) {
+    auto att = m_pcomInt->GetAtt(m_ci.GetAttUUID());
+
+    // The attachment is going to be deleted if its reference count is one.
+    if (att.GetRefcount() == 1) {
+      m_att = att;
+    }
+  }
   m_pcomInt->DoDeleteEntry(m_ci);
   m_pcomInt->AddChangedNodes(m_ci.GetGroup());
   m_pcomInt->RemoveExpiryEntry(m_ci);
@@ -667,10 +689,20 @@ void DeleteEntryCommand::Undo()
       // Check if dep entry hasn't already been added - can happen if
       // base and dep in group that's being undeleted.
       if (m_pcomInt->Find(m_ci.GetUUID()) == m_pcomInt->GetEntryEndIter()) {
-        pmulticmds->Add(AddEntryCommand::Create(m_pcomInt, m_ci, m_ci.GetBaseUUID(), &m_att, this));
+        pmulticmds->Add(
+          AddEntryCommand::Create(
+            m_pcomInt, m_ci, m_ci.GetBaseUUID(),
+            (m_att.HasUUID() && m_att.HasContent()) ? &m_att : nullptr, this
+          )
+        );
       }
     } else {
-      pmulticmds->Add(AddEntryCommand::Create(m_pcomInt, m_ci, m_ci.GetUUID(), &m_att, this));
+      pmulticmds->Add(
+        AddEntryCommand::Create(
+          m_pcomInt, m_ci, m_ci.GetUUID(),
+          (m_att.HasUUID() && m_att.HasContent()) ? &m_att : nullptr, this
+        )
+      );
 
       if (m_ci.IsShortcutBase()) { // restore dependents
         for (std::vector<CItemData>::iterator iter = m_vdependents.begin();
@@ -703,6 +735,55 @@ void DeleteEntryCommand::Undo()
     // Since not needed for Undo/Redo again - delete it
     delete pmulticmds;
 
+    RestoreDBInformation();
+  } // R/W & change to undo
+}
+
+// ------------------------------------------------
+// DeleteAttachmentCommand
+// ------------------------------------------------
+
+DeleteAttachmentCommand::DeleteAttachmentCommand(CommandInterface *pcomInt,
+  const CItemData &ci, const Command *pcmd)
+  : Command(pcomInt), m_ci(ci)
+{
+  m_CommandChangeType = DB;
+
+  if (pcmd != nullptr) {
+    m_bNotifyGUI = pcmd->GetGUINotify();
+  }
+}
+
+DeleteAttachmentCommand::~DeleteAttachmentCommand()
+{
+}
+
+int DeleteAttachmentCommand::Execute()
+{
+  // Get out quick if R-O
+  if (m_pcomInt->IsReadOnly())
+    return 0;
+
+  SaveDBInformation();
+
+  if (m_bNotifyGUI) {
+    m_pcomInt->NotifyGUINeedsUpdating(UpdateGUICommand::GUI_DELETE_ENTRY,
+      m_ci.GetUUID());
+  }
+
+  if (m_ci.IsNormal() && m_ci.HasAttRef() && m_pcomInt->HasAtt(m_ci.GetAttUUID())) {
+    m_att = m_pcomInt->GetAtt(m_ci.GetAttUUID());
+    m_pcomInt->DoDeleteAttachment(m_att);
+  }
+
+  m_CommandDBChange = DB;
+  return 0;
+}
+
+void DeleteAttachmentCommand::Undo()
+{
+  if (!m_pcomInt->IsReadOnly() && m_CommandDBChange == DB) {
+    m_pcomInt->DoAddAttachment(m_att);
     RestoreDBInformation();
   } // R/W & change to undo
 }
@@ -766,6 +847,43 @@ void EditEntryCommand::Undo()
     }
 
     RestoreDBInformation();
+  }
+}
+
+// ------------------------------------------------
+// EditAttachmentCommand
+// ------------------------------------------------
+
+EditAttachmentCommand::EditAttachmentCommand(CommandInterface *pcomInt,
+  const CItemAtt &old_att,
+  const CItemAtt &new_att)
+  : Command(pcomInt), m_old_att(old_att), m_new_att(new_att)
+{
+  // We're only supposed to operate on entries
+  // with same uuids, and possibly different fields
+  ASSERT(m_old_att.GetUUID() == m_new_att.GetUUID());
+
+  m_CommandChangeType = DB;
+}
+
+EditAttachmentCommand::~EditAttachmentCommand()
+{
+}
+
+int EditAttachmentCommand::Execute()
+{
+  if (!m_pcomInt->IsReadOnly()) {
+    m_pcomInt->DoReplaceAttachment(m_old_att, m_new_att);
+
+    m_CommandDBChange = DB;
+  }
+  return 0;
+}
+
+void EditAttachmentCommand::Undo()
+{
+  if (!m_pcomInt->IsReadOnly() && m_CommandDBChange == DB) {
+    m_pcomInt->DoReplaceAttachment(m_new_att, m_old_att);
   }
 }
 
@@ -849,6 +967,8 @@ void UpdateEntryCommand::Undo()
                                         m_old_ci.GetUUID(), m_ftype);
   
     RestoreDBInformation();
+    if (m_bNotifyGUI) // To update the filter view
+      m_pcomInt->NotifyGUINeedsUpdating(UpdateGUICommand::GUI_REFRESH_ENTRY, m_old_ci.GetUUID());
   }
 }
 
@@ -1152,6 +1272,9 @@ int RenameGroupCommand::Execute()
       m_pmulticmds->Execute();
 
     m_CommandDBChange = DB;
+      
+    if (m_bNotifyGUI) // To update the filter view
+      m_pcomInt->NotifyGUINeedsUpdating(UpdateGUICommand::GUI_REFRESH_TREE, pws_os::CUUID::NullUUID());
   }
   return rc;
 }
@@ -1163,6 +1286,9 @@ void RenameGroupCommand::Undo()
     m_pcomInt->UndoRenameGroup(m_pmulticmds);
   
     RestoreDBInformation();
+      
+    if (m_bNotifyGUI) // To update the filter view
+      m_pcomInt->NotifyGUINeedsUpdating(UpdateGUICommand::GUI_REFRESH_TREE, pws_os::CUUID::NullUUID());
   }
 }
 
@@ -1233,5 +1359,181 @@ void DBFiltersCommand::Undo()
       m_pcomInt->NotifyGUINeedsUpdating(UpdateGUICommand::GUI_UPDATE_STATUSBAR,
                                         CUUID::NullUUID());
     }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// class MultiPolicyCollector
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+MultiPolicyCollector::MultiPolicyCollector(PSWDPolicyMap& policies) : m_Policies(policies)
+{
+  ;
+}
+
+MultiPolicyCollector::~MultiPolicyCollector() = default;
+
+void MultiPolicyCollector::AddPolicy(const StringX& name, const PWPolicy& policy)
+{
+  m_Policies[name] = policy;
+}
+
+void MultiPolicyCollector::RemovePolicy(const StringX& name)
+{
+  m_Policies.erase(name);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// class SinglePolicyCollector
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+SinglePolicyCollector::SinglePolicyCollector(PWPolicy& defaultPolicy) : m_DefaultPolicy(defaultPolicy)
+{
+  ;
+}
+
+SinglePolicyCollector::~SinglePolicyCollector() = default;
+
+void SinglePolicyCollector::AddPolicy(const StringX& name, const PWPolicy& policy)
+{
+  m_Name = name;
+  m_DefaultPolicy = policy;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// class PolicyCommandAdd : public Command, public MultiPolicyCollector
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+PolicyCommandAdd::PolicyCommandAdd(
+  CommandInterface& commandInterface, PSWDPolicyMap& policies, 
+  const stringT& name, const PWPolicy& policy
+)
+: Command(&commandInterface), MultiPolicyCollector(policies)
+, m_Name(std2stringx(name)), m_Policy(policy)
+{
+  ;
+}
+
+PolicyCommandAdd::~PolicyCommandAdd() = default;
+
+int PolicyCommandAdd::Execute()
+{
+  if (!m_pcomInt->IsReadOnly()) {
+    AddPolicy(m_Name, m_Policy);
+  }
+  
+  return 0;
+}
+
+void PolicyCommandAdd::Undo()
+{
+  if (!m_pcomInt->IsReadOnly()) {
+    RemovePolicy(m_Name);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// class PolicyCommandRemove : public Command, public MultiPolicyCollector
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+PolicyCommandRemove::PolicyCommandRemove(
+  CommandInterface& commandInterface, PSWDPolicyMap& policies, 
+  const stringT& name, const PWPolicy& policy
+)
+: Command(&commandInterface), MultiPolicyCollector(policies)
+, m_Name(std2stringx(name)), m_Policy(policy)
+{
+  ;
+}
+
+PolicyCommandRemove::~PolicyCommandRemove() = default;
+
+int PolicyCommandRemove::Execute()
+{
+  if (!m_pcomInt->IsReadOnly()) {
+    RemovePolicy(m_Name);
+  }
+  
+  return 0;
+}
+
+void PolicyCommandRemove::Undo()
+{
+  if (!m_pcomInt->IsReadOnly()) {
+    AddPolicy(m_Name, m_Policy);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// class PolicyCommandModify : public Command, public Collector
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename Collector, typename T>
+PolicyCommandModify<Collector, T>::PolicyCommandModify(
+  CommandInterface& commandInterface, T& data, 
+  const stringT& name, const PWPolicy& original, const PWPolicy& modified
+)
+: Command(&commandInterface), Collector(data)
+, m_Name(std2stringx(name)), m_OriginalPolicy(original), m_ModifiedPolicy(modified)
+{
+  ;
+}
+
+template <typename Collector, typename T>
+PolicyCommandModify<Collector, T>::~PolicyCommandModify() = default;
+
+template <typename Collector, typename T>
+int PolicyCommandModify<Collector, T>::Execute()
+{
+  if (!m_pcomInt->IsReadOnly()) {
+    Collector::AddPolicy(m_Name, m_ModifiedPolicy);
+  }
+  
+  return 0;
+}
+
+template <typename Collector, typename T>
+void PolicyCommandModify<Collector, T>::Undo()
+{
+  if (!m_pcomInt->IsReadOnly()) {
+    Collector::AddPolicy(m_Name, m_OriginalPolicy);
+  }
+}
+
+template class PolicyCommandModify<SinglePolicyCollector, PWPolicy     >;
+template class PolicyCommandModify<MultiPolicyCollector,  PSWDPolicyMap>;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// class PolicyCommandRename : public Command, public MultiPolicyCollector
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+PolicyCommandRename::PolicyCommandRename(
+  CommandInterface& commandInterface, PSWDPolicyMap& policies, 
+  const stringT& oldName, const stringT& newName, const PWPolicy& original, const PWPolicy& modified
+)
+: Command(&commandInterface), MultiPolicyCollector(policies)
+, m_OldName(std2stringx(oldName)), m_NewName(std2stringx(newName)), m_OriginalPolicy(original), m_ModifiedPolicy(modified)
+{
+  ;
+}
+
+PolicyCommandRename::~PolicyCommandRename() = default;
+
+int PolicyCommandRename::Execute()
+{
+  if (!m_pcomInt->IsReadOnly()) {
+    RemovePolicy(m_OldName);
+    AddPolicy(m_NewName, m_ModifiedPolicy);
+  }
+  
+  return 0;
+}
+
+void PolicyCommandRename::Undo()
+{
+  if (!m_pcomInt->IsReadOnly()) {
+    RemovePolicy(m_NewName);
+    AddPolicy(m_OldName, m_OriginalPolicy);
   }
 }

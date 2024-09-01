@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -19,8 +19,6 @@
 #include "SampleTextDlg.h"
 
 #include "dlgs.h"
-
-extern const wchar_t *EYE_CATCHER;
 
 // CFontsDialog
 
@@ -196,18 +194,6 @@ INT_PTR CFontsDialog::DoModal()
 
 LRESULT CFontsDialog::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-  CWnd *pParent = GetParent();
-  while (pParent != NULL) {
-    DboxMain *pDbx = dynamic_cast<DboxMain *>(pParent);
-    if (pDbx != NULL && pDbx->m_eye_catcher != NULL &&
-        wcscmp(pDbx->m_eye_catcher, EYE_CATCHER) == 0) {
-      pDbx->ResetIdleLockCounter(message);
-      break;
-    } else
-      pParent = pParent->GetParent();
-  }
-  if (pParent == NULL)
-    pws_os::Trace(L"CFontsDialog::WindowProc - couldn't find DboxMain ancestor\n");
-
+  app.GetMainDlg()->ResetIdleLockCounter(message);
   return CFontDialog::WindowProc(message, wParam, lParam);
 }

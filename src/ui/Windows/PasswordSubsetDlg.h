@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -13,8 +13,6 @@
 #include "PWDialog.h"
 #include "ControlExtns.h"
 #include "TBMStatic.h"
-
-#include "core/PwsPlatform.h"
 
 // Simple class to ensure only numbers, space, comma and semi-colons
 // are entered
@@ -62,6 +60,17 @@ protected:
 
 private:
   LRESULT OnDisplayStatus(WPARAM /* wParam */, LPARAM /* lParam */);
+
+  struct SubsetInfo
+  {
+    bool incomplete_string = false; // set to true, when not all tokens were processed
+    StringX passwd_sub; // password's subset (with optional delimiters) 
+    int err_id = 0; // set to error code when position is wrong
+    int err_start_pos = 0;
+    int err_end_pos = 0;
+  };
+
+  SubsetInfo GetSubsetInfo(const CString& subset, bool with_delims) const;
 
   CNumEdit m_neSubsetPositions;
   CStaticExtn m_stcWarningMsg;

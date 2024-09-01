@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -19,8 +19,8 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 CSCWListCtrl::CSCWListCtrl()
-  : m_nHoverNDTimerID(0), m_nShowNDTimerID(0), m_bMouseInWindow(false),
-  m_pParent(NULL)
+  : m_pParent(nullptr), 
+  m_nHoverNDTimerID(0), m_nShowNDTimerID(0), m_bMouseInWindow(false)
 {
 }
 

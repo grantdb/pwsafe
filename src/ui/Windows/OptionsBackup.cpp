@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -14,7 +14,6 @@
 #include "Options_PropertySheet.h"
 #include "GeneralMsgBox.h"
 
-#include "core/PwsPlatform.h"
 #include "core/PWSprefs.h" // for DoubleClickAction enums
 #include "core/util.h" // for datetime string
 
@@ -310,17 +309,6 @@ BOOL COptionsBackup::VerifyFields()
     // This may work but we should enforce a proper expanded form.
     CString csBackupPath = m_csExpandedPath.GetLength() > 0 ?
       m_csExpandedPath : m_UserBackupOtherLocation;
-
-    std::wstring cdrive, cdir, dontCare;
-    pws_os::splitpath(std::wstring(csBackupPath),
-                        cdrive, cdir, dontCare, dontCare);
-
-    if (cdrive.length() == 0) {
-      gmb.AfxMessageBox(IDS_OPTBACKUPNODRIVE);
-      ((CEdit *)GetDlgItem(IDC_USERBACKUPOTHRLOCATIONVALUE))->SetFocus();
-      return FALSE;
-    }
-
     if (PathIsDirectory(csBackupPath) == FALSE) {
       gmb.AfxMessageBox(IDS_OPTBACKUPNOLOC);
       ((CEdit *)GetDlgItem(IDC_USERBACKUPOTHRLOCATIONVALUE))->SetFocus();

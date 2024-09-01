@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -96,11 +96,13 @@ const UINT CSystemTray::m_nTaskbarCreatedMsg = ::RegisterWindowMessage(L"Taskbar
 CSystemTray::CSystemTray(CWnd *pParent, UINT uCallbackMessage, LPCWSTR szToolTip,
                          HICON icon, CRUEList &RUEList,
                          UINT uID, UINT menuID)
-  : m_RUEList(RUEList), m_pParent((DboxMain *)pParent), m_bEnabled(FALSE),
-  m_bHidden(FALSE), m_uIDTimer(0), m_hSavedIcon(NULL), m_DefaultMenuItemID(ID_MENUITEM_RESTORE),
-  m_DefaultMenuItemByPos(FALSE), m_pTarget(NULL), m_menuID(0)
+  : m_bEnabled(FALSE), m_bHidden(FALSE), 
+  m_uIDTimer(0), m_menuID(0), 
+  m_hSavedIcon(nullptr), m_DefaultMenuItemID(ID_MENUITEM_RESTORE),
+  m_DefaultMenuItemByPos(FALSE), m_pTarget(nullptr), 
+  m_RUEList(RUEList), m_pParent((DboxMain*)pParent)
 {
-  ASSERT(m_pParent != NULL);
+  ASSERT(m_pParent != nullptr);
   SecureZeroMemory(&m_tnd, sizeof(m_tnd));
   Create(pParent, uCallbackMessage, szToolTip, icon, uID, menuID);
 }
@@ -478,6 +480,7 @@ static BOOL SetupRecentEntryMenu(DboxMain *pDbx, CMenu *&pMenu, const int i, con
     brc = pMenu->InsertMenu(ipos, MF_BYPOSITION | MF_STRING,
                             ID_MENUITEM_TRAYBROWSE1 + i,
                             cs_text);
+    if (brc == 0) goto exit;
     ipos++;
     cs_text.LoadString(IDS_TRAYBROWSEPLUS);
     brc = pMenu->InsertMenu(ipos, MF_BYPOSITION | MF_STRING,
@@ -485,6 +488,15 @@ static BOOL SetupRecentEntryMenu(DboxMain *pDbx, CMenu *&pMenu, const int i, con
                       cs_text);
     if (brc == 0) goto exit;
     ipos++;
+
+    if (!PWSprefs::GetInstance()->GetPref(PWSprefs::AltBrowser).empty()) {
+      cs_text.LoadString(IDS_TRAYBROWSEALT);
+      brc = pMenu->InsertMenu(ipos, MF_BYPOSITION | MF_STRING,
+                     ID_MENUITEM_TRAYBROWSEALT1 + i,
+                              cs_text);
+      if (brc == 0) goto exit;
+      ipos++;
+    }
   }
 
   if (!pci->IsFieldValueEmpty(CItemData::EMAIL, pbci) || 
@@ -597,6 +609,8 @@ LRESULT CSystemTray::OnTrayNotification(WPARAM wParam, LPARAM lParam)
     if (!allowCloseExit) {
       // Delete Close
       pContextMenu->RemoveMenu(ID_MENUITEM_CLOSE, MF_BYCOMMAND);
+      // Delete Open Another
+      pContextMenu->RemoveMenu(ID_MENUITEM_OPEN, MF_BYCOMMAND);
       // Delete Exit
       pContextMenu->RemoveMenu(ID_MENUITEM_EXIT, MF_BYCOMMAND);
       // Now that Exit is gone, delete last separator
@@ -722,7 +736,7 @@ LRESULT CSystemTray::OnTrayNotification(WPARAM wParam, LPARAM lParam)
     }
     m_menulist.clear();
     menu.DestroyMenu();
-  } else if (LOWORD(lParam) == WM_LBUTTONDBLCLK) { // WM_RBUTTONUP
+  } else if (LOWORD(lParam) == WM_LBUTTONUP) { // WM_RBUTTONUP
     ASSERT(m_pTarget != NULL);
     // double click received, the default action is to execute default menu item
     m_pTarget->SetForegroundWindow();  
@@ -742,7 +756,7 @@ LRESULT CSystemTray::OnTrayNotification(WPARAM wParam, LPARAM lParam)
 
     m_pTarget->SendMessage(WM_COMMAND, uItem, 0);
     menu.DestroyMenu();
-  } // WM_LBUTTONDBLCLK
+  } // WM_LBUTTONUP
   return 1L;
 }
 

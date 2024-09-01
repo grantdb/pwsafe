@@ -1,6 +1,6 @@
 /*
  * Created by Saurav Ghosh on 19/06/16.
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
@@ -35,12 +35,18 @@ struct Restriction {
 struct UserArgs {
   UserArgs()  { fields.set(); }
   StringX safe;
+  StringX passphrase[2];
   enum OpType {Unset, Import, Export, CreateNew, Search, Add,
                Diff, Sync, Merge} Operation{Unset};
-  enum {Print, Delete, Update, ClearFields, ChangePassword} SearchAction{Print};
+  enum {Print, Delete, Update, ClearFields, ChangePassword, GenerateTotpCode} SearchAction{Print};
   enum {Unknown, XML, Text} Format{Unknown};
 
   bool dry_run{false};
+
+  // verbosity_level is used as desired by any pwsafe-cli code.
+  // generally, 0 is a non-diag normal verbosity level, where 1
+  // or higher activates debug or verbose output.
+  int verbosity_level{ 0 };
 
   // The arg taken by the main operation
   std::wstring opArg;
@@ -87,5 +93,6 @@ CItemData::FieldBits ParseFields(const std::wstring &f);
 UserArgs::FieldUpdates ParseFieldValues(const std::wstring& updates);
 Restriction ParseSubset(const std::wstring &s);
 
+std::vector<stringT> GetValidFieldNames();
 
 #endif /* defined(__pwsafe_xcode6__argutils__) */

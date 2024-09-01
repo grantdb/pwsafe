@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -20,6 +20,7 @@
 #include "PWFileDialog.h"
 #include "PKBaseDlg.h"
 #include "VirtualKeyboard/VKeyBoardDlg.h"
+#include "winutils.h"
 
 #include "core/core.h" // for IDSC_UNKNOWN_ERROR
 #include "core/Util.h"
@@ -43,12 +44,15 @@ IMPLEMENT_DYNAMIC(CWZSelectDB, CWZPropertyPage)
 
 CWZSelectDB::CWZSelectDB(CWnd *pParent, int idd, UINT nIDCaption,
        const int nType)
- : CWZPropertyPage(idd, nIDCaption, nType), m_tries(0), m_state(0),
-  m_pVKeyBoardDlg(NULL), m_bAdvanced(BST_UNCHECKED), m_bExportDBFilters(BST_UNCHECKED),
-  m_bFileExistsUserAsked(false),
-  m_filespec(L""), m_passkey(L""), m_passkey2(L""), m_verify2(L""),
-  m_defexpdelim(L"\xbb"), m_pctlDB(new CEditExtn),
+ : CWZPropertyPage(idd, nIDCaption, nType), 
+  m_defexpdelim(L"\xbb"),
   m_pctlPasskey(new CSecEditExtn), m_pctlPasskey2(new CSecEditExtn), m_pctlVerify2(new CSecEditExtn),
+  m_pctlDB(new CEditExtn),
+  m_passkey(L""), m_passkey2(L""), m_verify2(L""), m_filespec(L""),
+  m_tries(0), m_state(0),
+  m_bAdvanced(BST_UNCHECKED), m_bExportDBFilters(BST_UNCHECKED),
+  m_bFileExistsUserAsked(false), m_btnShowMasterPassword(FALSE),
+  m_pVKeyBoardDlg(nullptr),
   m_LastFocus(IDC_PASSKEY)
 {
   m_pWZPSH = (CWZPropertySheet *)pParent;
@@ -92,6 +96,7 @@ void CWZSelectDB::DoDataExchange(CDataExchange* pDX)
 
   DDX_Control(pDX, IDC_DATABASE, *m_pctlDB);
   DDX_Check(pDX, IDC_ADVANCED, m_bAdvanced);
+  DDX_Check(pDX, IDC_SHOWMASTERPASSWORD, m_btnShowMasterPassword);
 
   if (nID != ID_MENUITEM_COMPARE && 
       nID != ID_MENUITEM_MERGE   && 
@@ -172,6 +177,7 @@ BEGIN_MESSAGE_MAP(CWZSelectDB, CWZPropertyPage)
   ON_BN_CLICKED(IDC_EXPORTFILTERS, OnExportFilters)
 
   ON_BN_CLICKED(IDC_YUBIKEY_BTN, OnYubikeyBtn)
+  ON_BN_CLICKED(IDC_SHOWMASTERPASSWORD, OnShowMasterPassword)
   //}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -239,10 +245,10 @@ BOOL CWZSelectDB::OnInitDialog()
   }
 
   if (bEXPORTDBCTRLS) {
-    // Show & Enable Export Combination controls
-    GetDlgItem(IDC_STATIC_NEWCOMBI)->ShowWindow(SW_SHOW);
+    // Show & Enable Export master password controls
+    GetDlgItem(IDC_STATIC_NEWMSTPWD)->ShowWindow(SW_SHOW);
     GetDlgItem(IDC_STATIC_VERIFY)->ShowWindow(SW_SHOW);
-    GetDlgItem(IDC_STATIC_COMBI)->ShowWindow(SW_SHOW);
+    GetDlgItem(IDC_STATIC_MSPWD)->ShowWindow(SW_SHOW);
     GetDlgItem(IDC_PASSKEY2)->ShowWindow(SW_SHOW);
     GetDlgItem(IDC_PASSKEY2)->EnableWindow(TRUE);
     GetDlgItem(IDC_VERIFY2)->ShowWindow(SW_SHOW);
@@ -265,6 +271,10 @@ BOOL CWZSelectDB::OnInitDialog()
     m_stc_warning.GetFont()->GetLogFont(&LogFont);
     LogFont.lfHeight = -14; // -14 stands for the size 14
     LogFont.lfWeight = FW_BOLD;
+
+    // Scale text for hi-dpi monitors:
+    UINT dpi = WinUtil::GetDPI(m_hWnd);
+    LogFont.lfHeight = MulDiv(LogFont.lfHeight, dpi, WinUtil::defDPI);
 
     m_WarningFont.CreateFontIndirect(&LogFont);
     m_stc_warning.SetFont(&m_WarningFont);
@@ -359,8 +369,8 @@ BOOL CWZSelectDB::OnInitDialog()
   m_pWZPSH->GetDlgItem(ID_WIZNEXT)->SetWindowText(cs_tmp);
 
   // Yubi-related initializations:
-  m_yubiLogo.LoadBitmap(IDB_YUBI_LOGO);
-  m_yubiLogoDisabled.LoadBitmap(IDB_YUBI_LOGO_DIS);
+  VERIFY(WinUtil::LoadScaledBitmap(m_yubiLogo, IDB_YUBI_LOGO) == TRUE);
+  VERIFY(WinUtil::LoadScaledBitmap(m_yubiLogoDisabled, IDB_YUBI_LOGO_DIS) == TRUE);
 
   // Disable passphrase until database name filled in
   m_pctlPasskey->EnableWindow(TRUE);
@@ -797,14 +807,6 @@ void CWZSelectDB::OnOpenFileBrowser()
 
   INT_PTR rc = fd.DoModal();
 
-  if (m_pWZPSH->WZPSHExitRequested()) {
-    // If U3ExitNow called while in CPWFileDialog,
-    // PostQuitMessage makes us return here instead
-    // of exiting the app. Try resignalling
-    PostQuitMessage(0);
-    return;
-  }
-
   if (rc == IDOK) {
     m_filespec = fd.GetPathName();
     m_pctlDB->SetWindowText(m_filespec);
@@ -976,7 +978,7 @@ void CWZSelectDB::yubiProcessCompleted(YKLIB_RC yrc, unsigned short ts, const BY
     m_yubi_status.ShowWindow(SW_SHOW);
     break;
 
-  default:                // A non-recoverable error has occured
+  default:                // A non-recoverable error has occurred
     m_state &= ~KEYPRESENT;
     m_pending = false;
     m_yubi_timeout.ShowWindow(SW_HIDE);
@@ -1011,5 +1013,21 @@ void CWZSelectDB::OnTimer(UINT_PTR)
       } else
         yubiRemoved();
     }
+  }
+}
+
+void CWZSelectDB::OnShowMasterPassword()
+{
+  UpdateData(TRUE);
+
+  m_pctlPasskey->SetSecure(m_btnShowMasterPassword == TRUE ? FALSE : TRUE);
+
+  if (m_btnShowMasterPassword == TRUE) {
+    m_pctlPasskey->SetPasswordChar(0);
+    m_pctlPasskey->SetWindowText(m_passkey);
+  }
+  else {
+    m_pctlPasskey->SetPasswordChar(PSSWDCHAR);
+    m_pctlPasskey->SetSecureText(m_passkey);
   }
 }

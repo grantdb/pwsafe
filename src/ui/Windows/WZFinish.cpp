@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -29,9 +29,10 @@
 IMPLEMENT_DYNAMIC(CWZFinish, CWZPropertyPage)
 
 CWZFinish::CWZFinish(CWnd *pParent, UINT nIDCaption, const int nType)
- : CWZPropertyPage(IDD, nIDCaption, nType), m_pothercore(nullptr), m_prpt(nullptr),
-   m_pExecuteThread(nullptr), m_bInProgress(false), m_bComplete(false), 
-  m_bInitDone(false), m_bViewingReport(false), m_status(-1), m_numProcessed(-1)
+ : CWZPropertyPage(IDD, nIDCaption, nType), 
+  m_prpt(nullptr), m_pExecuteThread(nullptr), m_pothercore(nullptr),
+  m_bInitDone(false), m_bInProgress(false), m_bComplete(false),
+  m_bViewingReport(false), m_status(-1), m_numProcessed(-1)
 {
   m_pWZPSH = (CWZPropertySheet *)pParent;
 }

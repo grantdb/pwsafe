@@ -35,10 +35,36 @@ data (such as a password) when the interface is minimized or closed.
 This prevents anyone else or any other program from reading the
 contents of the clipboard.</p>
 
+<h3>Exclude from clipboard history</h3>
+
+<p>When checked (default), items that <b>Password Safe</b> place on the clipboard (such as passwords) are <b>not</b> include in the clipboard history,
+in systems where this feature is supported (Windows 10 and later).
+By unchecking this, you're potentially exposing your passwords to anyone who can access your clipboard history.</p>
+
 <h3>Confirm item copy to clipboard</h3>
 
 <p>When checked, a prompt is displayed requesting user confirmation
 every time a password is copied from the database to the clipboard.</p>
+
+<h3>'Browse to URL' copies password to clipboard</h3>
+<p>It's useful to have the password ready for pasting when browsing to a website's login page. However, this can be considered a security risk, since you didn't explicitly copy the password.
+If you check this, the relevant password will be copied to your clipboard when browsing to the URL specified in the entry.</p>
+
+<h3>Exclude from screen capture</h3>
+<p>One possible security risk is someone surreptitiously capturing your screen when <b>Password Safe</b> is open. Even if you don't have a password displayed, the other information in an entry or the main window can be of use to an attacker.
+    Starting with version 3.64, <b>Password Safe</b> protects against this by hiding the application from Windows' screen capture feature.
+    If you wish to disable this feature, e.g., for taking a screenshot to report a problem, you can do so by clearing this checkbox.
+
+</p>
+<h4>Notes</h4>
+<ul>
+    <li>This feature is only supported on Windows 10 Version 2004 and later.</li>
+    <li>Some programs, such as remote desktop viewers and screen readers for the visually impaired, rely on the screen capture capability to function. If you're using such programs on a regular basis, you might want to disable this.
+        See also the <a href="cli.html">Command Line Arguments</a> page.</li>
+    <li>When enabled, a small green icon is displayed in the main window's status bar, and in the master password entry dialog.</li>
+    <li>When disabled, the icon will be displayed in yellow.</li>
+    <li>When overridden by the command line argument, the icon will be displayed in red.</li>
+</ul>
 
 <h3>Database locking</h3>
 
@@ -84,7 +110,7 @@ a <b>Password Safe</b> database. The <em>Standard</em> setting should provide su
 delaying the opening of a database significantly on most platforms. When increasing this value, consider
 the slowest CPU that you will use to access the database.</p>
 
-<p>PasswordSafe uses the <!-- [V4Format:] <a href="https://en.wikipedia.org/wiki/PBKDF2">PBKDF2</a> -->
+<p><b>Password Safe</b> uses the <!-- [V4Format:] <a href="https://en.wikipedia.org/wiki/PBKDF2">PBKDF2</a> -->
 original <a href="http://www.schneier.com/paper-low-entropy.pdf">Key
 Stretching</a> algorithm published by Bruce Schneier, which expands the 
 password to contain more entropy to make it significantly harder to

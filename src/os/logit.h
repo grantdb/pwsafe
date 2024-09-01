@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -46,17 +46,9 @@
 #endif
 #endif
 
-#define PWS_LOGIT_CONCAT(str) PWS_LOGIT_HEADER L ## str
-
-// Now the actual logging macros
-#define PWS_LOGIT pws_os::Logit(PWS_LOGIT_HEADER, __FILE__, __FUNCTION__)
-#define PWS_LOGIT_ARGS0(str) pws_os::Logit(PWS_LOGIT_CONCAT(str), \
-            __FILE__, __FUNCTION__)
-#define PWS_LOGIT_ARGS(format_str, ...) pws_os::Logit(PWS_LOGIT_CONCAT(format_str), \
-            __FILE__, __FUNCTION__, __VA_ARGS__)
 
 namespace pws_os {
-  extern void Logit(LPCTSTR lpszFormat, ...);
+  extern const stringT Logit(LPCTSTR lpszFormat, ...);
 }
 
 #endif /* _OSLOGIT_H */

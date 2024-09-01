@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
@@ -9,29 +9,25 @@
 /** \file ComparisonGridTable.cpp
 * 
 */
+
 // For compilers that support precompilation, includes "wx/wx.h".
 #include "wx/wxprec.h"
-
-#ifdef __BORLANDC__
-#pragma hdrstop
-#endif
 
 #ifndef WX_PRECOMP
 #include "wx/wx.h"
 #endif
 
-#include "./ComparisonGridTable.h"
-
-#include "./AdvancedSelectionDlg.h"
-#include "./SelectionCriteria.h"
-#include "../../core/PWScore.h"
-#include "./wxutils.h"
-#include <algorithm>
-#include <functional>
-
 #ifdef __WXMSW__
 #include <wx/msw/msvcrt.h>
 #endif
+
+#include "core/PWScore.h"
+
+#include "AdvancedSelectionDlg.h"
+#include "ComparisonGridTable.h"
+#include "SelectionCriteria.h"
+
+#include <functional>
 
 class ComparisonGridCellAttr: public wxGridCellAttr
 {
@@ -44,14 +40,6 @@ public:
 
 private:
   ComparisonGridTable* m_table;
-};
-
-struct st_CompareData_match : public std::binary_function<st_CompareData, pws_os::CUUID, bool>
-{
-  result_type operator()(const first_argument_type& arg1, const second_argument_type& arg2) const
-  {
-    return arg1.uuid0 == arg2 || arg1.uuid1 == arg2;
-  }
 };
 
 ///////////////////////////////////////////////////////////
@@ -92,7 +80,7 @@ ComparisonGridTable::ComparisonGridTable(SelectionCriteria* criteria): m_criteri
 ComparisonGridTable::~ComparisonGridTable()
 {
   delete [] m_colFields;
-  m_criteria = 0;
+  m_criteria = nullptr;
 }
 
 int ComparisonGridTable::GetNumberCols()
@@ -100,10 +88,10 @@ int ComparisonGridTable::GetNumberCols()
   //GetSelectedFields() will return at-least G+T+U
   //We club T & U and display only Group + title[user] + fields
   //Hence return one less
-  return m_criteria->GetNumSelectedFields() - 1; 
+  return static_cast<int>(m_criteria->GetNumSelectedFields() - 1);
 }
 
-void ComparisonGridTable::SetValue(int /*row*/, int /*col*/, const wxString& /*value*/)
+void ComparisonGridTable::SetValue(int WXUNUSED(row), int WXUNUSED(col), const wxString& WXUNUSED(value))
 {
 }
 
@@ -252,7 +240,7 @@ wxString UniSafeCompareGridTable::GetValue(int row, int col)
   return retval;
 }
 
-wxGridCellAttr* UniSafeCompareGridTable::GetAttr(int /*row*/, int /*col*/, wxGridCellAttr::wxAttrKind /*kind*/)
+wxGridCellAttr* UniSafeCompareGridTable::GetAttr(int WXUNUSED(row), int WXUNUSED(col), wxGridCellAttr::wxAttrKind WXUNUSED(kind))
 {
   //wxLogDebug(wxT("UniSafeCompareGridTable::GetAttr called for %d, %d"), row, col);
   m_gridAttr->IncRef();
@@ -262,10 +250,9 @@ wxGridCellAttr* UniSafeCompareGridTable::GetAttr(int /*row*/, int /*col*/, wxGri
 int UniSafeCompareGridTable::GetItemRow(const pws_os::CUUID& uuid) const
 {
   CompareData::iterator itr = std::find_if(m_compData->begin(),
-                                            m_compData->end(),
-                                            std::bind2nd(st_CompareData_match(), uuid));
+                                           m_compData->end(), [uuid](st_CompareData& arg){return arg.uuid0 == uuid || arg.uuid1 == uuid;});
   if (itr != m_compData->end())
-    return std::distance(m_compData->begin(), itr);
+    return (int) std::distance(m_compData->begin(), itr);
   else
     return wxNOT_FOUND;
 }
@@ -306,8 +293,8 @@ bool UniSafeCompareGridTable::DeleteRows(size_t pos, size_t numRows)
     //This will actually remove the item from grid display
     wxGridTableMessage msg(this,
                            wxGRIDTABLE_NOTIFY_ROWS_DELETED,
-                           reinterpret_cast<int &>(pos),
-                           reinterpret_cast<int &>(numRows));
+                           static_cast<int>(pos),
+                           static_cast<int>(numRows));
     GetView()->ProcessTableMessage(msg);
   }
 
@@ -322,7 +309,7 @@ bool UniSafeCompareGridTable::AppendRows(size_t numRows/*=1*/)
                 wxT("Items must be added to UnisafeComparisonGridTable's data before adding rows"));
     wxGridTableMessage msg(this,
                            wxGRIDTABLE_NOTIFY_ROWS_APPENDED,
-                           reinterpret_cast<int &>(numRows));
+                           static_cast<int>(numRows));
     GetView()->ProcessTableMessage(msg);
   }
   return true;
@@ -430,7 +417,7 @@ wxString MultiSafeCompareGridTable::GetValue(int row, int col)
   return retval;
 }
 
-wxGridCellAttr* MultiSafeCompareGridTable::GetAttr(int row, int col, wxGridCellAttr::wxAttrKind /*kind*/)
+wxGridCellAttr* MultiSafeCompareGridTable::GetAttr(int row, int col, wxGridCellAttr::wxAttrKind WXUNUSED(kind))
 {
   //wxLogDebug(wxT("MultiSafeCompareGridTable::GetAttr called for %d, %d"), row, col);
   wxGridCellAttr* attr = ( row%2 == 0? m_currentAttr: m_comparisonAttr );
@@ -457,10 +444,10 @@ wxString MultiSafeCompareGridTable::GetRowLabelValue(int row)
 int MultiSafeCompareGridTable::GetItemRow(const pws_os::CUUID& uuid) const
 {
   CompareData::iterator itr = std::find_if(m_compData->begin(),
-                                            m_compData->end(),
-                                            std::bind2nd(st_CompareData_match(), uuid));
+                                           m_compData->end(),
+                                           [uuid](st_CompareData& arg){return arg.uuid0 == uuid || arg.uuid1 == uuid;});
   if (itr != m_compData->end())
-    return std::distance(m_compData->begin(), itr)*2 + (itr->uuid0 == uuid? 0: 1);
+    return (int) std::distance(m_compData->begin(), itr)*2 + (itr->uuid0 == uuid? 0: 1);
   else
     return wxNOT_FOUND;
 }
@@ -507,8 +494,8 @@ bool MultiSafeCompareGridTable::DeleteRows(size_t pos, size_t numRows)
     //This will actually remove the item from grid display
     wxGridTableMessage msg(this,
                            wxGRIDTABLE_NOTIFY_ROWS_DELETED,
-                           reinterpret_cast<int &>(pos),
-                           reinterpret_cast<int &>(numRows));
+                           static_cast<int>(pos),
+                           static_cast<int>(numRows));
     GetView()->ProcessTableMessage(msg);
   }
 
@@ -521,7 +508,11 @@ bool MultiSafeCompareGridTable::DeleteRows(size_t pos, size_t numRows)
 DEFINE_EVENT_TYPE(EVT_SELECT_GRID_ROW)
 
 BEGIN_EVENT_TABLE( ComparisonGrid, wxGrid )
+#if wxCHECK_VERSION(3, 1, 5)
+  EVT_GRID_RANGE_SELECTED(ComparisonGrid::OnGridRangeSelect)
+#else
   EVT_GRID_RANGE_SELECT(ComparisonGrid::OnGridRangeSelect)
+#endif
   EVT_COMMAND(wxID_ANY, EVT_SELECT_GRID_ROW, ComparisonGrid::OnAutoSelectGridRow)
 END_EVENT_TABLE()
 

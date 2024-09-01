@@ -5,7 +5,7 @@
 ; first edit : Karlo Van der Gucht
 ;---------------------------------------------------
 ; Copyright 2004, David Lacy Kusters (dkusters@yahoo.com)
-; Copyright 2005-2007 Rony Shapiro <ronys@pwsafe.org>
+; Copyright 2005-2024 Rony Shapiro <ronys@pwsafe.org>
 ; 2009 extended by Karlo Van der Gucht for multiple language use
 ; 2010 extended by Karlo Van der Gucht Danish language
 ; This script may be redistributed and/or modified under the Artistic
@@ -47,6 +47,9 @@ LangString UNINSTALL_SHORTCUT ${LANG_RUSSIAN} "Ярлык для удалени�
 
 ; DESC_ProgramFiles "Installs the basic files necessary to run Password Safe."
 LangString DESC_ProgramFiles ${LANG_RUSSIAN} "Основные файлы, необходимые для работы Password Safe."
+
+; DESC_CliTool "Installs pwsafe-cli, a command line utility."
+LangString DESC_CliTool ${LANG_RUSSIAN} "Установить утилиту командной строки pwsafe-cli."
 
 ; DESC_LangSupport "Please select the language(s) that PasswordSafe will use."
 LangString DESC_LangSupport ${LANG_RUSSIAN} "Выберите язык(и) для интерфейса программы"
@@ -94,28 +97,49 @@ LangString LANG_INSTALL ${LANG_RUSSIAN} "Язык установки (Installati
 ; LANG_SELECT "Please select the language for the installation"
 LangString LANG_SELECT ${LANG_RUSSIAN} "Выберите язык для установки $\n(Please select the language for the installation)"
 
+; CLI_TOOL "Command-line tool"
+LangString CLI_TOOL ${LANG_RUSSIAN} "Утилита командной строки"
+
 LangString LANGUAGE_SUPPORT ${LANG_RUSSIAN} "Языки интерфейса"
 LangString ENGLISH_SUPPORT ${LANG_RUSSIAN} "Английский"
 ; CHINESE_CN_SUPPORT "Chinese (Simplified)"
 LangString CHINESE_CN_SUPPORT ${LANG_RUSSIAN} "Китайский (упрощённый)"
 ; CHINESE_TW_SUPPORT "Chinese (Traditional)"
 LangString CHINESE_TW_SUPPORT ${LANG_RUSSIAN} "Китайский (традиционный)"
+; GERMAN_SUPPORT "German"
 LangString GERMAN_SUPPORT ${LANG_RUSSIAN} "Немецкий"
+; SPANISH_SUPPORT "Spanish"
 LangString SPANISH_SUPPORT ${LANG_RUSSIAN} "Испанский"
+; SWEDISH_SUPPORT "Swedish"
 LangString SWEDISH_SUPPORT ${LANG_RUSSIAN} "Шведский"
+; DUTCH_SUPPORT "Dutch"
 LangString DUTCH_SUPPORT ${LANG_RUSSIAN} "Нидерландский"
+; FRENCH_SUPPORT "French"
 LangString FRENCH_SUPPORT ${LANG_RUSSIAN} "Французский"
+; RUSSIAN_SUPPORT "Russian"
 LangString RUSSIAN_SUPPORT ${LANG_RUSSIAN} "Русский"
+; POLISH_SUPPORT "Polish"
 LangString POLISH_SUPPORT ${LANG_RUSSIAN} "Польский"
+; ITALIAN_SUPPORT "Italian"
 LangString ITALIAN_SUPPORT ${LANG_RUSSIAN} "Итальянский"
+; DANISH_SUPPORT "Danish"
 LangString DANISH_SUPPORT ${LANG_RUSSIAN} "Датский"
 ; KOREAN_SUPPORT "Korean"
 LangString KOREAN_SUPPORT ${LANG_RUSSIAN} "Корейский"
+; CZECH_SUPPORT "Czech"
+LangString CZECH_SUPPORT ${LANG_RUSSIAN} "Чешский"
+; TURKISH_SUPPORT "Turkish"
+LangString TURKISH_SUPPORT ${LANG_RUSSIAN} "Турецкий"
+; HUNGARIAN_SUPPORT "Hungarian"
+LangString HUNGARIAN_SUPPORT ${LANG_RUSSIAN} "Венгерский"
+; SLOVENIAN_SUPPORT "Slovenian"
+LangString SLOVENIAN_SUPPORT ${LANG_RUSSIAN} "Словенский"
+; ARABIC_SUPPORT "Arabic"
+LangString ARABIC_SUPPORT ${LANG_RUSSIAN} "Арабский"
 ; PORTUGUESEBR_SUPPORT "Portuguese (Brazil)"
 LangString PORTUGUESEBR_SUPPORT ${LANG_RUSSIAN} "Португальский (Бразилия)"
-LangString CZECH_SUPPORT ${LANG_RUSSIAN} "Чешский"
-LangString TURKISH_SUPPORT ${LANG_RUSSIAN} "Турецкий"
-LangString HUNGARIAN_SUPPORT ${LANG_RUSSIAN} "Венгерский"
+; LATVIAN_SUPPORT "Latvian"
+LangString LATVIAN_SUPPORT ${LANG_RUSSIAN} "Латышский"
 
 ; LANG_PROGRAM "Program Language"
 LangString LANG_PROGRAM ${LANG_RUSSIAN} "Язык программы"
@@ -131,6 +155,25 @@ LangString SORRY_NO_ME ${LANG_RUSSIAN} "Извините, Windows ME больш�
 
 ; SORRY_NO_2K "Sorry, Windows 2000 is no longer supported. Try PasswordSafe 3.18"
 LangString SORRY_NO_2K ${LANG_RUSSIAN} "Извините, Windows 2000 больше не поддерживается. Попробуйте версию 3.18"
+
+; LangString Icon_description_Uninstall "Password Safe Uninstall"
+LangString Icon_description_Uninstall ${LANG_RUSSIAN} "Удаление Password Safe"
+
+; LangString Icon_description_Help  "Password Safe Help"
+LangString Icon_description_Help ${LANG_RUSSIAN} "Справка Password Safe"
+
+; Screen Capture Protection texts:
+; LangString SCRCAP_PROTECTION "Screen capture protection"
+LangString SCRCAP_PROTECTION ${LANG_RUSSIAN} "Защита от захвата экрана"
+
+; LangString SORRY_CANNOT_DISABLE_SCRCAP  "An error occurred disabling screen capture protection. Screen capture protection is not disabled."
+LangString SORRY_CANNOT_DISABLE_SCRCAP ${LANG_RUSSIAN} "Произошла ошибка при отключении защиты от захвата экрана. Защита от захвата экрана не отключена."
+
+; LangString SORRY_CANNOT_ENABLE_SCRCAP "An error occurred setting screen capture protection to default (enabled)."
+LangString SORRY_CANNOT_ENABLE_SCRCAP ${LANG_RUSSIAN} "Произошла ошибка при переключении защиты захвата экрана в значение по умолчанию (включено)."
+
+; LangString DESC_ScrCapProtection "Enables screen capture protection."
+LangString DESC_ScrCapProtection ${LANG_RUSSIAN} "Включить защиту от захвата экрана."
 
 ;=================================================================
 ; End of pwsafe_ru.lng

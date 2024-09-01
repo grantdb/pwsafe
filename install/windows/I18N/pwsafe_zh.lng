@@ -5,7 +5,7 @@
 ; first edit : Karlo Van der Gucht
 ;---------------------------------------------------
 ; Copyright 2004, David Lacy Kusters (dkusters@yahoo.com)
-; Copyright 2005-2007 Rony Shapiro <ronys@pwsafe.org>
+; Copyright 2005-2024 Rony Shapiro <ronys@pwsafe.org>
 ; 2009 extended by Karlo Van der Gucht for multiple language use
 ; 2010 extended by Karlo Van der Gucht Danish language
 ; This script may be redistributed and/or modified under the Artistic
@@ -19,128 +19,159 @@
 ;=================================================================
 
 ; RESERVE_TITLE "Choose Installation Type"
-LangString RESERVE_TITLE ${LANG_SIMPCHINESE} "ѡ��װ����"
+LangString RESERVE_TITLE ${LANG_SIMPCHINESE} "选锟斤拷装锟斤拷锟斤拷"
 
 ; RESERVE_FIELD1 "Regular (uses Registry, suitable for home or single user PC)"
-LangString RESERVE_FIELD1 ${LANG_SIMPCHINESE} "���棨ʹ��ע������ʺϼ�ͥ������û� PC��"
+LangString RESERVE_FIELD1 ${LANG_SIMPCHINESE} "锟斤拷锟芥（使锟斤拷注锟斤拷锟斤拷锟斤拷屎霞锟酵ワ拷锟斤拷锟斤拷锟矫伙拷 PC锟斤拷"
 
 ; RESERVE_FIELD2 "Green (for Disk-on-Key; does not use host Registry)"
-LangString RESERVE_FIELD2 ${LANG_SIMPCHINESE} "��ɫ���ʺ� U �̣���ʹ������ע�����"
+LangString RESERVE_FIELD2 ${LANG_SIMPCHINESE} "锟斤拷色锟斤拷锟绞猴拷 U 锟教ｏ拷锟斤拷使锟斤拷锟斤拷锟斤拷注锟斤拷锟斤拷锟"
 
 ; PROGRAM_FILES "Program Files"
-LangString PROGRAM_FILES ${LANG_SIMPCHINESE} "�����ļ�"
+LangString PROGRAM_FILES ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟侥硷拷"
 
 ; START_AUTO "Start automatically"
-LangString START_AUTO ${LANG_SIMPCHINESE}  "�Զ�����"
+LangString START_AUTO ${LANG_SIMPCHINESE}  "锟皆讹拷锟斤拷锟斤拷"
 
 ; START_SHOW "Show in start menu"
-LangString START_SHOW ${LANG_SIMPCHINESE} "�ڿ�ʼ�˵���ʾ"
+LangString START_SHOW ${LANG_SIMPCHINESE} "锟节匡拷始锟剿碉拷锟斤拷示"
 
 ; START_SHORTCUT "Install desktop shortcut"
-LangString START_SHORTCUT ${LANG_SIMPCHINESE} "��װ�����ݷ�ʽ"
+LangString START_SHORTCUT ${LANG_SIMPCHINESE} "锟斤拷装锟斤拷锟斤拷锟捷凤拷式"
 
 ; UNINSTALL_SHORTCUT "Uninstall shortcut"
-LangString UNINSTALL_SHORTCUT ${LANG_SIMPCHINESE} "ж�ؿ�ݷ�ʽ"
+LangString UNINSTALL_SHORTCUT ${LANG_SIMPCHINESE} "卸锟截匡拷莘锟绞"
 
 ;--------------------------------
 ; Descriptions
 
 ; DESC_ProgramFiles "Installs the basic files necessary to run Password Safe."
-LangString DESC_ProgramFiles ${LANG_SIMPCHINESE} "��װ���� Password Safe ����Ļ����ļ���"
+LangString DESC_ProgramFiles ${LANG_SIMPCHINESE} "锟斤拷装锟斤拷锟斤拷 Password Safe 锟斤拷锟斤拷幕锟斤拷锟斤拷募锟斤拷锟"
+
+; DESC_CliTool "Installs pwsafe-cli, a command line utility."
+LangString DESC_CliTool ${LANG_SIMPCHINESE} "Installs pwsafe-cli, a command line utility."
 
 ; DESC_LangSupport "Please select the language(s) that PasswordSafe will use."
-LangString DESC_LangSupport ${LANG_SIMPCHINESE} "��ѡ�� PasswordSafe ��Ҫʹ�õ�����"
+LangString DESC_LangSupport ${LANG_SIMPCHINESE} "锟斤拷选锟斤拷 PasswordSafe 锟斤拷要使锟矫碉拷锟斤拷锟斤拷"
 
 ; DESC_StartUp "Starts Password Safe as part of Windows boot/login."
-LangString DESC_StartUp ${LANG_SIMPCHINESE} "���� Windows ʱ�Զ����� Password Safe��"
+LangString DESC_StartUp ${LANG_SIMPCHINESE} "锟斤拷锟斤拷 Windows 时锟皆讹拷锟斤拷锟斤拷 Password Safe锟斤拷"
 
 ; DESC_StartMenu "Creates an entry in the start menu for Password Safe."
-LangString DESC_StartMenu ${LANG_SIMPCHINESE} "�ڿ�ʼ�˵�����һ�� Password Safe ��Ŀ��"
+LangString DESC_StartMenu ${LANG_SIMPCHINESE} "锟节匡拷始锟剿碉拷锟斤拷锟斤拷一锟斤拷 Password Safe 锟斤拷目锟斤拷"
 
 ; DESC_DesktopShortcut "Places a shortcut to Password Safe on your desktop."
-LangString DESC_DesktopShortcut ${LANG_SIMPCHINESE} "���������һ�� Password Safe ��ݷ�ʽ��"
+LangString DESC_DesktopShortcut ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟斤拷锟斤拷锟揭伙拷锟?Password Safe 锟斤拷莘锟绞斤拷锟"
 
 ; DESC_UninstallMenu "Places a shortcut in the start menu to Uninstall Password Safe."
-LangString DESC_UninstallMenu ${LANG_SIMPCHINESE} "�ڿ�ʼ�˵�����һ��ж�� Password Safe �Ŀ�ݷ�ʽ��"
+LangString DESC_UninstallMenu ${LANG_SIMPCHINESE} "锟节匡拷始锟剿碉拷锟斤拷锟斤拷一锟斤拷卸锟斤拷 Password Safe 锟侥匡拷莘锟绞斤拷锟"
   
 ; "LangString" (for "Function GreenOrRegular") are setup here because they cannot be defined in the function body
 ; TEXT_GC_TITLE "Installation Type"
-LangString TEXT_GC_TITLE ${LANG_SIMPCHINESE} "��װ����"
+LangString TEXT_GC_TITLE ${LANG_SIMPCHINESE} "锟斤拷装锟斤拷锟斤拷"
 
 ; TEXT_GC_SUBTITLE "Choose Regular for use on a single PC, Green for portable installation. If you're not sure, 'Regular' is fine."
-LangString TEXT_GC_SUBTITLE ${LANG_SIMPCHINESE} "ѡ�񳣹��ʺ����ڸ��� PC �ϣ���ɫ�ʺϿ���ֲ��װ������㲻ȷ������ô��ѡ�񡰳��桱��ɡ�"
+LangString TEXT_GC_SUBTITLE ${LANG_SIMPCHINESE} "选锟今常癸拷锟绞猴拷锟斤拷锟节革拷锟斤拷 PC 锟较ｏ拷锟斤拷色锟绞合匡拷锟斤拷植锟斤拷装锟斤拷锟斤拷锟斤拷悴蝗凤拷锟斤拷锟斤拷锟矫达拷锟窖★拷瘛俺锟斤拷妗憋拷锟缴★拷"
 
 ; PSWINI_TITLE "Choose Installation Type"
-LangString PSWINI_TITLE ${LANG_SIMPCHINESE} "ѡ��װ����"
+LangString PSWINI_TITLE ${LANG_SIMPCHINESE} "选锟斤拷装锟斤拷锟斤拷"
 
 ; PSWINI_TEXT1 "Regular (uses Registry, suitable for home or single user PC)"
-LangString PSWINI_TEXT1 ${LANG_SIMPCHINESE} "���� (ʹ��ע������ʺϼ�ͥ����� PC �û� ) "
+LangString PSWINI_TEXT1 ${LANG_SIMPCHINESE} "锟斤拷锟斤拷 (使锟斤拷注锟斤拷锟斤拷锟斤拷屎霞锟酵ワ拷锟斤拷锟斤拷 PC 锟矫伙拷 ) "
 
 ; PSWINI_TEXT2 "Green (for Disk-on-Key; does not use host Registry)"
-LangString PSWINI_TEXT2 ${LANG_SIMPCHINESE} "��ɫ (�ʺ� U �̣���ʹ������ע���)"
+LangString PSWINI_TEXT2 ${LANG_SIMPCHINESE} "锟斤拷色 (锟绞猴拷 U 锟教ｏ拷锟斤拷使锟斤拷锟斤拷锟斤拷注锟斤拷锟)"
 
 ;--------------------------------
 ; checks and warnings
 
 ; RUNNING_INSTALL "The installer is already running."
-LangString RUNNING_INSTALL ${LANG_SIMPCHINESE} "��װ�����Ѿ������У�"
+LangString RUNNING_INSTALL ${LANG_SIMPCHINESE} "锟斤拷装锟斤拷锟斤拷锟窖撅拷锟斤拷锟斤拷锟叫ｏ拷"
 
 ; RUNNING_APPLICATION "Please exit all running instances of PasswordSafe before installing a new version"
-LangString RUNNING_APPLICATION ${LANG_SIMPCHINESE} "��װ�°汾֮ǰ�����˳����������е� PasswordSafe��"
+LangString RUNNING_APPLICATION ${LANG_SIMPCHINESE} "锟斤拷装锟铰版本之前锟斤拷锟斤拷锟剿筹拷锟斤拷锟斤拷锟斤拷锟斤拷锟叫碉拷 PasswordSafe锟斤拷"
 
 ; LANG_INSTALL "Installation Language"
-LangString LANG_INSTALL ${LANG_SIMPCHINESE} "��װ����"
+LangString LANG_INSTALL ${LANG_SIMPCHINESE} "锟斤拷装锟斤拷锟斤拷"
 
 ; LANG_SELECT "Please select the language for the installation"
-LangString LANG_SELECT ${LANG_SIMPCHINESE} "��ѡ��װ����"
+LangString LANG_SELECT ${LANG_SIMPCHINESE} "锟斤拷选锟斤拷装锟斤拷锟斤拷"
+
+; CLI_TOOL "Command-line tool"
+LangString CLI_TOOL ${LANG_SIMPCHINESE} "Command-line tool"
 
 ; LANGUAGE_SUPPORT "Language Support"
-LangString LANGUAGE_SUPPORT ${LANG_SIMPCHINESE} "����֧��"
+LangString LANGUAGE_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷支锟斤拷"
 ; ENGLISH_SUPPORT "English"
-LangString ENGLISH_SUPPORT ${LANG_SIMPCHINESE} "Ӣ��"
+LangString ENGLISH_SUPPORT ${LANG_SIMPCHINESE} "英锟斤拷"
 ; CHINESE_CN_SUPPORT "Chinese (Simplified)"
-LangString CHINESE_CN_SUPPORT ${LANG_SIMPCHINESE} "��������"
+LangString CHINESE_CN_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟斤拷锟斤拷"
 ; CHINESE_TW_SUPPORT "Chinese (Traditional)"
-LangString CHINESE_TW_SUPPORT ${LANG_SIMPCHINESE} "��������"
+LangString CHINESE_TW_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟斤拷锟斤拷"
 ; GERMAN_SUPPORT "German"
-LangString GERMAN_SUPPORT ${LANG_SIMPCHINESE} "����"
+LangString GERMAN_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷"
 ; SPANISH_SUPPORT "Spanish"
-LangString SPANISH_SUPPORT ${LANG_SIMPCHINESE} "��������"
+LangString SPANISH_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟斤拷锟斤拷"
 ; SWEDISH_SUPPORT "Swedish"
-LangString SWEDISH_SUPPORT ${LANG_SIMPCHINESE} "�����"
+LangString SWEDISH_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟"
 ; DUTCH_SUPPORT "Dutch"
-LangString DUTCH_SUPPORT ${LANG_SIMPCHINESE} "������"
+LangString DUTCH_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟斤拷"
 ; FRENCH_SUPPORT "French"
-LangString FRENCH_SUPPORT ${LANG_SIMPCHINESE} "����"
+LangString FRENCH_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷"
 ; RUSSIAN_SUPPORT "Russian"
-LangString RUSSIAN_SUPPORT ${LANG_SIMPCHINESE} "����"
+LangString RUSSIAN_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷"
 ; POLISH_SUPPORT "Polish"
-LangString POLISH_SUPPORT ${LANG_SIMPCHINESE} "������"
+LangString POLISH_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟斤拷"
 ; ITALIAN_SUPPORT "Italian"
-LangString ITALIAN_SUPPORT ${LANG_SIMPCHINESE} "�������"
+LangString ITALIAN_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟斤拷锟"
 ; DANISH_SUPPORT "Danish"
-LangString DANISH_SUPPORT ${LANG_SIMPCHINESE} "������"
+LangString DANISH_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟斤拷"
 ; KOREAN_SUPPORT "Korean"
-LangString KOREAN_SUPPORT ${LANG_SIMPCHINESE} "������"
-LangString CZECH_SUPPORT ${LANG_SIMPCHINESE} "Czech"
-LangString TURKISH_SUPPORT ${LANG_SIMPCHINESE} "Turkish"
-LangString HUNGARIAN_SUPPORT ${LANG_SIMPCHINESE} "Hungarian"
+LangString KOREAN_SUPPORT ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟斤拷"
+LangString CZECH_SUPPORT ${LANG_SIMPCHINESE} "捷克语"
+LangString TURKISH_SUPPORT ${LANG_SIMPCHINESE} "土耳其语"
+LangString HUNGARIAN_SUPPORT ${LANG_SIMPCHINESE} "匈牙利语"
+LangString SLOVENIAN_SUPPORT ${LANG_SIMPCHINESE} "斯洛文尼亚语"
+LangString ARABIC_SUPPORT ${LANG_SIMPCHINESE} "阿拉伯语"
+; PORTUGUESEBR_SUPPORT "Portuguese (Brazil)"
+LangString PORTUGUESEBR_SUPPORT ${LANG_SIMPCHINESE} "葡萄牙语（巴西）"
+LangString LATVIAN_SUPPORT ${LANG_SIMPCHINESE} "拉脱维亚语"
+
 
 ; LANG_PROGRAM "Program Language"
-LangString LANG_PROGRAM ${LANG_SIMPCHINESE} "��������"
+LangString LANG_PROGRAM ${LANG_SIMPCHINESE} "锟斤拷锟斤拷锟斤拷锟斤拷"
 
 
 ; SORRY_NO_95 "Sorry, Windows 95 is no longer supported. Try PasswordSafe 2.16"
-LangString SORRY_NO_95 ${LANG_SIMPCHINESE} "��Ǹ��Windows 95 �Ѳ���֧�֣����� PasswordSafe 2.16��"
+LangString SORRY_NO_95 ${LANG_SIMPCHINESE} "锟斤拷歉锟斤拷Windows 95 锟窖诧拷锟斤拷支锟街ｏ拷锟斤拷锟斤拷 PasswordSafe 2.16锟斤拷"
 
 ; SORRY_NO_98 "Sorry, Windows 98 is no longer supported. Try PasswordSafe 2.16"
-LangString SORRY_NO_98 ${LANG_SIMPCHINESE} "��Ǹ��Windows 98 ����֧�֣����� PasswordSafe 2.16��"
+LangString SORRY_NO_98 ${LANG_SIMPCHINESE} "锟斤拷歉锟斤拷Windows 98 锟斤拷锟斤拷支锟街ｏ拷锟斤拷锟斤拷 PasswordSafe 2.16锟斤拷"
 
 ; SORRY_NO_ME "Sorry, Windows ME is no longer supported. Try PasswordSafe 2.16"
-LangString SORRY_NO_ME ${LANG_SIMPCHINESE} "��Ǹ��Windows ME ����֧�֣����� PasswordSafe 2.16��"
+LangString SORRY_NO_ME ${LANG_SIMPCHINESE} "锟斤拷歉锟斤拷Windows ME 锟斤拷锟斤拷支锟街ｏ拷锟斤拷锟斤拷 PasswordSafe 2.16锟斤拷"
 
 ; SORRY_NO_2K "Sorry, Windows 2000 is no longer supported. Try PasswordSafe 3.18"
-LangString SORRY_NO_2K ${LANG_SIMPCHINESE} "��Ǹ��Windows 2000 ����֧�֣����� PasswordSafe 3.18��"
+LangString SORRY_NO_2K ${LANG_SIMPCHINESE} "锟斤拷歉锟斤拷Windows 2000 锟斤拷锟斤拷支锟街ｏ拷锟斤拷锟斤拷 PasswordSafe 3.18锟斤拷"
+
+; LangString Icon_description_Uninstall "Password Safe Uninstall"
+LangString Icon_description_Uninstall ${LANG_SIMPCHINESE} "Password Safe Uninstall"
+
+; LangString Icon_description_Help  "Password Safe Help"
+LangString Icon_description_Help ${LANG_SIMPCHINESE} "Password Safe Help"
+
+; Screen Capture Protection texts:
+; LangString SCRCAP_PROTECTION "Screen capture protection"
+LangString SCRCAP_PROTECTION ${LANG_SIMPCHINESE} "屏幕截图保护"
+
+; LangString SORRY_CANNOT_DISABLE_SCRCAP  "An error occurred disabling screen capture protection. Screen capture protection is not disabled."
+LangString SORRY_CANNOT_DISABLE_SCRCAP ${LANG_SIMPCHINESE} "禁用屏幕捕获保护时发生错误。 屏幕捕获保护未禁用。"
+
+; LangString SORRY_CANNOT_ENABLE_SCRCAP "An error occurred setting screen capture protection to default (enabled)."
+LangString SORRY_CANNOT_ENABLE_SCRCAP ${LANG_SIMPCHINESE} "将屏幕捕获保护设置为默认值（启用）时发生错误。"
+
+; LangString DESC_ScrCapProtection "Enables screen capture protection."
+LangString DESC_ScrCapProtection ${LANG_SIMPCHINESE} "启用屏幕捕获保护。"
 
 ;=================================================================
 ; End of pwsafe_zh.lng

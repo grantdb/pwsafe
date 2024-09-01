@@ -5,7 +5,7 @@
 ; first edit : Karlo Van der Gucht
 ;---------------------------------------------------
 ; Copyright 2004, David Lacy Kusters (dkusters@yahoo.com)
-; Copyright 2005-2007 Rony Shapiro <ronys@pwsafe.org>
+; Copyright 2005-2024 Rony Shapiro <ronys@pwsafe.org>
 ; 2009 extended by Karlo Van der Gucht for multiple language use
 ; 2010 extended by Karlo Van der Gucht Danish language
 ; This script may be redistributed and/or modified under the Artistic
@@ -19,13 +19,13 @@
 ;=================================================================
 
 ; RESERVE_TITLE "Choose Installation Type"
-LangString RESERVE_TITLE ${LANG_GERMAN}  "Wählen Sie die Art der Installation"
+LangString RESERVE_TITLE ${LANG_GERMAN}  "WÃ¤hlen Sie die Art der Installation"
 
 ; RESERVE_FIELD1 "Regular (uses Registry, suitable for home or single user PC)"
 LangString RESERVE_FIELD1 ${LANG_GERMAN}  "Standard (verwendet Registry, einsetzbar am normalen ArbeitsPC)"
 
 ; RESERVE_FIELD2 "Green (for Disk-on-Key; does not use host Registry)"
-LangString RESERVE_FIELD2 ${LANG_GERMAN}  "Grün (für Disk-on-Key; verwendet keine lokale Registry)"
+LangString RESERVE_FIELD2 ${LANG_GERMAN}  "GrÃ¼n (fÃ¼r Disk-on-Key; verwendet keine lokale Registry)"
 
 ; PROGRAM_FILES "Program Files"
 LangString PROGRAM_FILES ${LANG_GERMAN}  "Programm Dateien"
@@ -34,13 +34,13 @@ LangString PROGRAM_FILES ${LANG_GERMAN}  "Programm Dateien"
 LangString START_AUTO ${LANG_GERMAN}  "Automatisch starten"
 
 ; START_SHOW "Show in start menu"
-LangString START_SHOW ${LANG_GERMAN}  "Im Startmenüanzeigen"
+LangString START_SHOW ${LANG_GERMAN}  "Im StartmenÃ¼anzeigen"
 
 ; START_SHORTCUT "Install desktop shortcut"
-LangString START_SHORTCUT ${LANG_GERMAN}  "Verknüpfung auf der Benutzeroberfläche"
+LangString START_SHORTCUT ${LANG_GERMAN}  "VerknÃ¼pfung auf der BenutzeroberflÃ¤che"
 
 ; UNINSTALL_SHORTCUT "Uninstall shortcut"
-LangString UNINSTALL_SHORTCUT ${LANG_GERMAN}  "Verknüpfung zum Deinstallieren"
+LangString UNINSTALL_SHORTCUT ${LANG_GERMAN}  "VerknÃ¼pfung zum Deinstallieren"
 
 ;--------------------------------
 ; Descriptions
@@ -48,42 +48,45 @@ LangString UNINSTALL_SHORTCUT ${LANG_GERMAN}  "Verknüpfung zum Deinstallieren"
 ; DESC_ProgramFiles "Installs the basic files necessary to run Password Safe."
 LangString DESC_ProgramFiles ${LANG_GERMAN} "Installiert die notwendigen Dateien, um Password Safe laufen zu lassen."
 
+; DESC_CliTool "Installs pwsafe-cli, a command line utility."
+LangString DESC_CliTool ${LANG_GERMAN} "Installs pwsafe-cli, a command line utility."
+
 ; DESC_LangSupport "Please select the language(s) that PasswordSafe will use."
-LangString DESC_LangSupport ${LANG_GERMAN} "Bitte wählen sie die Sprachen aus womit Password Safe später laufen soll."
+LangString DESC_LangSupport ${LANG_GERMAN} "Bitte wÃ¤hlen sie die Sprachen aus womit Password Safe spÃ¤ter laufen soll."
 
 ; DESC_StartUp "Starts Password Safe as part of Windows boot/login."
 LangString DESC_StartUp ${LANG_GERMAN} "Startet Password Safe beim Hochfahren von Windows."
 
 ; DESC_StartMenu "Creates an entry in the start menu for Password Safe."
-LangString DESC_StartMenu ${LANG_GERMAN} "Erstellt ein Eintrag im Start Menü für Password Safe."
+LangString DESC_StartMenu ${LANG_GERMAN} "Erstellt ein Eintrag im Start MenÃ¼ fÃ¼r Password Safe."
 
 ; DESC_DesktopShortcut "Places a shortcut to Password Safe on your desktop."
-LangString DESC_DesktopShortcut ${LANG_GERMAN} "Erzeugt eine Verknüpfung zu Password Safe auf der Benutzeroberfläche."
+LangString DESC_DesktopShortcut ${LANG_GERMAN} "Erzeugt eine VerknÃ¼pfung zu Password Safe auf der BenutzeroberflÃ¤che."
 
 ; DESC_UninstallMenu "Places a shortcut in the start menu to Uninstall Password Safe."
-LangString DESC_UninstallMenu ${LANG_GERMAN} "Erzeugt eine Verknüpfung im Start Menü zum Deinstallieren von Password Safe."
+LangString DESC_UninstallMenu ${LANG_GERMAN} "Erzeugt eine VerknÃ¼pfung im Start MenÃ¼ zum Deinstallieren von Password Safe."
   
 ; "LangString" (for "Function GreenOrRegular") are setup here because they cannot be defined in the function body
 ; TEXT_GC_TITLE "Installation Type"
 LangString TEXT_GC_TITLE ${LANG_GERMAN} "Art der Installation"
 
 ; TEXT_GC_SUBTITLE "Choose Regular for use on a single PC, Green for portable installation. If you're not sure, 'Regular' is fine."
-LangString TEXT_GC_SUBTITLE ${LANG_GERMAN} "Wählen Sie Standard zur Verwendung in einem PC und Grün für eine portable Installation. Wenn Sie nicht sicher sind, wählen Sie 'Standard' aus."
+LangString TEXT_GC_SUBTITLE ${LANG_GERMAN} "WÃ¤hlen Sie Standard zur Verwendung in einem PC und GrÃ¼n fÃ¼r eine portable Installation. Wenn Sie nicht sicher sind, wÃ¤hlen Sie 'Standard' aus."
 
 ; PSWINI_TITLE "Choose Installation Type"
-LangString PSWINI_TITLE ${LANG_GERMAN} "Wählen Sie die Art der Installation"
+LangString PSWINI_TITLE ${LANG_GERMAN} "WÃ¤hlen Sie die Art der Installation"
 
 ; PSWINI_TEXT1 "Regular (uses Registry, suitable for home or single user PC)"
 LangString PSWINI_TEXT1 ${LANG_GERMAN} "Standard (verwendet Registry, einsetzbar am normalen ArbeitsPC)"
 
 ; PSWINI_TEXT2 "Green (for Disk-on-Key; does not use host Registry)"
-LangString PSWINI_TEXT2 ${LANG_GERMAN} "Grün (für Disk-on-Key; verwendet keine lokale Registry)"
+LangString PSWINI_TEXT2 ${LANG_GERMAN} "GrÃ¼n (fÃ¼r Disk-on-Key; verwendet keine lokale Registry)"
 
 ;--------------------------------
 ; checks and warnings
 
 ; RUNNING_INSTALL "The installer is already running."
-LangString RUNNING_INSTALL ${LANG_GERMAN} "Das Installationsprogramm läuft bereits."
+LangString RUNNING_INSTALL ${LANG_GERMAN} "Das Installationsprogramm lÃ¤uft bereits."
 
 ; RUNNING_APPLICATION "Please exit all running instances of PasswordSafe before installing a new version"
 LangString RUNNING_APPLICATION ${LANG_GERMAN} "Bitte schliessen Sie alle Instanzen von PasswordSafe, bevor Sie eine neue Version installieren"
@@ -92,12 +95,15 @@ LangString RUNNING_APPLICATION ${LANG_GERMAN} "Bitte schliessen Sie alle Instanz
 LangString LANG_INSTALL ${LANG_GERMAN} "Sprache der Installation"
 
 ; LANG_SELECT "Please select the language for the installation"
-LangString LANG_SELECT ${LANG_GERMAN} "Bitte wählen Sie die Sprache für die Installation"
+LangString LANG_SELECT ${LANG_GERMAN} "Bitte wÃ¤hlen Sie die Sprache fÃ¼r die Installation"
 
 ; LANG_PROGRAM "Program Language"
 LangString LANG_PROGRAM ${LANG_GERMAN} "Sprache der Anwendung"
 
-LangString LANGUAGE_SUPPORT ${LANG_GERMAN} "Sprachenunterstützung"
+; CLI_TOOL "Command-line tool"
+LangString CLI_TOOL ${LANG_GERMAN} "Command-line tool"
+
+LangString LANGUAGE_SUPPORT ${LANG_GERMAN} "SprachenunterstÃ¼tzung"
 LangString ENGLISH_SUPPORT ${LANG_GERMAN} "Englisch"
 ; Chinese (Simplified)
 LangString CHINESE_CN_SUPPORT ${LANG_GERMAN} "Chinesisch (Simplified)"
@@ -107,28 +113,52 @@ LangString CHINESE_SUPPORT ${LANG_GERMAN} "Chinesisch"
 LangString GERMAN_SUPPORT ${LANG_GERMAN} "Deutsch"
 LangString SPANISH_SUPPORT ${LANG_GERMAN} "Spanisch"
 LangString SWEDISH_SUPPORT ${LANG_GERMAN} "Swedisch"
-LangString DUTCH_SUPPORT ${LANG_GERMAN} "Niederländisch"
-LangString FRENCH_SUPPORT ${LANG_GERMAN} "Französisch"
+LangString DUTCH_SUPPORT ${LANG_GERMAN} "NiederlÃ¤ndisch"
+LangString FRENCH_SUPPORT ${LANG_GERMAN} "FranzÃ¶sisch"
 LangString RUSSIAN_SUPPORT ${LANG_GERMAN} "Russisch"
 LangString POLISH_SUPPORT ${LANG_GERMAN} "Polnisch"
 LangString ITALIAN_SUPPORT ${LANG_GERMAN} "Italienisch"
-LangString DANISH_SUPPORT ${LANG_GERMAN} "Dänisch"
+LangString DANISH_SUPPORT ${LANG_GERMAN} "DÃ¤nisch"
 LangString KOREAN_SUPPORT ${LANG_GERMAN} "Korean"
 LangString CZECH_SUPPORT ${LANG_GERMAN} "Czech"
-LangString TURKISH_SUPPORT ${LANG_GERMAN} "Türkisch"
+LangString TURKISH_SUPPORT ${LANG_GERMAN} "TÃ¼rkisch"
 LangString HUNGARIAN_SUPPORT ${LANG_GERMAN} "Ungarisch"
+LangString SLOVENIAN_SUPPORT ${LANG_GERMAN} "Slovenisch"
+LangString ARABIC_SUPPORT ${LANG_GERMAN} "Arabisch"
+; PORTUGUESEBR_SUPPORT "Portuguese (Brazil)"
+LangString PORTUGUESEBR_SUPPORT ${LANG_GERMAN}  "Portugiesisch  (Brasilianisch)"
+LangString LATVIAN_SUPPORT ${LANG_GERMAN} "Lettisch"
 
 ; SORRY_NO_95 "Sorry, Windows 95 is no longer supported. Try PasswordSafe 2.16"
-LangString SORRY_NO_95 ${LANG_GERMAN} "Schade, aber Windows 95 wieder nicht mehr unterstützt. Versuchen Sie PasswordSafe 2.16"
+LangString SORRY_NO_95 ${LANG_GERMAN} "Schade, aber Windows 95 wieder nicht mehr unterstÃ¼tzt. Versuchen Sie PasswordSafe 2.16"
 
 ; SORRY_NO_98 "Sorry, Windows 98 is no longer supported. Try PasswordSafe 2.16"
-LangString SORRY_NO_98 ${LANG_GERMAN} "Schade, aber Windows 98 wieder nicht mehr unterstützt. Versuchen Sie PasswordSafe 2.16"
+LangString SORRY_NO_98 ${LANG_GERMAN} "Schade, aber Windows 98 wieder nicht mehr unterstÃ¼tzt. Versuchen Sie PasswordSafe 2.16"
 
 ; SORRY_NO_ME "Sorry, Windows ME is no longer supported. Try PasswordSafe 2.16"
-LangString SORRY_NO_ME ${LANG_GERMAN} "Schade, aber Windows ME wieder nicht mehr unterstützt. Versuchen Sie PasswordSafe 2.16"
+LangString SORRY_NO_ME ${LANG_GERMAN} "Schade, aber Windows ME wieder nicht mehr unterstÃ¼tzt. Versuchen Sie PasswordSafe 2.16"
 
 ; SORRY_NO_2K "Sorry, Windows 2000 is no longer supported. Try PasswordSafe 3.18"
-LangString SORRY_NO_2K ${LANG_GERMAN} "Schade, aber Windows 2000 wieder nicht mehr unterstützt. Versuchen Sie PasswordSafe 3.18"
+LangString SORRY_NO_2K ${LANG_GERMAN} "Schade, aber Windows 2000 wieder nicht mehr unterstÃ¼tzt. Versuchen Sie PasswordSafe 3.18"
+
+; LangString Icon_description_Uninstall "Password Safe Uninstall"
+LangString Icon_description_Uninstall ${LANG_GERMAN} "Password Safe Uninstall"
+
+; LangString Icon_description_Help  "Password Safe Help"
+LangString Icon_description_Help ${LANG_GERMAN} "Password Safe Help"
+
+; Screen Capture Protection texts:
+; LangString SCRCAP_PROTECTION "Screen capture protection"
+LangString SCRCAP_PROTECTION ${LANG_GERMAN} "Bildschirmaufnahmeschutz."
+
+; LangString SORRY_CANNOT_DISABLE_SCRCAP  "An error occurred disabling screen capture protection. Screen capture protection is not disabled."
+LangString SORRY_CANNOT_DISABLE_SCRCAP ${LANG_GERMAN} "Beim Deaktivieren des Bildschirmaufnahmeschutzes ist ein Fehler aufgetreten. Der Bildschirmaufnahmeschutz ist nicht deaktiviert."
+
+; LangString SORRY_CANNOT_ENABLE_SCRCAP "An error occurred setting screen capture protection to default (enabled)."
+LangString SORRY_CANNOT_ENABLE_SCRCAP ${LANG_GERMAN} "Beim Festlegen des Bildschirmaufnahmeschutzes auf die Standardeinstellung (aktiviert) ist ein Fehler aufgetreten."
+
+; LangString DESC_ScrCapProtection "Enables screen capture protection."
+LangString DESC_ScrCapProtection ${LANG_GERMAN} "Aktiviert den Bildschirmaufnahmeschutz."
 
 ;=================================================================
 ; End of pwsafe_de.lng

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -13,8 +13,8 @@
 #include "ThisMfcApp.h"    // For Help
 #include "Options_PropertySheet.h"
 #include "GeneralMsgBox.h"
+#include "winutils.h"
 
-#include "core/PwsPlatform.h"
 #include "core/PWSprefs.h"
 #include "core/SysInfo.h"
 
@@ -23,9 +23,6 @@
 #include "resource3.h"  // String resources
 
 #include "OptionsSystem.h" // Must be after resource.h
-
-extern bool OfferConfigMigration();
-extern bool PerformConfigMigration();
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -146,7 +143,7 @@ BOOL COptionsSystem::OnInitDialog()
 
   bool bofferdeleteregistry = prefs->OfferDeleteRegistry();
 
-  bool boffermigrate2appdata = OfferConfigMigration();
+  bool boffermigrate2appdata = WinUtil::OfferConfigMigration();
 
   if (!bofferdeleteregistry) {
     GetDlgItem(IDC_REGDEL)->ShowWindow(SW_HIDE);
@@ -211,7 +208,8 @@ BOOL COptionsSystem::OnInitDialog()
 
 LRESULT COptionsSystem::OnQuerySiblings(WPARAM wParam, LPARAM )
 {
-  UpdateData(TRUE);
+  if (!UpdateData(TRUE))
+    return 1L; // stop propagation
 
   // Have any of my fields been changed?
   switch (wParam) {
@@ -340,7 +338,7 @@ void COptionsSystem::OnApplyConfigChanges()
 
   if (m_Migrate2Appdata == TRUE) {
     GetDlgItem(IDC_MIGRATETOAPPDATA)->EnableWindow(FALSE);
-    PerformConfigMigration();
+    WinUtil::PerformConfigMigration();
   }
 
   if (!GetDlgItem(IDC_REGDEL)->IsWindowEnabled() && 

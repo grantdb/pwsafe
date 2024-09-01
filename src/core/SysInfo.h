@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -27,9 +27,8 @@ public:
   static SysInfo *GetInstance(); // singleton
   static void DeleteInstance();
 
-  static bool IsUnderU3();
   static bool IsUnderPw2go();
-  static bool IsLinux();
+  static bool IsWXUI();
 
   void SetEffectiveUser(const stringT &u) {m_euser = u;}
   void SetEffectiveHost(const stringT &h) {m_esysname = h;}
@@ -42,7 +41,7 @@ public:
 
 private:
   SysInfo();
-  ~SysInfo() {};
+  ~SysInfo() {}
 
   static SysInfo *self;
 

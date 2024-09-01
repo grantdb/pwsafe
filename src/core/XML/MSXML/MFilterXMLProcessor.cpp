@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -21,6 +21,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <atlcomcli.h>
 #include <comutil.h>
 
 #include <map>
@@ -28,7 +29,7 @@
 
 MFilterXMLProcessor::MFilterXMLProcessor(PWSFilters &mapfilters, const FilterPool fpool,
                                          Asker *pAsker)
-  : m_MapXMLFilters(mapfilters), m_FPool(fpool), m_pAsker(pAsker)
+  : m_pAsker(pAsker), m_MapXMLFilters(mapfilters), m_FPool(fpool)
 {
 }
 

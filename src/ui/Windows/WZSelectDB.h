@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -57,6 +57,7 @@ protected:
   afx_msg void OnPasskey2Setfocus();
   afx_msg void OnVerify2keySetfocus();
   afx_msg void OnYubikeyBtn();
+  afx_msg void OnShowMasterPassword();
   afx_msg void OnTimer(UINT_PTR nIDEvent);
   afx_msg LRESULT OnInsertBuffer(WPARAM, LPARAM);
   //}}AFX_MSG
@@ -73,6 +74,8 @@ private:
 
   bool ProcessPhrase(const StringX &filename, const StringX &passkey);
   bool m_bFileExistsUserAsked;
+  BOOL m_btnShowMasterPassword;
+
 
   CVKeyBoardDlg *m_pVKeyBoardDlg;
   bool m_bVKAvailable;

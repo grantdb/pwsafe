@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -20,6 +20,8 @@
 
 #include <string>
 #include <vector>
+
+#include <algorithm>
 
 using namespace std;
 
@@ -60,13 +62,35 @@ const size_t CPasswordCharPool::easyvision_hexdigit_len = LENGTH(easyvision_hexd
 // See the values of "charT sym" in the static const structure "leets" below
 const charT CPasswordCharPool::pronounceable_symbol_chars[] = _T("@&(#!|$+");
 
+namespace
+{
+
+class UrbgAdapter {
+public:
+    UrbgAdapter(PWSrand* ri) : ri_{ ri }
+    { }
+
+    typedef unsigned int result_type;
+
+    static constexpr result_type min() { return std::numeric_limits<result_type>::min(); }
+    static constexpr result_type max() { return std::numeric_limits<result_type>::max(); }
+
+    result_type operator()() const {
+        return ri_->RandUInt();
+    }
+private:
+    PWSrand* const ri_;
+};
+
+}
+
 //-----------------------------------------------------------------------------
 CPasswordCharPool::typeFreq_s::typeFreq_s(const CPasswordCharPool *parent, CharType ct, uint nc)
   : numchars(nc)
 {
   vchars.resize(parent->m_pwlen);
   std::generate(vchars.begin(), vchars.end(),
-                [this, parent, ct] () {return parent->GetRandomChar(ct);});
+                [parent, ct] () {return parent->GetRandomChar(ct);});
 }
 
 //-----------------------------------------------------------------------------
@@ -220,7 +244,7 @@ charT CPasswordCharPool::GetRandomChar(CPasswordCharPool::CharType t) const
 
 StringX CPasswordCharPool::MakePassword() const
 {
-  // We don't care if the policy is inconsistent e.g. 
+  // We don't care if the policy is inconsistent e.g.
   // number of lower case chars > 1 + make pronounceable
   // The individual routines (normal, hex, pronounceable) will
   // ignore what they don't need.
@@ -259,7 +283,9 @@ StringX CPasswordCharPool::MakePassword() const
          return a.numchars > b.numchars;
        });
 
-  StringX retval, cat;
+  StringX retval;
+  retval.reserve(m_pwlen);
+
   // First meet the 'at least' constraints
   for (auto iter = typeFreqs.begin(); iter != typeFreqs.end(); iter++)
     for (uint j = 0; j < iter->numchars; j++) {
@@ -271,35 +297,29 @@ StringX CPasswordCharPool::MakePassword() const
       }
     }
 
-  // Now fill in the rest
-  for (int i = 0; i < NUMTYPES; i++)
-    if (m_lengths[i] > 0)
-      cat += m_char_arrays[i];
+  if (retval.size() < m_pwlen) {
+      StringX cat;
 
-  // If the requested password length is > set of chars we collected
-  // in cat, just grow cat until it's big enough (BR1450)
-  if ((m_pwlen - retval.length()) > cat.length()) {
-    const auto cat0 = cat;
-    while ((m_pwlen - retval.length()) > cat.length())
-      cat += cat0;
+      // Now fill in the rest
+      for (int i = 0; i < NUMTYPES; i++)
+          if (m_lengths[i] > 0)
+              cat += m_char_arrays[i];
+
+      if (!cat.empty()) {
+          while(retval.size() < m_pwlen) {
+              const uint r = PWSrand::GetInstance()->RangeRand(cat.size());
+              ASSERT(r < cat.size());
+
+              retval.push_back(cat[r]);
+          }
+      }
   }
-
-  random_shuffle(cat.begin(), cat.end(),
-                 [](size_t i)
-                 {
-                   return PWSrand::GetInstance()->RangeRand(i);
-                 });
-
-  retval += cat.substr(0, m_pwlen - retval.length());
 
  do_shuffle:
   // If 'at least' values were non-zero, we have some unwanted order,
   // so we mix things up a bit:
-  random_shuffle(retval.begin(), retval.end(),
-                 [](size_t i)
-                 {
-                   return PWSrand::GetInstance()->RangeRand(i);
-                 });
+  UrbgAdapter g{ PWSrand::GetInstance() };
+  std::shuffle(retval.begin(), retval.end(), g);
 
   ASSERT(retval.length() == size_t(m_pwlen));
   return retval;
@@ -327,6 +347,7 @@ class FillSC {
   // for "leet" alphabet for pronounceable passwords
   // with usesymbols and/or usedigits specified
 public:
+  FillSC(const FillSC&) = default;
   FillSC(vector<int> &sc, bool digits, bool symbols)
     : m_sc(sc), m_digits(digits), m_symbols(symbols), m_i(0) {}
 
@@ -338,7 +359,7 @@ public:
   }
 
 private:
-  FillSC& operator=(const FillSC&); // Do not implement
+  FillSC& operator=(const FillSC&) = delete; // Do not implement
   vector<int> &m_sc;
   bool m_digits, m_symbols;
   int m_i;
@@ -382,7 +403,7 @@ StringX CPasswordCharPool::MakePronounceable() const
      generates "mmitify" even though no word in my dictionary
      begins with mmi. So what.) */
   sumfreq = sigma;  // sigma calculated by loadtris
-  ranno = static_cast<long>(pwsrnd->RangeRand((size_t)(sumfreq + 1))); // Weight by sum of frequencies
+  ranno = static_cast<long>(pwsrnd->RangeRand(static_cast<size_t>(sumfreq + 1))); // Weight by sum of frequencies
   sum = 0;
   for (c1 = 0; c1 < 26; c1++) {
     for (c2 = 0; c2 < 26; c2++) {
@@ -413,7 +434,7 @@ StringX CPasswordCharPool::MakePronounceable() const
       break;  // Break while nchar loop & print what we have.
     }
     /* Choose a continuation. */
-    ranno = static_cast<long>(pwsrnd->RangeRand((size_t)(sumfreq + 1))); // Weight by sum of frequencies
+    ranno = static_cast<long>(pwsrnd->RangeRand(static_cast<size_t>(sumfreq + 1))); // Weight by sum of frequencies
     sum = 0;
     for (c3 = 0; c3 < 26; c3++) {
       sum += tris[int(c1)][int(c2)][int(c3)];
@@ -440,11 +461,8 @@ StringX CPasswordCharPool::MakePronounceable() const
       // choose how many to replace (not too many, but at least one)
       unsigned int rn = pwsrnd->RangeRand(sc.size() - 1)/2 + 1;
       // replace some of them
-      random_shuffle(sc.begin(), sc.end(),
-                     [](size_t i)
-                     {
-                       return PWSrand::GetInstance()->RangeRand(i);
-                     });
+      UrbgAdapter g{ pwsrnd };
+      std::shuffle(sc.begin(), sc.end(), g);
 
       for (unsigned int i = 0; i < rn; i++)
         leet_replace(password, sc[i], m_usedigits, m_usesymbols);
@@ -479,7 +497,7 @@ StringX CPasswordCharPool::MakeHex() const
   return password;
 }
 
-bool CPasswordCharPool::CheckPassword(const StringX &pwd, StringX &error)
+bool CPasswordCharPool::CheckMasterPassword(const StringX &pwd, StringX &error)
 {
   /**
    * A password is "Good enough" if:

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -7,7 +7,6 @@
 */
 
 #include "../logit.h"
-#include "../../core/PWSLog.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -22,7 +21,7 @@ enum {MAX_LOG_STATEMENT = 1024 * 64, STARTING_LOG_STATEMENT = 256};
 # define _stprintf_s snprintf
 #endif
 
-void pws_os::Logit(LPCTSTR lpszFormat, ...)
+const stringT pws_os::Logit(LPCTSTR lpszFormat, ...)
 {
   va_list args;
   va_start(args, lpszFormat);
@@ -39,7 +38,8 @@ void pws_os::Logit(LPCTSTR lpszFormat, ...)
   }
   while(!(nwritten > 0 && nwritten < len) && len <= MAX_LOG_STATEMENT);
 
-  PWSLog::GetLog()->Add(stringT(szbuffer));
+  stringT retval(szbuffer);
   delete[] szbuffer;
   va_end(args);
+  return retval;
 }

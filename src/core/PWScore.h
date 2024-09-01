@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -49,6 +49,7 @@ struct st_DBProperties {
   StringX numentries;
   StringX numattachments;
   StringX whenlastsaved;
+  StringX whenpwdlastchanged;
   StringX wholastsaved;
   StringX whatlastsaved;
   StringX file_uuid;
@@ -59,10 +60,10 @@ struct st_DBProperties {
 
 struct st_ValidateResults;
 
-class PWScore : public CommandInterface
+class PWScore : public Observable, public CommandInterface
 {
 public:
-  enum {
+  enum Status {
     SUCCESS = 0,
     FAILURE = 1,
     USER_DECLINED_SAVE = 2,
@@ -88,14 +89,13 @@ public:
     DB_HAS_DUPLICATES,                        //  21
     OK_WITH_ERRORS,                           //  22
     OK_WITH_VALIDATION_ERRORS,                //  23
-    OPEN_NODB                                 //  24
+    OPEN_NODB,                                //  24
+    MAX_SIZE_EXCEEDED                         //  25
   };
+  static stringT StatusText(int s);
 
   PWScore();
   ~PWScore();
-
-  bool SetUIInterFace(UIInterFace *pUIIF, size_t num_supported,
-                      std::bitset<UIInterFace::NUM_SUPPORTED> bsSupportedFunctions);
 
   // Set following to a Reporter-derived object
   // so that we can inform user of events of interest
@@ -108,6 +108,8 @@ public:
   void ClearFileUUID() { m_hdr.m_file_uuid = pws_os::CUUID::NullUUID(); }
   void SetFileUUID(const pws_os::CUUID &fu) { m_hdr.m_file_uuid = fu; }
   const pws_os::CUUID &GetFileUUID() const { return m_hdr.m_file_uuid; }
+
+  static const TCHAR *GROUPTITLEUSERINCHEVRONS;
 
   // Get/Set Unknown Fields info
   bool HasHeaderUnknownFields() const
@@ -124,6 +126,7 @@ public:
   void ReInit(bool bNewfile = false);
 
   // Following used to read/write databases and Get/Set file name
+  bool IsDbOpen() const { return !m_currfile.empty(); }
   StringX GetCurFile() const {return m_currfile;}
   void SetCurFile(const StringX &file) {m_currfile = file;}
 
@@ -154,7 +157,7 @@ public:
 
   // R/O file status
   void SetReadOnly(bool state) {m_bIsReadOnly = state;}
-  bool IsReadOnly() const {return m_bIsReadOnly;};
+  bool IsReadOnly() const {return m_bIsReadOnly;}
 
   // Check/Change master passphrase
   int CheckPasskey(const StringX &filename, const StringX &passkey);
@@ -246,6 +249,7 @@ public:
   void UnlockFile(const stringT &filename);
 
   void SafeUnlockCurFile(); // unlocks current file iff we locked it.
+  void SafeUnlockFile(const stringT &filename);
 
   // Following 3 routines only for SaveAs to use a temporary lock handle
   // LockFile2, UnLockFile2 & MoveLock
@@ -264,7 +268,7 @@ public:
   void GetAllGroups(std::vector<stringT> &vAllGroups, const bool bIncludeEmptyGroups = true) const;
   // Construct unique title
   StringX GetUniqueTitle(const StringX &group, const StringX &title,
-                         const StringX &user, const int IDS_MESSAGE);
+                         const StringX &user, const int ids_messsage);
   // Get all password policy names
   void GetPolicyNames(std::vector<stringT> &vNames) const;
   bool GetPolicyFromName(const StringX &sxPolicyName, PWPolicy &st_pp) const;
@@ -272,12 +276,12 @@ public:
                              std::map<StringX, StringX> &mapRenamedPolicies,
                              std::vector<StringX> &vs_PoliciesAdded,
                              StringX &sxOtherPolicyName, bool &bUpdated,
-                             const StringX &sxDateTime, const UINT &IDS_MESSAGE);
+                             const StringX &sxDateTime, const UINT &ids_message);
 
   // This routine should only be directly called from XML import
   void MakePolicyUnique(std::map<StringX, StringX> &mapRenamedPolicies,
                         StringX &sxPolicyName, const StringX &sxDateTime,
-                        const UINT IDS_MESSAGE);
+                        const UINT ids_message);
 
   bool GetEntriesUsingNamedPasswordPolicy(const StringX sxPolicyName,
                                           std::vector<st_GroupTitleUser> &ventries);
@@ -290,7 +294,7 @@ public:
   // Adds an st_GroupTitleUser to setGTU, possible modifying title
   // to ensure uniqueness. Returns false if title was modified.
   bool MakeEntryUnique(GTUSet &setGTU, const StringX &group, StringX &title,
-                       const StringX &user, const int IDS_MESSAGE);
+                       const StringX &user, const int ids_message);
   bool GetUniqueGTUValidated() const
   {return m_bUniqueGTUValidated;}
 
@@ -327,7 +331,7 @@ public:
   ItemListConstIter Find(const pws_os::CUUID &entry_uuid) const
   {return m_pwlist.find(entry_uuid);}
 
-  bool ConfirmDelete(const CItemData *pci); // ask user when about to delete a base,
+  bool ConfirmDelete(const CItemData *pci, StringX sxGroup = L""); // ask user when about to delete a base,
   //                                           otherwise just return true
 
   // General routines for aliases and shortcuts
@@ -339,6 +343,9 @@ public:
 
   const CItemData *GetBaseEntry(const CItemData *pAliasOrSC) const;
   CItemData *GetBaseEntry(const CItemData *pAliasOrSC);
+
+  const CItemData* GetCredentialEntry(const CItemData* pAny) const;
+  CItemData* GetCredentialEntry(const CItemData* pAny);
 
   // alias/base and shortcut/base handling
   void SortDependents(UUIDVector &dlist, StringX &csDependents);
@@ -458,6 +465,9 @@ private:
   virtual void DoAddEntry(const CItemData &item, const CItemAtt *att);
   virtual void DoDeleteEntry(const CItemData &item);
   virtual void DoReplaceEntry(const CItemData &old_ci, const CItemData &new_ci);
+  virtual void DoAddAttachment(const CItemAtt &att);
+  virtual void DoDeleteAttachment(const CItemAtt &att);
+  virtual void DoReplaceAttachment(const CItemAtt &old_att, const CItemAtt &new_att);
 
   // General routines for aliases and shortcuts
   virtual void DoAddDependentEntry(const pws_os::CUUID &base_uuid,
@@ -589,7 +599,8 @@ private:
   void SetBase2ShortcutsMmap(ItemMMap &b2smm) {m_base2shortcuts_mmap = b2smm;}
   
   // Following are private in PWScore, public in CommandInterface:
-  void AddChangedNodes(StringX path);
+  void AddChangedNodes(const StringX &path);
+  void AddChangedEmptyGroups(const StringX &path);
 
   // EmptyGroups
   std::vector<StringX> m_vEmptyGroups;
@@ -601,9 +612,6 @@ private:
   UUIDList m_RUEList;
   UUIDList m_InitialRUEList;
 
-  UIInterFace *m_pUIIF; // pointer to UI interface abtraction
-  std::bitset<UIInterFace::NUM_SUPPORTED> m_bsSupportedFunctions;
-  
   void NotifyGUINeedsUpdating(UpdateGUICommand::GUI_Action, const pws_os::CUUID &,
                               CItemData::FieldType ft = CItemData::START);
 

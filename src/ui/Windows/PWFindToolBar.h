@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -130,4 +130,6 @@ private:
   st_SaveAdvValues m_SaveFindValues;
   CSecString m_save_search_text;
   bool m_save_cs_search, m_bUseSavedFindValues;
+
+  int m_editCtrlWidth, m_findResultsWidth; // dynamically set per DPI
 };

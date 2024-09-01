@@ -1,17 +1,19 @@
 /*
  * Created by Saurav Ghosh
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
  * http://www.opensource.org/licenses/artistic-license-2.0.php
  */
 
+#include "stdafx.h"
 #include "./impexp.h"
 
 #include "./argutils.h"
 #include "../../os/file.h"
 
+#include "core/core.h"
 #include "core/PWSdirs.h"
 
 #include <string>
@@ -29,7 +31,7 @@ int Import(PWScore &core, const UserArgs &ua)
 
 int Export(PWScore &core, const UserArgs &ua)
 {
-  CItemData::FieldBits all(~0L);
+  CItemData::FieldBits all(~0UL);
   int N;
   return ua.Format == UserArgs::XML?
     core.WriteXMLFile(std2stringx(ua.opArg), all, L"", 0, 0, L' ', L"", N):
@@ -48,7 +50,7 @@ ImportText(PWScore &core, const stringT &fname)
 
   // Create report as we go
   CReport rpt;
-  rpt.StartReport(L"Import_Text", core.GetCurFile().c_str());
+  rpt.StartReport(IDSC_RPTIMPORTTEXT, core.GetCurFile().c_str());
   wstring str(L"Text file being imported: ");
   str += core.GetCurFile().c_str();
   rpt.WriteLine(str.c_str());
@@ -134,7 +136,7 @@ ImportXML(PWScore &core, const stringT &fname)
   // Create report as we go
   CReport rpt;
   std::wstring str_text;
-  rpt.StartReport(L"Import_XML", core.GetCurFile().c_str());
+  rpt.StartReport(IDSC_RPTIMPORTXML, core.GetCurFile().c_str());
   str_text = L"XML file being imported: ";
   str_text += fname.c_str();
   rpt.WriteLine(str_text);

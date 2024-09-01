@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -17,23 +17,19 @@
 
 #include "PasswordSafe.h"
 
-#include "resource.h"
-#include "resource2.h"  // Menu, Toolbar & Accelerator resources
-#include "resource3.h"  // String resources
-
 #include "ThisMfcApp.h"
+#include "winutils.h"
 #include "DboxMain.h"
 #include "SingleInstance.h"
 #include "CryptKeyEntry.h"
 #include "PWSRecentFileList.h"
-#include "MFCMessages.h"
+#include "MFCmessages.h"
 #include "GeneralMsgBox.h"
 #include "PWSFaultHandler.h"
 #include "Fonts.h"
 #include "PWSversion.h"
 
 #include "core/Util.h"
-#include "core/BlowFish.h"
 #include "core/PWSprefs.h"
 #include "core/PWSrand.h"
 #include "core/PWSdirs.h"
@@ -46,13 +42,13 @@
 #include "os/env.h"
 #include "os/lib.h"
 #include "os/debug.h"
+#include "os/registry.h"
 
 #include "Shlwapi.h"
 
+#include <memory>
 #include <vector>
-#include <errno.h>
 #include <fstream>
-#include <io.h>
 
 using namespace std;
 
@@ -70,22 +66,18 @@ END_MESSAGE_MAP()
 
 static MFCReporter aReporter;
 static MFCAsker    anAsker;
-#ifndef _DEBUG
-extern wchar_t *wcRevision;
-extern wchar_t *wcMsg1;
-extern wchar_t *wcMsg2;
-extern wchar_t *wcMsg3;
-extern wchar_t *wcCaption;
-#endif
 
 ThisMfcApp::ThisMfcApp() :
+  m_ghAccelTable(nullptr),
+  m_pDbx(nullptr), 
+  m_pMainMenu(nullptr), m_pMRUMenu(nullptr), m_pMRU(nullptr),
   m_bUseAccelerator(true),
-  m_pMRU(NULL),
-  m_HotKeyPressed(false), m_hMutexOneInstance(NULL),
-  m_ghAccelTable(NULL), m_pMainMenu(NULL),
-  m_bACCEL_Table_Created(false), m_noSysEnvWarnings(false),
-  m_bPermitTestdump(false), m_hInstResDLL(NULL), m_ResLangID(0),
-  m_pMRUMenu(NULL)
+  m_hMutexOneInstance(nullptr), m_hInstResDLL(nullptr),
+  m_HotKeyPressed(false), m_bACCEL_Table_Created(false),
+  m_ResLangID(0),
+  m_noSysEnvWarnings(false),
+  m_bPermitTestdump(false),
+  m_allowScreenCaptureState(Disallowed)
 {
   // Get my Thread ID
   m_nBaseThreadID = AfxGetThread()->m_nThreadID;
@@ -225,30 +217,9 @@ int ThisMfcApp::ExitInstance()
 {
   if (m_hInstResDLL != m_hInstance)
     pws_os::FreeLibrary(m_hInstResDLL);
-
-  CWinApp::ExitInstance();
-  return 0;
+  delete m_pDbx;
+  return CWinApp::ExitInstance();
 }
-
-// Listener window whose sole purpose in life is to receive
-// the "AppStop" message from the U3 framework and then
-// cause a semi-graceful exit.
-
-class CLWnd : public CWnd
-{
-public:
-  CLWnd(DboxMain &dbox) : m_dbox(dbox) {}
-  virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
-  {
-    if (message != (WM_APP+0x765))
-      return CWnd::WindowProc(message, wParam, lParam);
-    else
-      m_dbox.U3ExitNow();
-    return 0L;
-  }
-private:
-  DboxMain &m_dbox;
-};
 
 static void GetVersionInfoFromFile(const CString &csFileName,
                                    DWORD &MajorMinor, DWORD &BuildRevision)
@@ -740,11 +711,11 @@ bool ThisMfcApp::GetConfigFromCommandLine(StringX &sxConfigFile, StringX &sxHost
             arg++;
             bool bRelative(false);
             if (PathIsRelative(*arg)) {
-              // As per Help entry - use executable directory unless overridden
+              // PWS_PREFSDIR overrides default user prefs dir (LOCAL_APPDATA\PasswordSafe)
               // Don't use PWSdirs::GetConfigDir()
               wstring sPWS_PREFSDIR = pws_os::getenv("PWS_PREFSDIR", true);
               if (sPWS_PREFSDIR.empty()) {
-                sConfig = pws_os::getexecdir() + wstring(*arg);
+                sConfig = pws_os::getuserprefsdir() + wstring(*arg);
               } else {
                 sConfig = sPWS_PREFSDIR + wstring(*arg);
               }
@@ -768,7 +739,7 @@ bool ThisMfcApp::GetConfigFromCommandLine(StringX &sxConfigFile, StringX &sxHost
               // of the Usage.
               if (bRelative) {
                 // Also tell user the full path we checked as well.
-                csConfigfile.Format(L"%s\n  (%s)", static_cast<LPCWSTR>(*arg), 
+                csConfigfile.Format(L"%ls\n  (%ls)", static_cast<LPCWSTR>(*arg),
                   static_cast<LPCWSTR>(sConfig.c_str()));
               } else {
                 // Just tell the user the absolute path they specified
@@ -776,7 +747,7 @@ bool ThisMfcApp::GetConfigFromCommandLine(StringX &sxConfigFile, StringX &sxHost
               }
 
               CGeneralMsgBox gmb;
-              cs_ErrorMsg.Format(L"Configuration file not found.\n  %s\n\nDo you wish to create it?",
+              cs_ErrorMsg.Format(L"Configuration file not found.\n  %ls\n\nDo you wish to create it?",
                 static_cast<LPCWSTR>(csConfigfile));
 
               INT_PTR rc = gmb.AfxMessageBox(cs_ErrorMsg, L"Error finding configuration file",
@@ -830,7 +801,7 @@ bool ThisMfcApp::GetConfigFromCommandLine(StringX &sxConfigFile, StringX &sxHost
   return true;
 }
 
-bool ThisMfcApp::ParseCommandLine(DboxMain &dbox, bool &allDone)
+bool ThisMfcApp::ParseCommandLine(DboxMain &dbox, bool &allDone, bool &postMinimize)
 {
   /*
    * Command line processing:
@@ -848,7 +819,7 @@ bool ThisMfcApp::ParseCommandLine(DboxMain &dbox, bool &allDone)
 
   int dialogOrientation = -1; // update pref only if set
 
-  allDone = false;
+  allDone = postMinimize = false;
   if (m_lpCmdLine[0] != L'\0') {
     CString args = m_lpCmdLine;
 
@@ -891,7 +862,7 @@ bool ThisMfcApp::ParseCommandLine(DboxMain &dbox, bool &allDone)
           /**
            * '--setup' is meant to be used when invoking PasswordSafe at the end of the installation process.
            * It will cause the application to create a new database with the default name at the default location,
-           * prompting the user for the safe combination.
+           * prompting the user for the master password.
            */
           dbox.SetSetup();
         } else if ((*arg) == L"--novalidate") {
@@ -912,6 +883,8 @@ bool ThisMfcApp::ParseCommandLine(DboxMain &dbox, bool &allDone)
           dialogOrientation = PWSprefs::WIDE;
         } else if ((*arg) == L"--do-auto") {
           dialogOrientation = PWSprefs::AUTO;
+        } else if ((*arg) == L"--allow-screen-capture") {
+          m_allowScreenCaptureState = ForceAllowedCommandLine;
         } else {
           // unrecognized extended flag. Silently ignore.
         }
@@ -968,6 +941,7 @@ bool ThisMfcApp::ParseCommandLine(DboxMain &dbox, bool &allDone)
           dbox.SetStartClosed();
           break;
         case L'M': case L'm':// closed & minimized
+          postMinimize = true;
           m_core.SetCurFile(L"");
           dbox.SetStartNoDB();
           dbox.SetStartMinimized();
@@ -980,6 +954,7 @@ bool ThisMfcApp::ParseCommandLine(DboxMain &dbox, bool &allDone)
           break;
         case L'S': case L's':
           startSilent = true;
+          postMinimize = true;
           dbox.SetStartSilent();
           break;
         case L'V': case L'v':
@@ -1016,6 +991,9 @@ bool ThisMfcApp::ParseCommandLine(DboxMain &dbox, bool &allDone)
     // If start silent && no filename specified, start closed as well
     if (startSilent && !fileGiven)
       dbox.SetStartNoDB();
+    // start silent implies system tray:
+    if (startSilent)
+      PWSprefs::GetInstance()->SetPref(PWSprefs::UseSystemTray, true);
   } // Command line not empty
 
   if (!allDone) {
@@ -1024,6 +1002,62 @@ bool ThisMfcApp::ParseCommandLine(DboxMain &dbox, bool &allDone)
       PWSprefs::GetInstance()->SetPref(PWSprefs::DlgOrientation, dialogOrientation);
   } // !allDone
   return true;
+}
+
+UINT ThisMfcApp::ResolveAllowScreenCaptureStateResourceId(UINT nIdFirst) const
+{
+  // nIdFirst is the first known valid state.
+  // nIdFirst - 1 should be a resource indicating a program/state error.
+  // From nIdFirst through to the last state (nIdFirst + MaxState - 1),
+  // the resource should reflect within itself the indicated state.
+  UINT nId = nIdFirst - 1;
+  if (m_allowScreenCaptureState >= Disallowed || m_allowScreenCaptureState < MaxState)
+    nId = nIdFirst + m_allowScreenCaptureState;
+  return nId;
+}
+
+CString ThisMfcApp::GetAllowScreenCaptureStateMessage(UINT nIdFirst) const
+{
+  UINT nId = ResolveAllowScreenCaptureStateResourceId(nIdFirst);
+  CString csExcludeOverridePhrase;
+  if (!csExcludeOverridePhrase.LoadStringW(nId))
+    csExcludeOverridePhrase = L"<error-invalid-state-message>";
+  return csExcludeOverridePhrase;
+}
+
+int ThisMfcApp::GetScreenCaptureProtectionEnabledRegValue()
+{
+
+  const int ENABLED = 1;
+  HKEY hKey;
+  LSTATUS result;
+  result = ::RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+                          PWS_ADMIN_OPTIONS_SUBKEY_NAME,
+                          0,
+                          KEY_QUERY_VALUE,
+                          &hKey);
+  if (result != ERROR_SUCCESS)
+    return ENABLED;
+  DWORD dwValue;
+  DWORD dwType;
+  DWORD dwSize = sizeof(dwValue);
+  result = ::RegQueryValueEx(hKey,
+                             SCRCAP_PROTECTION_ENABLED_REG_VALUE_NAME,
+                             NULL,
+                             &dwType,
+                             reinterpret_cast<LPBYTE>(&dwValue),
+                             &dwSize);
+  ::RegCloseKey(hKey);
+  if (result != ERROR_SUCCESS || dwType != REG_DWORD || dwSize != sizeof(dwValue))
+    return ENABLED;
+  return static_cast<int>(dwValue);
+}
+
+bool ThisMfcApp::IsExcludeFromScreenCapture() const
+{
+  if (!PWSprefs::GetInstance()->GetPref(PWSprefs::ExcludeFromScreenCapture))
+    return false;
+  return m_allowScreenCaptureState == Disallowed;
 }
 
 BOOL ThisMfcApp::InitInstance()
@@ -1055,6 +1089,7 @@ BOOL ThisMfcApp::InitInstance()
   // Command line parsing MUST be done before the first PWSprefs lookup!
   // (since user/host/config file may be overridden!)
   bool allDone = false;
+  bool postMinimize = false;
 
   // Get config information from the command line before "really" parsing the command line!
   StringX sxConfigFile, sxHost, sxUser;
@@ -1089,22 +1124,18 @@ BOOL ThisMfcApp::InitInstance()
 
   // Do not create dbox before config data obtained as it would create PWSprefs
   // using the potentially incorrect config data
-  DboxMain dbox(m_core);
-
-  std::bitset<UIInterFace::NUM_SUPPORTED> bsSupportedFunctions;
-  bsSupportedFunctions.set(UIInterFace::DATABASEMODIFIED);
-  bsSupportedFunctions.set(UIInterFace::UPDATEGUI);
-  bsSupportedFunctions.set(UIInterFace::GUIREFRESHENTRY);
-  bsSupportedFunctions.set(UIInterFace::UPDATEWIZARD);
-  bsSupportedFunctions.set(UIInterFace::UPDATEGUIGROUPS);
-
-  m_core.SetUIInterFace(&dbox, UIInterFace::NUM_SUPPORTED, bsSupportedFunctions);
+  m_pDbx = new DboxMain(m_core);
 
   // Parse the command line again.  If there were errors getting the config file,
   // host or user before, then this time around we will issue messages but they
   // will probably be in English unless the config data was OK previously and
   // the config file specifies a different language.
-  bool parseVal = ParseCommandLine(dbox, allDone);
+  bool parseVal = ParseCommandLine(*m_pDbx, allDone, postMinimize);
+
+  // If screen capture protection is not disabled by command line processing,
+  // get the registry (installer) screen capture protection setting.
+  if (IsExcludeFromScreenCapture() && GetScreenCaptureProtectionEnabledRegValue() == 0)
+    m_allowScreenCaptureState = AllowedRegistrySetting;
 
   // allDone will be true iff -e or -d options given, in which case
   // we're just a batch encryptor/decryptor
@@ -1170,7 +1201,7 @@ BOOL ThisMfcApp::InitInstance()
   // PWScore needs it to get into database header if/when saved
   m_core.SetApplicationNameAndVersion(AfxGetAppName(), m_dwMajorMinor, m_dwBuildRevision);
 
-  if (m_core.GetCurFile().empty()) {
+  if (!m_core.IsDbOpen()) {
     std::wstring path = prefs->GetPref(PWSprefs::CurrentFile).c_str();
     pws_os::AddDrive(path);
     m_core.SetCurFile(path.c_str());
@@ -1182,34 +1213,16 @@ BOOL ThisMfcApp::InitInstance()
   * normal startup
   */
 
-  /*
-  Here's where PWS currently does DboxMain, which in turn will do
-  the initial PasskeyEntry (the one that looks like a splash screen).
-  This makes things very hard to control.
-  The app object (here) should instead do the initial PasskeyEntry,
-  and, if successful, move on to DboxMain.  I think. {jpr}
-  */
-  m_pDbx = &dbox;
   m_pMainWnd = m_pDbx;
 
-  CLWnd ListenerWnd(dbox);
-  if (SysInfo::IsUnderU3()) {
-    // See comment under CLWnd to understand this.
-    ListenerWnd.m_hWnd = NULL;
-    if (!ListenerWnd.CreateEx(0, AfxRegisterWndClass(0),
-                              L"Pwsafe Listener",
-                              WS_OVERLAPPED, 0, 0, 0, 0, NULL, NULL)) {
-      ASSERT(0);
-      return FALSE;
-    } 
-  }
-
   // Run dialog - note that we don't particularly care what the response was
-  dbox.DoModal();
+  m_pDbx->Create(IDD_PASSWORDSAFE_DIALOG);
+  m_pDbx->ShowWindow(SW_SHOW);
+  m_pDbx->UpdateWindow();
 
-  // Since the dialog has been closed, return FALSE so that we exit the
-  // application, rather than start the application's message pump.
-  return FALSE;
+  if (postMinimize) // as returned by parser
+    m_pDbx->PostMessage(WM_SYSCOMMAND, SC_MINIMIZE);
+  return TRUE;
 }
 
 void ThisMfcApp::AddToMRU(const CString &pszFilename)
@@ -1474,22 +1487,18 @@ void ThisMfcApp::GetLanguageFiles()
   // Add default embedded language - English
   const LCID AppLCID = MAKELCID(m_AppLangID, SORT_DEFAULT); // 0x0409 - English US
 
-  wchar_t *szLanguage_Native(NULL), *szLanguage_English(NULL);
-  wchar_t *szCountry_Native(NULL), *szCountry_English(NULL);
-
-  int inum = ::GetLocaleInfo(AppLCID, LOCALE_SNATIVELANGNAME, szLanguage_Native, 0);
+  int inum = ::GetLocaleInfo(AppLCID, LOCALE_SNATIVELANGNAME, nullptr, 0);
   if (inum > 0) {
-    szLanguage_Native = new wchar_t[inum + 1];
-    ::GetLocaleInfo(AppLCID, LOCALE_SNATIVELANGNAME, szLanguage_Native, inum);
+    const auto szLanguage_Native = std::make_unique<wchar_t[]>(inum + 1);
+    ::GetLocaleInfo(AppLCID, LOCALE_SNATIVELANGNAME, szLanguage_Native.get(), inum);
 
     st_lng.lcid = AppLCID;
     st_lng.xFlags = (wcscmp(sxLL.c_str(), L"EN") == 0) ? 0xC0 : 0x40;
     st_lng.wsLL = L"EN";
     st_lng.wsCC = L"";
-    st_lng.wsLanguage = szLanguage_Native;
+    st_lng.wsLanguage = szLanguage_Native.get();
 
     m_vlanguagefiles.push_back(st_lng);
-    delete[] szLanguage_Native;
   }
 
   CFileFind finder;
@@ -1528,39 +1537,41 @@ void ThisMfcApp::GetLanguageFiles()
     // Create LCID
     LCID lcid = MAKELCID(FoundResLangID, SORT_DEFAULT);
 
-    inum = ::GetLocaleInfo(lcid, LOCALE_SNATIVELANGNAME, NULL, 0);
+    inum = ::GetLocaleInfo(lcid, LOCALE_SNATIVELANGNAME, nullptr, 0);
     if (inum > 0) {
+      std::unique_ptr<wchar_t[]> szCountry_Native;
+      std::unique_ptr<wchar_t[]> szCountry_English;
+
       // Get language name in that language
-      szLanguage_Native = new wchar_t[inum + 1];
-      ::GetLocaleInfo(lcid, LOCALE_SNATIVELANGNAME, szLanguage_Native, inum);
+      const auto szLanguage_Native = std::make_unique<wchar_t[]>(inum + 1);
+      ::GetLocaleInfo(lcid, LOCALE_SNATIVELANGNAME, szLanguage_Native.get(), inum);
 
       int jnum = 0;
       if (!cs_CC.IsEmpty()) {
         // Get Country name in that language
-        jnum = ::GetLocaleInfo(lcid, LOCALE_SNATIVECTRYNAME, NULL, 0);
+        jnum = ::GetLocaleInfo(lcid, LOCALE_SNATIVECTRYNAME, nullptr, 0);
         if (jnum > 0) {
-          szCountry_Native = new wchar_t[jnum + 1];
-          ::GetLocaleInfo(lcid, LOCALE_SNATIVECTRYNAME, szCountry_Native, jnum);
+          szCountry_Native = std::make_unique<wchar_t[]>(jnum + 1);
+          ::GetLocaleInfo(lcid, LOCALE_SNATIVECTRYNAME, szCountry_Native.get(), jnum);
         }
         // Get Country name in English
         int knum = ::GetLocaleInfo(lcid, LOCALE_SENGCOUNTRY, NULL, 0);
         if (knum > 0) {
-          szCountry_English = new wchar_t[knum + 1];
-          ::GetLocaleInfo(lcid, LOCALE_SENGCOUNTRY, szCountry_English, knum);
+          szCountry_English = std::make_unique<wchar_t[]>(knum + 1);
+          ::GetLocaleInfo(lcid, LOCALE_SENGCOUNTRY, szCountry_English.get(), knum);
         }
       }
 
       // Now try to make first character of language name in that language upper case
       // Should use LCMapStringEx but that is for Vista + and we support XP & later
-      wchar_t *szLanguage_NativeUpper(NULL);
       int iu = LCMapString(lcid, LCMAP_LINGUISTIC_CASING | LCMAP_UPPERCASE,
-                           szLanguage_Native, inum,
-                           szLanguage_NativeUpper, 0);
+                           szLanguage_Native.get(), inum,
+                           nullptr, 0);
       if (iu > 0) {
-        szLanguage_NativeUpper = new wchar_t[iu + 1];
+        const auto szLanguage_NativeUpper = std::make_unique<wchar_t[]>(iu + 1);
         iu = LCMapString(lcid, LCMAP_LINGUISTIC_CASING | LCMAP_UPPERCASE,
-                         szLanguage_Native, inum,
-                         szLanguage_NativeUpper, iu);
+                         szLanguage_Native.get(), inum,
+                         szLanguage_NativeUpper.get(), iu);
         if (szLanguage_NativeUpper[0] != L'?') {
           // Assume all OK and language supports Upper case and is read Left->Right
           // Seems to translate non-Latin characters from Hindi, Punjabi, Hebrew, Korean & Chinese
@@ -1569,26 +1580,25 @@ void ThisMfcApp::GetLanguageFiles()
           // Works for Russian Cyrillic alphabet though. Can't promise for future languages!
           szLanguage_Native[0] = szLanguage_NativeUpper[0];
         }
-        delete[] szLanguage_NativeUpper;
       }
       // Get language name in English
-      int lnum = ::GetLocaleInfo(lcid, LOCALE_SENGLANGUAGE, NULL, 0);
+      int lnum = ::GetLocaleInfo(lcid, LOCALE_SENGLANGUAGE, nullptr, 0);
       if (lnum > 0) {
-        szLanguage_English = new wchar_t[lnum + 1];
-        ::GetLocaleInfo(lcid, LOCALE_SENGLANGUAGE, szLanguage_English, lnum);
-        if (wcscmp(szLanguage_Native, szLanguage_English) != 0) {
+        const auto szLanguage_English = std::make_unique<wchar_t[]>(lnum + 1);
+        ::GetLocaleInfo(lcid, LOCALE_SENGLANGUAGE, szLanguage_English.get(), lnum);
+        if (wcscmp(szLanguage_Native.get(), szLanguage_English.get()) != 0) {
           if (jnum > 0)
-            cs_language.Format(L"%s - %s (%s - %s)", szLanguage_Native, szCountry_Native, szLanguage_English, szCountry_English);
+            cs_language.Format(L"%s - %s (%s - %s)", szLanguage_Native.get(), szCountry_Native.get(), szLanguage_English.get(), szCountry_English.get());
           else
-            cs_language.Format(L"%s (%s)", szLanguage_Native, szLanguage_English);
+            cs_language.Format(L"%s (%s)", szLanguage_Native.get(), szLanguage_English.get());
         } else {
           if (jnum > 0)
-            cs_language.Format(L"%s - %s", szLanguage_Native, szCountry_Native);
+            cs_language.Format(L"%s - %s", szLanguage_Native.get(), szCountry_Native.get());
           else
-            cs_language.Format(L"%s", szLanguage_Native);
+            cs_language.Format(L"%s", szLanguage_Native.get());
         }
       } else
-        cs_language.Format(L"%s", szLanguage_Native);
+        cs_language.Format(L"%s", szLanguage_Native.get());
 
       st_lng.lcid = lcid;
       st_lng.xFlags = (m_ResLangID == FoundResLangID) ? 0x80 : 0x00;
@@ -1598,10 +1608,6 @@ void ThisMfcApp::GetLanguageFiles()
       st_lng.wsLanguage = (LPCWSTR)cs_language;
 
       m_vlanguagefiles.push_back(st_lng);
-      delete[] szLanguage_Native;
-      delete[] szLanguage_English;
-      delete[] szCountry_Native;
-      delete[] szCountry_English;
     }
   }
   finder.Close();

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -10,6 +10,7 @@
 #include "Options_PropertySheet.h"
 #include "Options_PropertyPage.h"
 #include "Shortcut.h"
+#include "winutils.h"
 
 #include "core/PWSAuxParse.h"
 
@@ -18,20 +19,24 @@ IMPLEMENT_DYNAMIC(COptions_PropertySheet, CPWPropertySheet)
 COptions_PropertySheet::COptions_PropertySheet(UINT nID, CWnd* pParent,
   const bool bLongPPs)
   : CPWPropertySheet(nID, pParent, bLongPPs),
-  m_save_bSymbols(L""), m_save_iUseOwnSymbols(DEFAULT_SYMBOLS),
-  m_save_iPreExpiryWarnDays(0),
+  m_save_bSymbols(L""), m_save_iPreExpiryWarnDays(0), m_save_iUseOwnSymbols(DEFAULT_SYMBOLS),
   m_bIsModified(false), m_bChanged(false),
   m_bRefreshViews(false), m_bSaveGroupDisplayState(false), m_bUpdateShortcuts(false),
   m_bCheckExpired(false),
-  m_save_bShowUsernameInTree(FALSE), m_save_bShowPasswordInTree(FALSE), 
-  m_save_bExplorerTypeTree(FALSE), m_save_bPreExpiryWarn(FALSE),
-  m_save_bLockOnWindowLock(FALSE), m_bStartupShortcutExists(FALSE),
   m_save_bSaveImmediately(TRUE), m_save_bHighlightChanges(FALSE),
-  m_pp_backup(NULL), m_pp_display(NULL), m_pp_misc(NULL),
-  m_pp_passwordhistory(NULL), m_pp_security(NULL),
-  m_pp_shortcuts(NULL), m_pp_system(NULL)
+  m_save_bPreExpiryWarn(FALSE), m_save_bShowUsernameInTree(FALSE), 
+  m_save_bShowPasswordInTree(FALSE), m_save_bExplorerTypeTree(FALSE), 
+  m_save_bLockOnWindowLock(FALSE), m_bStartupShortcutExists(FALSE),
+  m_pp_backup(nullptr), m_pp_display(nullptr), m_pp_misc(nullptr),
+  m_pp_passwordhistory(nullptr), m_pp_security(nullptr),
+  m_pp_shortcuts(nullptr), m_pp_system(nullptr)
 {
-  ASSERT(pParent != NULL);
+  ASSERT(pParent != nullptr);
+
+  if (!WinUtil::HasTouchscreen()) { // BR1539 - MFC doesn't work well on touchscreen with this
+    SetLook(PropSheetLook_OutlookBar); // switch to nicer view. Will we need to make this a config option?
+    ENSURE(SetIconsList(IDB_OPTION_PAGES, 32));
+  }
 
   // Set up initial values
   SetupInitialValues();
@@ -60,6 +65,8 @@ COptions_PropertySheet::COptions_PropertySheet(UINT nID, CWnd* pParent,
   AddPage(m_pp_shortcuts);
   AddPage(m_pp_system);
  
+ EnablePageHeader(30); // Doesn't work with our pages - increases size on bottom, virtual function OnDrawPageHeader not called
+// so we added the page header manually in each dialog
   CString cs_caption(MAKEINTRESOURCE(nID));
   m_psh.pszCaption = _wcsdup(cs_caption);
 }
@@ -226,6 +233,7 @@ void COptions_PropertySheet::SetupInitialValues()
   m_OPTMD.PWHistoryNumDefault =
       prefs->GetPref(PWSprefs::NumPWHistoryDefault);
   m_OPTMD.PWHAction = 0;
+  m_OPTMD.PWHDefExpDays = prefs->GetPref(PWSprefs::DefaultExpiryDays);
   // Preferences min/max values
   m_OPTMD.prefminPWHNumber = (short)prefs->GetPrefMinVal(PWSprefs::NumPWHistoryDefault);
   m_OPTMD.prefmaxPWHNumber = (short)prefs->GetPrefMaxVal(PWSprefs::NumPWHistoryDefault);
@@ -235,6 +243,8 @@ void COptions_PropertySheet::SetupInitialValues()
       prefs->GetPref(PWSprefs::ClearClipboardOnMinimize) ? TRUE : FALSE;
   m_OPTMD.ClearClipboardOnExit =
       prefs->GetPref(PWSprefs::ClearClipboardOnExit) ? TRUE : FALSE;
+  m_OPTMD.ExcludeFromClipboardHistory =
+      prefs->GetPref(PWSprefs::ExcludeFromClipboardHistory) ? TRUE : FALSE;
   m_OPTMD.LockOnMinimize =
       prefs->GetPref(PWSprefs::DatabaseClear) ? TRUE : FALSE;
   m_OPTMD.ConfirmCopy =
@@ -248,6 +258,8 @@ void COptions_PropertySheet::SetupInitialValues()
   m_OPTMD.HashIters = GetMainDlg()->GetHashIters();
   m_OPTMD.CopyPswdBrowseURL =
       prefs->GetPref(PWSprefs::CopyPasswordWhenBrowseToURL) ? TRUE : FALSE;
+  m_OPTMD.ExcludeFromScreenCapture =
+      prefs->GetPref(PWSprefs::ExcludeFromScreenCapture) ? TRUE : FALSE;
   // Preferences min/max values
   m_OPTMD.prefminIdleTimeout = (short)prefs->GetPrefMinVal(PWSprefs::IdleTimeout);
   m_OPTMD.prefmaxIdleTimeout = (short)prefs->GetPrefMaxVal(PWSprefs::IdleTimeout);
@@ -338,10 +350,10 @@ void COptions_PropertySheet::UpdateCopyPreferences()
   prefs->SetPref(PWSprefs::WindowTransparency,
                   m_OPTMD.PercentTransparency, true);
   
-  // Changes are highlighted only if "hightlight changes" is true and 
+  // Changes are highlighted only if "highlight changes" is true and 
   // "save immediately" is false.
-  // So only need to refresh view if the new combination is different
-  // to the original combination
+  // So only need to refresh view if the new master password is different
+  // from the original one.
   m_bRefreshViews = (m_save_bHighlightChanges && !m_save_bSaveImmediately) != 
                     (m_OPTMD.HighlightChanges && !m_OPTMD.SaveImmediately);
 
@@ -370,10 +382,12 @@ void COptions_PropertySheet::UpdateCopyPreferences()
   prefs->SetPref(PWSprefs::MinimizeOnAutotype,
                  m_OPTMD.MinAuto == TRUE, true);
 
+  // Security
   prefs->SetPref(PWSprefs::ClearClipboardOnMinimize,
                  m_OPTMD.ClearClipboardOnMinimize == TRUE, true);
   prefs->SetPref(PWSprefs::ClearClipboardOnExit,
                  m_OPTMD.ClearClipboardOnExit == TRUE, true);
+  prefs->SetPref(PWSprefs::ExcludeFromClipboardHistory, m_OPTMD.ExcludeFromClipboardHistory == TRUE, true);
   prefs->SetPref(PWSprefs::DatabaseClear,
                  m_OPTMD.LockOnMinimize == TRUE, true);
   prefs->SetPref(PWSprefs::DontAskQuestion,
@@ -382,6 +396,8 @@ void COptions_PropertySheet::UpdateCopyPreferences()
                  m_OPTMD.LockOnWindowLock == TRUE, true);
   prefs->SetPref(PWSprefs::CopyPasswordWhenBrowseToURL,
                  m_OPTMD.CopyPswdBrowseURL == TRUE, true);
+  prefs->SetPref(PWSprefs::ExcludeFromScreenCapture,
+                 m_OPTMD.ExcludeFromScreenCapture == TRUE, true);
 
   prefs->SetPref(PWSprefs::UseSystemTray,
                  m_OPTMD.UseSystemTray == TRUE, true);
@@ -442,6 +458,8 @@ void COptions_PropertySheet::UpdateCopyPreferences()
   if (m_OPTMD.SavePWHistory == TRUE)
     prefs->SetPref(PWSprefs::NumPWHistoryDefault,
                    m_OPTMD.PWHistoryNumDefault, true);
+
+  prefs->SetPref(PWSprefs::DefaultExpiryDays, m_OPTMD.PWHDefExpDays, true);
 
   prefs->SetPref(PWSprefs::LockDBOnIdleTimeout,
                  m_OPTMD.LockOnIdleTimeout == TRUE, true);

@@ -9,7 +9,7 @@
 #
 # Parent CMakeLists.txt already called find_package(Gettext)
 
-set (LANGS "da" "de" "es" "fr" "hu" "it" "ko" "nl" "pl" "ru" "sv" "zh")
+set (LANGS "da" "de" "es" "fr" "hu" "it" "ko" "nl" "pl" "ru" "sl" "sv" "zh")
 
 
 # In general, globbing the source file's not recommended for cmake,
@@ -28,6 +28,8 @@ file (GLOB I18N_SRCS
   "${SRC_BASE_DIR}/ui/wxWidgets/*.h"
   "${SRC_BASE_DIR}/core/*.cpp"
   "${SRC_BASE_DIR}/core/*.h"
+  "${SRC_BASE_DIR}/core/XML/Pugi/*.cpp"
+  "${SRC_BASE_DIR}/core/XML/Pugi/*.h"
   "${CMAKE_BINARY_DIR}/src/core/core_st.*"
   "${SRC_BASE_DIR}/os/unix/*.cpp"
   "${SRC_BASE_DIR}/os/unix/*.h"
@@ -39,9 +41,9 @@ add_custom_target("pot"
 add_custom_command(OUTPUT "pwsafe.pot"
   COMMAND "xgettext"
   ARGS "--default-domain=pwsafe" "--from-code=UTF-8"
-  "--language=C++" "--keyword=_" "--output=pwsafe.pot" ${I18N_SRCS}
+  "--language=C++" "--keyword=_" "--keyword=wxTRANSLATE" "--output=pwsafe.pot" ${I18N_SRCS}
   DEPENDS ${I18N_SRCS}
-  COMMENT "Updating pwsafe.pot"
+  COMMENT "Updating pwsafe.pot in build directory."
   )
 
 add_custom_target("pos"
@@ -52,7 +54,7 @@ macro(update_po LANG)
 	  COMMAND ${GETTEXT_MSGMERGE_EXECUTABLE} "--update" "--backup=off"
     "pos/pwsafe_${LANG}.po" "${CMAKE_CURRENT_BINARY_DIR}/pwsafe.pot"
     DEPENDS "pwsafe.pot"
-    COMMENT "Updating pwsafe_${LANG}.po"
+    COMMENT "Updating pwsafe_${LANG}.po in build directory."
     )
 endmacro(update_po)
 foreach (LANG ${LANGS})

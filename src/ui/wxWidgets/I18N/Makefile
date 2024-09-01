@@ -7,10 +7,12 @@ SRCS := $(wildcard $(SRC_BASE)/ui/wxWidgets/*.cpp) \
 	$(wildcard $(SRC_BASE)/ui/wxWidgets/*.h) \
 	$(wildcard $(SRC_BASE)/core/*.cpp) \
 	$(wildcard $(SRC_BASE)/core/*.h) \
+	$(wildcard $(SRC_BASE)/core/XML/Pugi/*.cpp) \
+	$(wildcard $(SRC_BASE)/core/XML/Pugi/*.h) \
 	$(wildcard $(SRC_BASE)/os/unix/*.cpp) \
 	$(wildcard $(SRC_BASE)/os/unix/*.h)
 
-LANGS := de da es fr hu it ko nl pl ru sv zh
+LANGS := de da es fr hu it ko nl pl ru sl sv zh
 
 POS := $(patsubst %,pos/pwsafe_%.po,$(LANGS))
 
@@ -31,7 +33,7 @@ pos: $(POS)
 mos: $(MOS)
 
 $(POT) : $(SRCS)
-	@xgettext --default-domain=$(DOMAIN) --from-code=UTF-8 --language=C++ --keyword=_ --output=$@ $^
+	@xgettext --default-domain=$(DOMAIN) --from-code=UTF-8 --language=C++ --keyword=_ --keyword=wxTRANSLATE --output=$@ $^
 
 $(POS) : $(POT)
 	@msgmerge --update --backup=off $@ $^

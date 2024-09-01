@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -11,10 +11,8 @@
 #include "stdafx.h"
 
 #include "ThisMfcApp.h"
-#include "fonts.h"
 
 #include "ConfirmDeleteDlg.h"
-#include "core/PwsPlatform.h"
 #include "core/PWSprefs.h"
 
 #ifdef _DEBUG
@@ -27,7 +25,7 @@ static char THIS_FILE[] = __FILE__;
 CConfirmDeleteDlg::CConfirmDeleteDlg(CWnd* pParent, const int numchildren,
      const StringX sxGroup, const StringX sxTitle, const StringX sxUser)
   : CPWDialog(CConfirmDeleteDlg::IDD, pParent),
-  m_numchildren(numchildren), m_sxGroup(sxGroup), m_sxTitle(sxTitle), m_sxUser(sxUser)
+  m_sxGroup(sxGroup), m_sxTitle(sxTitle), m_sxUser(sxUser), m_numchildren(numchildren)
 {
   m_dontaskquestion = PWSprefs::GetInstance()->
     GetPref(PWSprefs::DeleteQuestion);
@@ -77,10 +75,6 @@ BOOL CConfirmDeleteDlg::OnInitDialog()
               L"\xab" + m_sxTitle + L"\xbb " +
               L"\xab" + m_sxUser  + L"\xbb";
     GetDlgItem(IDC_ENTRY)->SetWindowText(sxEntry.c_str());
-
-    // Get Add/Edit font
-    CFont *pFont = Fonts::GetInstance()->GetAddEditFont();
-    GetDlgItem(IDC_ENTRY)->SetFont(pFont);
 
     // Disable/hide children info - n/a for a single entry
     GetDlgItem(IDC_DELETECHILDREN)->EnableWindow(FALSE);

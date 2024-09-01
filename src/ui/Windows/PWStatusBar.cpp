@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -10,7 +10,10 @@
 //
 
 #include "stdafx.h"
+#include "ThisMfcApp.h"
 #include "PWStatusBar.h"
+#include "winutils.h"
+#include "ScreenCaptureStateControl.h"
 
 #include "os/debug.h"
 
@@ -38,15 +41,22 @@ TIMEINT_SB_SHOWING The length of time the tool tip window remains visible
 IMPLEMENT_DYNAMIC(CPWStatusBar, CStatusBar)
 
 CPWStatusBar::CPWStatusBar()
-  : m_bSTBFilterStatus(false), m_pSBToolTips(NULL), m_bUseToolTips(false),
+  : m_pSBToolTips(nullptr), m_bSTBFilterStatus(false), m_bUseToolTips(false),
   m_bMouseInWindow(false), m_bFileReadOnly(false), m_bFileOpen(false)
 {
-  m_FilterBitmap.LoadBitmap(IDB_FILTER_ACTIVE);
-  BITMAP bm;
 
-  m_FilterBitmap.GetBitmap(&bm);
-  m_bmWidth = bm.bmWidth;
-  m_bmHeight = bm.bmHeight;
+  // from https://docs.microsoft.com/en-us/windows/win32/hidpi/high-dpi-desktop-application-development-on-windows
+  int dpi = WinUtil::GetDPI(); // can't use ForWindow(m_Hwnd) as we don't have a valid one when this is called.
+  CBitmap origBmp;
+  origBmp.LoadBitmap(IDB_FILTER_ACTIVE);
+
+  BITMAP bm;
+  origBmp.GetBitmap(&bm);
+  m_bmWidth = MulDiv(bm.bmWidth, dpi, WinUtil::defDPI);
+  m_bmHeight = MulDiv(bm.bmHeight, dpi, WinUtil::defDPI);
+
+  WinUtil::ResizeBitmap(origBmp, m_FilterBitmap, m_bmWidth, m_bmHeight);
+  origBmp.DeleteObject();
 }
 
 CPWStatusBar::~CPWStatusBar()
@@ -87,6 +97,7 @@ void CPWStatusBar::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
   switch (lpDrawItemStruct->itemID) {
     case SB_FILTER:
+    {
       // Attach to a CDC object
       CDC dc;
       dc.Attach(lpDrawItemStruct->hDC);
@@ -105,7 +116,8 @@ void CPWStatusBar::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
         dc.BitBlt(ileft, itop, m_bmWidth, m_bmHeight,
                   &srcDC, 0, 0, SRCCOPY); // BitBlt to pane rect
         srcDC.SelectObject(pOldBitmap);
-      } else {
+      }
+      else {
         dc.FillSolidRect(&rect, ::GetSysColor(COLOR_BTNFACE));
       }
       // Detach from the CDC object, otherwise the hDC will be
@@ -113,6 +125,25 @@ void CPWStatusBar::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
       dc.Detach();
 
       return;
+    }
+    case SB_SCR_CAP:
+    {
+      UINT nIdStateBitmap;
+      UINT nStyle;
+      int cxWidth;
+      GetPaneInfo(SB_SCR_CAP, nIdStateBitmap, nStyle, cxWidth);
+
+      LONG bmWidthDpi; // use m_bmWidth, remove after testing.
+      LONG bmHeightDpi;
+      m_ExcludeCaptureBitmaps.GetBitmapInfo(nIdStateBitmap, nullptr, &bmWidthDpi, &bmHeightDpi);
+
+      CRect rect(&lpDrawItemStruct->rcItem);
+      // Center bitmap.
+      int ileft = rect.left + rect.Width() / 2 - m_bmWidth / 2;
+      int itop = rect.top + rect.Height() / 2 - m_bmHeight / 2;
+      m_ExcludeCaptureBitmaps.BitBltStateBitmap(nIdStateBitmap, ileft, itop, lpDrawItemStruct->hDC);
+      return;
+    }
   }
 
   CStatusBar::DrawItem(lpDrawItemStruct);
@@ -153,6 +184,7 @@ bool CPWStatusBar::ShowToolTip(int nPane, const bool bVisible)
     IDS_SB_TT_MODIFIED   /* SB_MODIFIED        */,
     IDS_SB_TT_MODE       /* SB_READONLY        */,
     IDS_SB_TT_NUMENTRIES /* SB_NUM_ENT         */,
+    IDS_SCRCAP_TT_OVERRIDE_CMDLINE    /* SB_SCR_CAP         */,
     IDS_SB_TT_FILTER     /* SB_FILTER          */};
 
   if (!m_bUseToolTips || !m_bFileOpen)
@@ -163,19 +195,24 @@ bool CPWStatusBar::ShowToolTip(int nPane, const bool bVisible)
     return false;
   }
 
+  UINT nIdToolTipString = uiMsg[nPane];
+
   // Don't show Mode change tooltip if file is R/O on disk
-  if (uiMsg[nPane] == IDS_SB_TT_MODE && m_bFileReadOnly) {
+  if (nIdToolTipString == IDS_SB_TT_MODE && m_bFileReadOnly) {
     return false;
   }
 
+  if (nPane == SB_SCR_CAP)
+    nIdToolTipString = CScreenCaptureStateControl::GetCurrentCaptureStateToolTipStringId();
+
   CString cs_ToolTip;
-  cs_ToolTip.LoadString(uiMsg[nPane]);
+  cs_ToolTip.LoadString(nIdToolTipString);
   m_pSBToolTips->SetWindowText(cs_ToolTip);
 
   CPoint pt;
   ::GetCursorPos(&pt);
 
-  pt.y += ::GetSystemMetrics(SM_CYCURSOR) / 2; // half-height of cursor
+  pt.y += WinUtil::GetSystemMetrics(SM_CYCURSOR, m_hWnd) / 2; // half-height of cursor
 
   m_pSBToolTips->SetWindowPos(&wndTopMost, pt.x, pt.y, 0, 0,
                               SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
@@ -231,8 +268,9 @@ void CPWStatusBar::OnMouseMove(UINT nFlags, CPoint point)
            UINT uiID, uiStyle;
            int cxWidth;
            GetPaneInfo(i, uiID, uiStyle, cxWidth);
-           if (rc.right - rc.left < cxWidth)
-             rc.right = rc.left + ::GetSystemMetrics(SM_CXVSCROLL) + ::GetSystemMetrics(SM_CXBORDER) * 2;
+           if (rc.right - rc.left < cxWidth) {
+             rc.right = rc.left + WinUtil::GetSystemMetrics(SM_CXVSCROLL, m_hWnd) + WinUtil::GetSystemMetrics(SM_CXBORDER, m_hWnd) * 2;
+           }
         }
         if (PtInRect(&rc, point)) {
           nPane = i;

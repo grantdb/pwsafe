@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -13,11 +13,12 @@
 // TRACE replacement
 #include "../debug.h"
 #include "../../core/util.h"
+#include "../pws_str.h"
 #include <wtypes.h>
 
 #if defined(_DEBUG) || defined(DEBUG)
 
-#include <stdio.h>
+#include <cstdio>
 
 // Debug output - Same usage as MFC TRACE
 // Adds timestamp to start of every piece of debug output

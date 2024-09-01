@@ -51,6 +51,7 @@
 #define IDS_PWHHELP                     5119
 #define IDS_PASSWORDHELP2               5120
 #define IDS_TRANSPARENCYHELP            5121
+#define IDS_EXCLUDE_FROM_SCR_CAP_HELP   5122
 
 // Program strings
 #define IDS_FILEERROR1                  5210
@@ -159,6 +160,7 @@
 #define IDS_FILEOPENERROR               5319
 #define IDS_CANTOPENREADING             5320
 #define IDS_UNKNOWNERROR                5321
+#define IDS_CONFIRMOLDPHRASE            5322
 #define IDS_NEWFORMAT2                  5323
 #define IDS_VERSIONWARNING              5324
 #define IDS_CANTOPENWRITING             5325
@@ -187,10 +189,8 @@
 #define IDS_NOCOMPAREFILE               5353
 #define IDS_PICKCOMPAREFILE             5354
 #define IDS_COMPARESAME                 5355
-#define IDS_COMPARESTATISTICS           5356
 #define IDS_IDENTICALDATABASES          5357
 #define IDS_COMPARECOMPLETE             5358
-#define IDS_COMPARESTATS                5359
 #define IDS_COMPAREENTRIES1             5360
 #define IDS_COMPAREENTRIES2             5361
 #define IDS_COMPAREBOTHDIFF             5362
@@ -227,6 +227,7 @@
 #define IDS_OPTBACKUPTITLE              5393
 #define IDS_DEFDBNAME                   5394
 #define IDS_CREATENAME                  5395
+#define IDS_COMPTWOFACTORKEY            5396
 #define IDS_MENUEXPCOLGROUP             5400
 #define IDS_MENUEDITENTRY               5401
 #define IDS_MENUVIEWENTRY               5402
@@ -235,7 +236,6 @@
 #define IDS_MAXNUMDAYSEXCEEDED          5407
 #define IDS_HELPMENU                    5408
 #define IDS_INVALIDEXPIRYWARNDAYS       5410
-#define IDS_DRAGNUMBER                  5411
 #define IDS_STRICT_LOCKED               5412
 #define IDS_CPF_CDD                     5413
 #define IDS_NOITEMS                     5414
@@ -297,7 +297,6 @@
 #define IDS_TRYING2CONTACT_SERVER       5475
 #define IDS_NEWER_CAPTION               5476
 #define IDS_NEWER_AVAILABLE             5477
-#define IDS_NEWER_AVAILABLE_U3          5478
 #define IDS_TEXTIMPORTFAILED            5479
 #define IDS_COMPARINGDATABASE           5480
 #define IDS_COPYENTRY                   5481
@@ -336,14 +335,6 @@
 #define IDS_PSWD                        5529
 #define IDS_SHOWTOOLBAR                 5530
 #define IDS_HIDETOOLBAR                 5531
-#define IDS_RPTCOMPARE                  5532
-#define IDS_RPTFIND                     5533
-#define IDS_RPTIMPORTTEXT               5534
-#define IDS_RPTIMPORTXML                5535
-#define IDS_RPTMERGE                    5536
-#define IDS_RPTVALIDATE                 5537
-#define IDS_SEARCHRESULTS1              5538
-#define IDS_SEARCHRESULTS2              5539
 #define IDS_REPORTCREATED               5540
 #define IDS_FINDGROUP                   5541
 #define IDS_FINDTITLE                   5542
@@ -469,6 +460,7 @@
 #define IDS_URLCOPIED                   5676
 #define IDS_AUTOTYPECOPIED              5677
 #define IDS_RUNCMDCOPIED                5678
+#define IDS_TRAYBROWSEALT               5679
 #define IDS_COL_MENUITEM                5680
 #define IDS_COL_SHORTCUT                5681
 #define IDS_SHCT_TOOLTIP                5682
@@ -526,7 +518,6 @@
 #define IDS_PASSWORDGENERATED2          5745
 #define IDS_SYNCHRONIZEX                5747
 #define IDS_NOFIELDSFORSYNCH            5748
-#define IDS_RPTSYNCH                    5749
 #define IDS_SYNCHINGDATABASE            5750
 #define IDS_PICKSYNCHRONIZEEFILE        5753
 #define IDS_OPEN                        5754
@@ -577,8 +568,6 @@
 #define IDS_UNPROTECT                   5802
 #define IDS_WZSLCT_WARNING_SYNC         5803
 #define IDS_WZSLCT_WARNING_EXP          5804
-#define IDS_RPTEXPORTTEXT               5805
-#define IDS_RPTEXPORTXML                5806
 #define IDS_EXPORT_TEXTX_SINGLE         5807
 #define IDS_EXPORT_XMLX_SINGLE          5808
 #define IDS_WZDATABASE                  5809
@@ -639,8 +628,6 @@
 #define IDS_WZACTIONFAILED              5865
 #define IDS_CANNOTCREATEDIR             5866
 #define IDS_WITHWARNINGS                5867
-#define IDS_RPTIMPORTKPV1TXT            5868
-#define IDS_RPTIMPORTKPV1CSV            5869
 #define IDS_IMPORTFAILED                5870
 #define IDS_PASSWORDLEN                 5871
 #define IDS_SHIFTDCA                    5872
@@ -668,7 +655,6 @@
 #define IDS_INVALIDPOLICYNAME2          5896
 #define IDS_XMLIMPORTWITHWARNINGS       5905
 #define IDS_CHANGED_POLICIES            5906
-#define IDS_DRAGPOLICY                  5907
 #define IDS_NOT_USED                    5908
 #define IDS_COMPPOLICYNAME              5909
 #define IDS_POLICY_VIEWENTRY            5910
@@ -726,7 +712,6 @@
 #define IDS_WZEXPORTDB                  5962
 #define IDS_EXPORT_TEXTX_GROUP          5963
 #define IDS_EXPORT_XMLX_GROUP           5964
-#define IDS_RPTEXPORTDB                 5965
 #define IDS_WSSLCT_GROUP                5966
 #define IDS_EXDB                        5967
 #define IDS_EXPORTWARNING               5970
@@ -765,6 +750,10 @@
 #define IDS_YUBI_UNINITIALIZED          6003
 #define IDS_YUBI_INIT_FAILED            6004
 #define IDS_YUBI_INIT_SUCCESS           6005
+#define IDS_YUBI_SET_FAILED             6006
+#define IDS_YUBI_SET_SUCCESS            6007
+#define IDS_YUBI_SET_DB_SAVE_FAILED     6008
+#define IDS_YUBI_READ_FAIL              6009
 
 #define IDS_STATIC_DB_PREFS_RO_WARNING  6020
 #define IDS_DB_READ_ONLY                6021
@@ -780,7 +769,6 @@
 #define IDS_MEM_LOCK_FAILED             6031
 #define IDS_CLEARMRU                    6032
 #define IDS_CONFIRMCLEARMRU             6033
-#define IDS_OPTBACKUPNODRIVE            6034
 #define IDS_EXPANDPATH                  6035
 #define IDS_CANT_EXPANDPATH             6036
 #define IDS_PWHISTORYCOPIED             6037
@@ -802,4 +790,39 @@
 #define IDS_VIEWBASEENTRY               6053
 #define IDS_DBIDINUSE                   6054
 #define IDS_INCLUDEDBASES               6055
+#define IDS_GC_ONE_CHILD                6060
+#define IDS_GC_N_CHILDREN               6061
+#define IDS_USEANYWAY                   6062
+#define IDS_DISCARD                     6063
+#define IDS_SAVE                        6064
 
+#define IDS_SCRCAP_TT_STATE_ERROR                           6067
+#define IDS_SCRCAP_TT_DISALLOWED_DEFAULT                    6068
+#define IDS_SCRCAP_TT_ALLOWED_DBPREF                        6069
+
+#define IDS_SCRCAP_TT_OVERRIDE_INVALID                      6070
+#define IDS_SCRCAP_TT_OVERRIDE_NONE                         6071
+#define IDS_SCRCAP_TT_OVERRIDE_CMDLINE                      6072
+#define IDS_SCRCAP_TT_OVERRIDE_REGISTRY                     6073
+
+#define IDS_SCRCAP_EXCLUDE_OVERRIDE_WARNING_BEFORE_INVALID  6080
+#define IDS_SCRCAP_EXCLUDE_OVERRIDE_WARNING_BEFORE_NONE     6081
+#define IDS_SCRCAP_EXCLUDE_OVERRIDE_WARNING_BEFORE_CMDLINE  6082
+#define IDS_SCRCAP_EXCLUDE_OVERRIDE_WARNING_BEFORE_REGISTRY 6083
+
+#define IDS_SCRCAP_EXCLUDE_OVERRIDE_WARNING_AFTER_INVALID   6090
+#define IDS_SCRCAP_EXCLUDE_OVERRIDE_WARNING_AFTER_NONE      6091
+#define IDS_SCRCAP_EXCLUDE_OVERRIDE_WARNING_AFTER_CMDLINE   6092
+#define IDS_SCRCAP_EXCLUDE_OVERRIDE_WARNING_AFTER_REGISTRY  6093
+
+#define IDS_ADDEDITERR_INVALID_TOTP_KEY                     6100
+#define IDS_TWOFACTORKEY                                    6101
+#define IDS_TWOFACTORCODEBUTTON_CONFIGURED                  6102
+#define IDS_TWOFACTORCODEBUTTON_NOTCONFIGURED               6103
+#define IDS_TWOFACTORCODESTATIC_CONFIGURED                  6104
+#define IDS_TWOFACTORCODE_COPIED                            6105
+#define IDS_TWOFACTORCODE_ERROR_TITLE                       6106
+#define IDS_TWOFACTORCODE_ERROR_MESSAGE                     6107
+#define IDS_TWOFACTORCODE_ERROR_KEYEMPTY                    6108
+#define IDS_AC_STATIC_TWOFACTORCODE                         6115
+#define IDS_DISPLAYAUTHCODE_TITLEFMT                        6116

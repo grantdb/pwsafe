@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -13,6 +13,7 @@
 //
 #include "stdafx.h"
 #include "puptext.h"
+#include "winutils.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -61,7 +62,7 @@ int CPopupText::Create(CPoint pt, CWnd* pParentWnd, UINT nID)
 LRESULT CPopupText::OnSetText(WPARAM , LPARAM lp)
 {
   CRect rc;
-  const int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+  const int screenWidth = WinUtil::GetSystemMetrics(SM_CXSCREEN, m_hWnd);
   GetWindowRect(&rc);
   int h = rc.Height();
   CClientDC dc(this);

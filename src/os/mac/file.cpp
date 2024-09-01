@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -28,6 +28,9 @@
 #include "../../core/core.h"
 #include "../../core/StringXStream.h"
 #include "../../core/PwsPlatform.h"
+
+
+#include "../../core/pugixml/pugixml.hpp"
 
 using namespace std;
 
@@ -261,9 +264,6 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker, HANDLE &)
 #endif
   int fh = open(lfn, (O_CREAT | O_EXCL | O_WRONLY),
                  (S_IREAD | S_IWRITE));
-#ifdef UNICODE
-  delete[] lfn;
-#endif
 
   if (fh == -1) { // failed to open exclusively. Already locked, or ???
     switch (errno) {
@@ -274,14 +274,63 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker, HANDLE &)
       break;
     case EEXIST: // filename already exists
       {
+        locker = _T("Unable to determine locker");
         // read locker data ("user@machine:nnnnnnnn") from file
-          istringstreamT is(lock_filename);
-          stringT lockerStr;
-          if (is >> lockerStr) {
-            locker = lockerStr;
+        fh = open(lfn, (O_RDONLY));
+        if(fh != -1) {
+          struct stat sbuf;
+          if((fstat(fh, &sbuf) != -1) && sbuf.st_size) {
+            char *lb = new char [sbuf.st_size + sizeof(TCHAR)];
+            ssize_t num;
+            ASSERT(lb);
+            num = read(fh, lb, sbuf.st_size);
+            if(num == sbuf.st_size) {
+              char *lp;
+              for(lp = &lb[num-1]; lp >= lb && *lp != ':'; --lp) ; // Search for ':'
+              if(lp >= lb) {
+                unsigned long offset = &lb[num] - lp;
+                pugi::xml_encoding encoding = pugi::encoding_auto;
+                if(offset == 9) { // ':' '1' '2' '3' '4' '5' '6' '7' '8' ('\0')
+                  // UTF-8 coding
+                  encoding = pugi::encoding_utf8;
+                }
+                else if(offset == 18) { // ':' '\0' '1' '\0' '2' '\0' '3' '\0' '4' '\0' '5' '\0' '6' '\0' '7' '\0' '8' '\0' ('\0' '\0')
+                  // UTF-16 coding little endian
+                  encoding = pugi::encoding_utf16_le;
+                }
+                else if(offset == 17) { // '\0' ':' '\0' '1' '\0' '2' '\0' '3' '\0' '4' '\0' '5' '\0' '6' '\0' '7' '\0' '8' ('\0' '\0')
+                  // UTF-16 coding big endian);
+                  encoding = pugi::encoding_utf16_be;
+                }
+                else if(offset == 36) { // ':' '\0' '\0' '\0' '1' '\0' '\0' '\0' '2' '\0' '\0' '\0' '3' '\0' '\0' '\0' '4' '\0' '\0' '\0' '5' '\0' '\0' '\0' '6' '\0' '\0' '\0' '7' '\0' '\0' '\0' '8' '\0' '\0' '\0' ('\0' '\0' '\0' '\0')
+                  // UTF-32 coding little endian
+                  encoding = pugi::encoding_utf32_le;
+                }
+                else if(offset == 34) { // '\0' '\0' '\0' ':' '\0' '\0' '\0' '1' '\0' '\0' '\0' '2' '\0' '\0' '\0' '3' '\0' '\0' '\0' '4' '\0' '\0' '\0' '5' '\0' '\0' '\0' '6' '\0' '\0' '\0' '7' '\0' '\0' '\0' '8' ('\0' '\0' '\0' '\0')
+                  // UTF-32 coding big endian
+                  encoding = pugi::encoding_utf32_be;
+                }
+                if(encoding != pugi::encoding_auto) {
+                  // get private buffer
+                  wchar_t* buffer = 0;
+                  size_t length = 0;
+                  // Convert from UTF-8, UTF-16 or UTF-32 to machine wchar_t
+                  if(pugi::convertBuffer(buffer, length, encoding, lb, num, true)) {
+                    ASSERT(buffer);
+                    locker = _T("");
+                    locker.append(buffer, length);
+                    if(static_cast<void *>(buffer) != static_cast<void *>(lb))
+                      (*pugi::get_memory_deallocation_function())(buffer);
+                  }
+                }
+              }
+            }
+            delete [] lb;
           }
+          close(fh);
+        }
       } // EEXIST block
-        break;
+      break;
     case EINVAL: // Invalid oflag or pmode argument
       LoadAString(locker, IDSC_INTERNALLOCKERROR);
       break;
@@ -295,9 +344,17 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker, HANDLE &)
       LoadAString(locker, IDSC_UNKNOWN_ERROR);
       break;
     } // switch (errno)
+#ifdef UNICODE
+    delete[] lfn;
+#endif
     return false;
   } else { // valid filehandle, write our info
-    int numWrit;
+
+// Since ASSERT is a no-op in a release build, numWrit
+// becomes an unused variable
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+    ssize_t numWrit;
     const stringT user = pws_os::getusername();
     const stringT host = pws_os::gethostname();
     const stringT pid = pws_os::getprocessid();
@@ -308,7 +365,12 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker, HANDLE &)
     numWrit += write(fh, _T(":"), sizeof(TCHAR));
     numWrit += write(fh, pid.c_str(), pid.length() * sizeof(TCHAR));
     ASSERT(numWrit > 0);
+#pragma GCC diagnostic pop
+
     close(fh);
+#ifdef UNICODE
+    delete[] lfn;
+#endif
     return true;
   }
 }
@@ -337,6 +399,10 @@ bool pws_os::IsLockedFile(const stringT &filename)
 
 std::FILE *pws_os::FOpen(const stringT &filename, const TCHAR *mode)
 {
+  if (filename.empty()) { // set to stdin/stdout, depending on mode[0] (r/w/a)
+	  return mode[0] == L'r' ? stdin : stdout;
+  }
+  
   const char *cfname = NULL;
   const char *cmode = NULL;
 #ifdef UNICODE
@@ -374,7 +440,7 @@ int pws_os::FClose(std::FILE *fd, const bool &bIsWrite)
   return 0;
 }
 
-ulong64 pws_os::fileLength(std::FILE *fp)
+size_t pws_os::fileLength(std::FILE *fp)
 {
   int fd = fileno(fp);
   if (fd == -1)
@@ -382,7 +448,7 @@ ulong64 pws_os::fileLength(std::FILE *fp)
   struct stat st;
   if (fstat(fd, &st) == -1)
     return -1;
-  return ulong64(st.st_size);
+  return size_t(st.st_size);
 }
 
 bool pws_os::GetFileTimes(const stringT &filename,

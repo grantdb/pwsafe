@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -9,18 +9,17 @@
 //
 
 #include "stdafx.h"
-#include "passwordsafe.h"
 #include "DboxMain.h"
 #include "PasswordPolicyDlg.h"
 #include "GeneralMsgBox.h"
 
 #include "core/core.h"
 #include "core/PWCharPool.h"
-#include "core/PwsPlatform.h"
 #include "core/PWSprefs.h"
 
 #include "resource.h"
 #include "resource3.h"  // String resources
+#include "winutils.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -59,9 +58,12 @@ IMPLEMENT_DYNAMIC(CPasswordPolicyDlg, CPWDialog)
 CPasswordPolicyDlg::CPasswordPolicyDlg(UINT uicaller, CWnd *pParent, bool bLongPPs,
                                        bool bReadOnly, PWPolicy &st_default_pp)
   : CPWDialog(bLongPPs ? CPasswordPolicyDlg::IDD : CPasswordPolicyDlg::IDD_SHORT, pParent),
-  m_uicaller(uicaller), m_bReadOnly(bReadOnly), m_password(L""),
-  m_UseNamedPolicy(FALSE), m_st_default_pp(st_default_pp), m_bLongPPs(bLongPPs), m_pCopyBtn(NULL),
-  m_bCopyPasswordEnabled(false), m_bImageLoaded(FALSE), m_bDisabledImageLoaded(FALSE)
+  m_uicaller(uicaller), 
+  m_UseNamedPolicy(FALSE),
+  m_password(L""), m_st_default_pp(st_default_pp), m_bReadOnly(bReadOnly),
+  m_pCopyBtn(nullptr), m_bLongPPs(bLongPPs),
+  m_bImageLoaded(FALSE), m_bDisabledImageLoaded(FALSE),
+  m_bCopyPasswordEnabled(false)
 {
   m_PWUseLowercase = m_oldPWUseLowercase =
     (m_st_default_pp.flags & PWPolicy::UseLowercase) != 0;
@@ -78,7 +80,7 @@ CPasswordPolicyDlg::CPasswordPolicyDlg(UINT uicaller, CWnd *pParent, bool bLongP
   m_PWMakePronounceable = m_oldPWMakePronounceable =
     (m_st_default_pp.flags & PWPolicy::MakePronounceable) != 0;
 
-  m_PWDefaultLength = m_oldPWDefaultLength = m_st_default_pp.length;
+  m_PWLength = m_oldPWLength = m_st_default_pp.length;
   m_PWDigitMinLength = m_oldPWDigitMinLength = m_st_default_pp.digitminlength;
   m_PWLowerMinLength = m_oldPWLowerMinLength = m_st_default_pp.lowerminlength;
   m_PWSymbolMinLength = m_oldPWSymbolMinLength = m_st_default_pp.symbolminlength;
@@ -122,7 +124,7 @@ void CPasswordPolicyDlg::DoDataExchange(CDataExchange* pDX)
     CPWDialog::DoDataExchange(pDX);
 
     //{{AFX_DATA_MAP(CPasswordPolicyDlg)
-    DDX_Text(pDX, IDC_DEFPWLENGTH, m_PWDefaultLength);
+    DDX_Text(pDX, IDC_DEFPWLENGTH, m_PWLength);
     DDX_Text(pDX, IDC_MINDIGITLENGTH, m_PWDigitMinLength);
     DDX_Text(pDX, IDC_MINLOWERLENGTH, m_PWLowerMinLength);
     DDX_Text(pDX, IDC_MINSYMBOLLENGTH, m_PWSymbolMinLength);
@@ -145,8 +147,16 @@ void CPasswordPolicyDlg::DoDataExchange(CDataExchange* pDX)
     DDX_Control(pDX, IDC_POLICYLIST, m_cbxPolicyNames);
 
     DDX_Control(pDX, IDC_STATIC_MESSAGE, m_stcMessage);
-    DDX_Control(pDX, IDC_COPYPASSWORDHELP, m_Help1);
     //}}AFX_DATA_MAP
+
+    if (pDX->m_bSaveAndValidate) {
+      if (m_PolicyNameEdit.IsWindowVisible()) {
+        m_PolicyNameEdit.GetWindowText((CString &)m_policyname);
+      } else  if (m_cbxPolicyNames.IsWindowVisible()) {
+        int index = m_cbxPolicyNames.GetCurSel();
+        m_cbxPolicyNames.GetLBText(index, m_policyname);
+      } // else default policy edit
+    }
 }
 
 BEGIN_MESSAGE_MAP(CPasswordPolicyDlg, CPWDialog)
@@ -307,27 +317,17 @@ BOOL CPasswordPolicyDlg::OnInitDialog()
       // Load bitmaps
       UINT nImageID = PWSprefs::GetInstance()->GetPref(PWSprefs::UseNewToolbar) ?
         IDB_COPYPASSWORD_NEW : IDB_COPYPASSWORD_CLASSIC;
-      m_bImageLoaded = m_CopyPswdBitmap.Attach(
-                    ::LoadImage(::AfxFindResourceHandle(MAKEINTRESOURCE(nImageID), RT_BITMAP),
-                    MAKEINTRESOURCE(nImageID), IMAGE_BITMAP, 0, 0,
-                    (LR_DEFAULTSIZE | LR_CREATEDIBSECTION | LR_SHARED)));
+      m_bImageLoaded = WinUtil::LoadScaledBitmap(m_CopyPswdBitmap, nImageID, true, m_hWnd);
 
       ASSERT(m_bImageLoaded);
-      if (m_bImageLoaded) {
-        FixBitmapBackground(m_CopyPswdBitmap);
-      }
 
       nImageID = PWSprefs::GetInstance()->GetPref(PWSprefs::UseNewToolbar) ?
         IDB_COPYPASSWORD_NEW_D : IDB_COPYPASSWORD_CLASSIC_D;
 
-      m_bDisabledImageLoaded = m_DisabledCopyPswdBitmap.Attach(
-        ::LoadImage(::AfxFindResourceHandle(MAKEINTRESOURCE(nImageID), RT_BITMAP),
-          MAKEINTRESOURCE(nImageID), IMAGE_BITMAP, 0, 0,
-          (LR_DEFAULTSIZE | LR_CREATEDIBSECTION | LR_SHARED)));
+      m_bDisabledImageLoaded = WinUtil::LoadScaledBitmap(m_DisabledCopyPswdBitmap, nImageID, true, m_hWnd);
 
       ASSERT(m_bDisabledImageLoaded);
       if (m_bDisabledImageLoaded) {
-        FixBitmapBackground(m_DisabledCopyPswdBitmap);
         m_pCopyBtn->SetBitmap(m_DisabledCopyPswdBitmap);
       }
       break;
@@ -363,7 +363,7 @@ BOOL CPasswordPolicyDlg::OnInitDialog()
     break;
   }
 
-  setupBuddy(this, IDC_PWLENSPIN, IDC_DEFPWLENGTH, m_PWDefaultLength, PWSprefs::PWDefaultLength);
+  setupBuddy(this, IDC_PWLENSPIN, IDC_DEFPWLENGTH, m_PWLength, PWSprefs::PWDefaultLength);
   setupBuddy(this, IDC_SPINDIGITS, IDC_MINDIGITLENGTH, m_PWDigitMinLength, PWSprefs::PWDigitMinLength);
   setupBuddy(this, IDC_SPINLOWERCASE, IDC_MINLOWERLENGTH, m_PWLowerMinLength, PWSprefs::PWLowercaseMinLength);
   setupBuddy(this, IDC_SPINUPPERCASE, IDC_MINUPPERLENGTH, m_PWUpperMinLength, PWSprefs::PWUppercaseMinLength);
@@ -404,13 +404,8 @@ BOOL CPasswordPolicyDlg::OnInitDialog()
 
     // Set up Tooltips
     if (InitToolTip(TTS_BALLOON | TTS_NOPREFIX, 0)) {
-      m_Help1.Init(IDB_QUESTIONMARK);
-
-      AddTool(IDC_COPYPASSWORDHELP, IDS_CLICKTOCOPYGENPSWD);
+      AddTool(IDC_COPYPASSWORD, IDS_CLICKTOCOPYGENPSWD);
       ActivateToolTip();
-    } else {
-      m_Help1.EnableWindow(FALSE);
-      m_Help1.ShowWindow(SW_HIDE);
     }
   }
 
@@ -469,7 +464,7 @@ void CPasswordPolicyDlg::OnCancel()
   m_SymbolsEdit.GetWindowText(m_Symbols);
 
   // Check if any changes made
-  if (m_PWDefaultLength     != m_oldPWDefaultLength     ||
+  if (m_PWLength     != m_oldPWLength     ||
       m_PWUseLowercase      != m_oldPWUseLowercase      ||
       (m_oldPWUseLowercase  == TRUE &&
        m_PWLowerMinLength   != m_oldPWLowerMinLength)   ||
@@ -543,11 +538,13 @@ void CPasswordPolicyDlg::SetPolicyData(CString &cs_policyname,
   m_PWMakePronounceable = m_oldPWMakePronounceable =
     (xst_pp.flags & PWPolicy::MakePronounceable) ==
                        PWPolicy::MakePronounceable;
-  m_PWDefaultLength = m_oldPWDefaultLength = xst_pp.length;
+  m_PWLength = m_oldPWLength = xst_pp.length;
   m_PWDigitMinLength = m_oldPWDigitMinLength = xst_pp.digitminlength;
   m_PWLowerMinLength = m_oldPWLowerMinLength = xst_pp.lowerminlength;
   m_PWSymbolMinLength = m_oldPWSymbolMinLength = xst_pp.symbolminlength;
   m_PWUpperMinLength = m_oldPWUpperMinLength = xst_pp.upperminlength;
+
+  do_reset_symbols(false); // BR1496 - if symbols were set; this will be overridden below:
 
   CString cs_symbols = xst_pp.symbols.c_str();
   if (m_PWUseSymbols &&!cs_symbols.IsEmpty())
@@ -590,7 +587,7 @@ void CPasswordPolicyDlg::OnNamesComboChanged()
   m_PWEasyVision = (xst_pp.flags & PWPolicy::UseEasyVision) != 0;
   m_PWMakePronounceable = (xst_pp.flags & PWPolicy::MakePronounceable) != 0;
   
-  m_PWDefaultLength = xst_pp.length;
+  m_PWLength = xst_pp.length;
   m_PWDigitMinLength = xst_pp.digitminlength;
   m_PWLowerMinLength = xst_pp.lowerminlength;
   m_PWSymbolMinLength = xst_pp.symbolminlength;
@@ -828,7 +825,7 @@ BOOL CPasswordPolicyDlg::Validate()
   }
 
   if (m_PWUseHexdigits) {
-    if (m_PWDefaultLength % 2 != 0) {
+    if (m_PWLength % 2 != 0) {
       gmb.AfxMessageBox(IDS_HEXMUSTBEEVEN);
       return FALSE;
     }
@@ -841,7 +838,7 @@ BOOL CPasswordPolicyDlg::Validate()
 
   int minPWL = PWSprefs::GetInstance()->GetPrefMinVal(PWSprefs::PWDefaultLength);
   int maxPWL = PWSprefs::GetInstance()->GetPrefMaxVal(PWSprefs::PWDefaultLength);
-  if ((m_PWDefaultLength < minPWL) || (m_PWDefaultLength > maxPWL)) {
+  if ((m_PWLength < minPWL) || (m_PWLength > maxPWL)) {
     CString errmess;
     errmess.Format(IDS_DEFAULTPWLENGTH, minPWL, maxPWL);
     gmb.AfxMessageBox(errmess);
@@ -849,11 +846,10 @@ BOOL CPasswordPolicyDlg::Validate()
     return FALSE;
   }
 
-  if (!(m_PWUseHexdigits || m_PWEasyVision || m_PWMakePronounceable) &&
-      ((m_PWUseDigits ? m_PWDigitMinLength : 0) +
+  if (((m_PWUseDigits ? m_PWDigitMinLength : 0) +
        (m_PWUseLowercase ? m_PWLowerMinLength : 0) +
        (m_PWUseSymbols ? m_PWSymbolMinLength : 0) +
-       (m_PWUseUppercase ? m_PWUpperMinLength : 0)) > m_PWDefaultLength) {
+       (m_PWUseUppercase ? m_PWUpperMinLength : 0)) > m_PWLength) {
     gmb.AfxMessageBox(IDS_DEFAULTPWLENGTHTOOSMALL);
     ((CEdit*)GetDlgItem(IDC_DEFPWLENGTH))->SetFocus();
     return FALSE;
@@ -907,7 +903,7 @@ void CPasswordPolicyDlg::OnGeneratePassword()
       st_pp.flags |= PWPolicy::UseEasyVision;
     if (m_PWMakePronounceable == TRUE)
       st_pp.flags |= PWPolicy::MakePronounceable;
-    st_pp.length = m_PWDefaultLength;
+    st_pp.length = m_PWLength;
     st_pp.digitminlength = m_PWDigitMinLength;
     st_pp.lowerminlength = m_PWLowerMinLength;
     st_pp.symbolminlength = m_PWSymbolMinLength;
@@ -917,12 +913,7 @@ void CPasswordPolicyDlg::OnGeneratePassword()
     st_pp.symbols = LPCWSTR(m_Symbols);
   } else {
     // Use named policy
-    if (m_PolicyNameEdit.IsWindowVisible()) {
-      m_PolicyNameEdit.GetWindowText((CString &)m_policyname);
-    } else {
-      int index = m_cbxPolicyNames.GetCurSel();
-      m_cbxPolicyNames.GetLBText(index, m_policyname);
-    }
+    ASSERT(!m_policyname.IsEmpty());
     StringX sxPolicyName(m_policyname);
     GetMainDlg()->GetPolicyFromName(sxPolicyName, st_pp);
   }
@@ -1103,7 +1094,7 @@ bool CPasswordPolicyDlg::UpdatePasswordPolicy()
   if (m_PWMakePronounceable == TRUE)
     st_pp.flags |= PWPolicy::MakePronounceable;
 
-  st_pp.length = m_PWDefaultLength;
+  st_pp.length = m_PWLength;
   st_pp.digitminlength = m_PWDigitMinLength;
   st_pp.lowerminlength = m_PWLowerMinLength;
   st_pp.symbolminlength = m_PWSymbolMinLength;
@@ -1163,6 +1154,7 @@ void CPasswordPolicyDlg::do_reset_symbols(bool restore_defaults)
   }
 
   m_SymbolsEdit.SetValidSym(st_symbols);
-  m_SymbolsEdit.SetWindowText(st_symbols.c_str());
+  if (::IsWindow(m_SymbolsEdit.m_hWnd))
+    m_SymbolsEdit.SetWindowText(st_symbols.c_str());
   m_Symbols = st_symbols.c_str();
 }

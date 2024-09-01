@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -24,8 +24,7 @@
 #include "core/pwscore.h"
 #include "core/PWSAuxParse.h"
 #include "core/RUEList.h"
-
-#include "os/logit.h"
+#include "core/PWSLog.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -62,6 +61,10 @@ void DboxMain::OnTrayLockUnLock()
         m_vGroupDisplayState = GetGroupDisplayState();
 
       if (LockDataBase())  { // save db if needed, clear data
+
+        // Prepare to restore app window WS_DISABLED state for the case where modal dialogs are detected.
+        m_bMainWindowWasDisabled = (GetStyle() & WS_DISABLED) && CPWDialog::GetDialogTracker()->AnyModalDialogs();
+
         // Hide everything
         CPWDialog::GetDialogTracker()->HideOpenDialogs();
 
@@ -70,8 +73,13 @@ void DboxMain::OnTrayLockUnLock()
         // the scroll bar positions
         if (PWSprefs::GetInstance()->GetPref(PWSprefs::UseSystemTray))
           ShowWindow(SW_HIDE);
-        else
-          ShowWindow(SW_MINIMIZE);
+        else {
+          // With pwsafe in "taskbar" mode, and DB lock complete, immediately
+          // present the unlock password entry dialog as the pwsafe taskbar
+          // app window in minimized state.
+          PostMessage(WM_SYSCOMMAND, SC_RESTORE, PWSAFE_SC_LPARAM_INIT_APP_WINDOW_MINIMIZED);
+          ShowWindow(SW_HIDE);
+        }
       }
       break;
     case CLOSED:
@@ -161,12 +169,19 @@ void DboxMain::OnUpdateTrayCopyNotes(CCmdUI *)
 void DboxMain::OnTrayBrowse(UINT nID)
 {
   ASSERT(((nID >= ID_MENUITEM_TRAYBROWSE1) && (nID <= ID_MENUITEM_TRAYBROWSEMAX)) ||
-         ((nID >= ID_MENUITEM_TRAYBROWSEPLUS1) && (nID <= ID_MENUITEM_TRAYBROWSEPLUSMAX)));
+         ((nID >= ID_MENUITEM_TRAYBROWSEPLUS1) && (nID <= ID_MENUITEM_TRAYBROWSEPLUSMAX)) ||
+         ((nID >= ID_MENUITEM_TRAYBROWSEALT1) && (nID <= ID_MENUITEM_TRAYBROWSEALTMAX)));
 
   CItemData ci;
   const bool bDoAutotype = (nID >= ID_MENUITEM_TRAYBROWSEPLUS1) && 
                            (nID <= ID_MENUITEM_TRAYBROWSEPLUSMAX);
-  if (!bDoAutotype) {
+  const bool bUseAltBrowser = (nID >= ID_MENUITEM_TRAYBROWSEALT1) && (nID <= ID_MENUITEM_TRAYBROWSEALTMAX) &&
+                              !PWSprefs::GetInstance()->GetPref(PWSprefs::AltBrowser).empty();
+
+  if (bUseAltBrowser) {
+    if (!GetRUEntry(m_RUEList, nID - ID_MENUITEM_TRAYBROWSEALT1, ci))
+      return;
+  } else if (!bDoAutotype) {
     if (!GetRUEntry(m_RUEList, nID - ID_MENUITEM_TRAYBROWSE1, ci))
       return;
   } else {
@@ -175,25 +190,27 @@ void DboxMain::OnTrayBrowse(UINT nID)
   }
 
   const CItemData *pbci = ci.IsDependent() ? m_core.GetBaseEntry(&ci) : nullptr;
-  StringX sx_group, sx_title, sx_user, sx_pswd, sx_lastpswd, sx_notes, sx_url, sx_email, sx_autotype, sx_runcmd;
+  CItemData effci;
 
-  if (!PWSAuxParse::GetEffectiveValues(&ci, pbci, sx_group, sx_title, sx_user,
-                                       sx_pswd, sx_lastpswd,
-                                       sx_notes, sx_url, sx_email, sx_autotype, sx_runcmd))
-    return;
+  StringX sx_lastpswd, sx_totpauthcode;
 
+  PWSAuxParse::GetEffectiveValues(&ci, pbci, effci, sx_lastpswd, sx_totpauthcode);
+  StringX sx_url(effci.GetURL());
+ 
   if (!sx_url.empty()) {
     std::vector<size_t> vactionverboffsets;
-    StringX sxAutotype = PWSAuxParse::GetAutoTypeString(sx_autotype,
-                                  sx_group, sx_title, sx_user,
-                                  sx_pswd, sx_lastpswd,
-                                  sx_notes, sx_url, sx_email,
-                                  vactionverboffsets);
+    StringX sxAutotype = PWSAuxParse::GetAutoTypeString(effci.GetAutoType(),effci.GetGroup(), effci.GetTitle(), effci.GetUser(),
+                                                        effci.GetPassword(), sx_lastpswd, effci.GetNotes(),
+                                                        effci.GetURL(), effci.GetEmail(), sx_totpauthcode,
+                                                     vactionverboffsets);
+
+    if (bUseAltBrowser)
+      sx_url = L"[alt] " + sx_url; // LaunchBrowser can handle > 1 "[alt]", so no need to check if already there.
 
     LaunchBrowser(sx_url.c_str(), sxAutotype, vactionverboffsets, bDoAutotype);
 
     if (PWSprefs::GetInstance()->GetPref(PWSprefs::CopyPasswordWhenBrowseToURL)) {
-      SetClipboardData(sx_pswd);
+      SetClipboardData(effci.GetPassword());
       UpdateLastClipboardAction(CItemData::PASSWORD);
     }
   }
@@ -207,12 +224,20 @@ void DboxMain::OnUpdateTrayBrowse(CCmdUI *pCmdUI)
   int nID = pCmdUI->m_nID;
 
   ASSERT(((nID >= ID_MENUITEM_TRAYBROWSE1) && (nID <= ID_MENUITEM_TRAYBROWSEMAX)) ||
-         ((nID >= ID_MENUITEM_TRAYBROWSEPLUS1) && (nID <= ID_MENUITEM_TRAYBROWSEPLUSMAX)));
+         ((nID >= ID_MENUITEM_TRAYBROWSEPLUS1) && (nID <= ID_MENUITEM_TRAYBROWSEPLUSMAX)) ||
+         ((nID >= ID_MENUITEM_TRAYBROWSEALT1) && (nID <= ID_MENUITEM_TRAYBROWSEALTMAX)));
 
   CItemData ci, *pbci(nullptr);
+
   const bool bDoAutotype = (nID >= ID_MENUITEM_TRAYBROWSEPLUS1) && 
                            (nID <= ID_MENUITEM_TRAYBROWSEPLUSMAX);
-  if (!bDoAutotype) {
+  const bool bUseAltBrowser = (nID >= ID_MENUITEM_TRAYBROWSEALT1) && (nID <= ID_MENUITEM_TRAYBROWSEALTMAX) &&
+    !PWSprefs::GetInstance()->GetPref(PWSprefs::AltBrowser).empty();
+
+  if (bUseAltBrowser) {
+    if (!GetRUEntry(m_RUEList, nID - ID_MENUITEM_TRAYBROWSEALT1, ci))
+      return;
+  } else if (!bDoAutotype) {
     if (!GetRUEntry(m_RUEList, nID - ID_MENUITEM_TRAYBROWSE1, ci))
       return;
   } else {
@@ -226,15 +251,19 @@ void DboxMain::OnUpdateTrayBrowse(CCmdUI *pCmdUI)
   // Has it an embedded URL
   if (ci.IsFieldValueEmpty(CItemData::URL, pbci)) {
     pCmdUI->Enable(FALSE);
-  } else {
+  } else { // we have a URL
     const bool bIsEmail = ci.IsURLEmail(pbci);
-    MapMenuShortcutsIter iter;
-    if (!bIsEmail && (nID >= ID_MENUITEM_TRAYBROWSE1) && (nID <= ID_MENUITEM_TRAYBROWSEMAX))
-      iter = m_MapMenuShortcuts.find(ID_MENUITEM_BROWSEURL);
-    else if (!bIsEmail && (nID >= ID_MENUITEM_TRAYBROWSEPLUS1) && (nID <= ID_MENUITEM_TRAYBROWSEPLUSMAX))
-      iter = m_MapMenuShortcuts.find(ID_MENUITEM_BROWSEURLPLUS);
-    else if (bIsEmail && (nID >= ID_MENUITEM_TRAYBROWSE1) && (nID <= ID_MENUITEM_TRAYBROWSEMAX))
-      iter = m_MapMenuShortcuts.find(ID_MENUITEM_SENDEMAIL);
+    MapMenuShortcutsIter iter = m_MapMenuShortcuts.end();
+    if (!bIsEmail) {
+      if ((nID >= ID_MENUITEM_TRAYBROWSE1) && (nID <= ID_MENUITEM_TRAYBROWSEMAX))
+        iter = m_MapMenuShortcuts.find(ID_MENUITEM_BROWSEURL);
+      else if ((nID >= ID_MENUITEM_TRAYBROWSEPLUS1) && (nID <= ID_MENUITEM_TRAYBROWSEPLUSMAX))
+        iter = m_MapMenuShortcuts.find(ID_MENUITEM_BROWSEURLPLUS);
+      else if ((nID >= ID_MENUITEM_TRAYBROWSEALT1) && (nID <= ID_MENUITEM_TRAYBROWSEALTMAX))
+        iter = m_MapMenuShortcuts.find(ID_MENUITEM_BROWSEURLALT);
+    } else // bIsEmail
+      if ((nID >= ID_MENUITEM_TRAYBROWSE1) && (nID <= ID_MENUITEM_TRAYBROWSEMAX))
+        iter = m_MapMenuShortcuts.find(ID_MENUITEM_SENDEMAIL);
 
     ASSERT(iter != m_MapMenuShortcuts.end());
     CString cs_text = iter->second.name.c_str();
@@ -243,7 +272,7 @@ void DboxMain::OnUpdateTrayBrowse(CCmdUI *pCmdUI)
       cs_text = cs_text.Left(nPos);
 
     pCmdUI->SetText(cs_text);
-  }
+  } // have URL
 }
 
 void DboxMain::OnTrayCopyEmail(UINT nID)
@@ -406,21 +435,19 @@ void DboxMain::OnTrayRunCommand(UINT nID)
     return;
 
   const CItemData *pbci = ci.IsDependent() ? m_core.GetBaseEntry(&ci) : nullptr;
-  StringX sx_group, sx_title, sx_user, sx_pswd, sx_lastpswd, sx_notes, sx_url, sx_email, sx_autotype, sx_runcmd;
+  StringX sx_lastpswd, sx_totpauthcode;
+  CItemData effci;
 
-  if (!PWSAuxParse::GetEffectiveValues(&ci, pbci, sx_group, sx_title, sx_user,
-                                       sx_pswd, sx_lastpswd,
-                                       sx_notes, sx_url, sx_email, sx_autotype, sx_runcmd))
-    return;
+  PWSAuxParse::GetEffectiveValues(&ci, pbci, effci, sx_lastpswd, sx_totpauthcode);
 
   StringX sx_Expanded_ES;
-  if (sx_runcmd.empty())
+  if (effci.GetRunCommand().empty())
     return;
 
   std::wstring errmsg;
   StringX::size_type st_column;
   bool bURLSpecial;
-  sx_Expanded_ES = PWSAuxParse::GetExpandedString(sx_runcmd,
+  sx_Expanded_ES = PWSAuxParse::GetExpandedString(effci.GetRunCommand(),
                                                   m_core.GetCurFile(), &ci, pbci,
                                                   m_bDoAutoType, m_sxAutoType,
                                                   errmsg, st_column, bURLSpecial);
@@ -438,12 +465,11 @@ void DboxMain::OnTrayRunCommand(UINT nID)
   if (m_sxAutoType.empty())
     m_sxAutoType = ci.GetAutoType();
 
-  m_sxAutoType = PWSAuxParse::GetAutoTypeString(m_sxAutoType,
-                                                sx_group, sx_title, sx_user,
-                                                sx_pswd, sx_lastpswd,
-                                                sx_notes, sx_url, sx_email,
+  m_sxAutoType = PWSAuxParse::GetAutoTypeString(m_sxAutoType, effci.GetGroup(), effci.GetTitle(), effci.GetUser(),
+                                                effci.GetPassword(), sx_lastpswd, effci.GetNotes(),
+                                                effci.GetURL(), effci.GetEmail(), sx_totpauthcode,
                                                 m_vactionverboffsets);
-  SetClipboardData(sx_pswd);
+  SetClipboardData(effci.GetPassword());
   UpdateLastClipboardAction(CItemData::PASSWORD);
 
   // Password always comes from a normal or base entry

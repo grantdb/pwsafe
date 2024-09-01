@@ -1,16 +1,23 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
  * http://www.opensource.org/licenses/artistic-license-2.0.php
  */
 
-#ifndef __SELECTIONCRITERIA_H__
-#define __SELECTIONCRITERIA_H__
+/** \file SelectionCriteria.h
+*
+*/
 
-#include "../../core/ItemData.h"
-#include "./wxutils.h"
+#ifndef _SELECTIONCRITERIA_H_
+#define _SELECTIONCRITERIA_H_
+
+#include "core/ItemData.h"
+
+#include "wxUtilities.h"
+
+class CReport;
 
 /*
  * SelectionCriteria data structure backs the AdvancedSelectionPanel widget
@@ -75,7 +82,8 @@ public:
   wxString GetGroupSelectionDescription() const;
   //returns true if all fields have been selected
   bool GetFieldSelection(wxArrayString& selectedFields, wxArrayString& unselectedFields);
-
+  void ReportAdvancedOptions(CReport* rpt, const wxString& operation, const wxString& fullPath);
+  
 SelectionCriteria& operator=(const SelectionCriteria& data) {
     m_fCaseSensitive    = data.m_fCaseSensitive;
     m_bsFields          = data.m_bsFields;
@@ -113,4 +121,4 @@ inline bool operator!=(const SelectionCriteria& a, const SelectionCriteria& b)
          a.m_subgroupObject   != b.m_subgroupObject; 
 }
 
-#endif
+#endif // _SELECTIONCRITERIA_H_

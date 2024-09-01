@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -11,11 +11,12 @@
 #include <cstdarg>
 #include "StringX.h"
 #include "Util.h"
+#include "os/pws_str.h"
 
-#include "PwsPlatform.h"
 #include "os/pws_tchar.h"
 
 #if !defined(_WIN32) || defined(__WX__)
+#include <wx/intl.h>
 #include "core_st.h"
 #endif
 
@@ -155,7 +156,7 @@ template<class T> void LoadAString(T &s, int id)
   cs.LoadString(id);
   s = cs;
 #else
-  s = core_st[id];
+  s = _(core_st[id]).c_str();
 #endif
 }
 
@@ -164,7 +165,7 @@ template<class T> void Format(T &s, const TCHAR *fmt, ...)
   va_list args;
   va_start(args, fmt);
 
-  unsigned int len = GetStringBufSize(fmt, args);
+  unsigned int len = pws_os::GetStringBufSize(fmt, args);
   va_end(args);//after using args we should reset list
   va_start(args, fmt);
 
@@ -184,7 +185,7 @@ template<class T> void Format(T &s, int fmt, ...)
   T fmt_str;
   LoadAString(fmt_str, fmt);
 
-  unsigned int len = GetStringBufSize(fmt_str.c_str(), args);
+  unsigned int len = pws_os::GetStringBufSize(fmt_str.c_str(), args);
   va_end(args);//after using args we should reset list
   va_start(args, fmt);
 

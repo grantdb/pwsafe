@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -52,8 +52,9 @@ IMPLEMENT_DYNAMIC(CWZAdvanced, CWZPropertyPage)
 
 CWZAdvanced::CWZAdvanced(CWnd *pParent, UINT nIDCaption, const int nType, WZAdvanced::AdvType iIndex,
                              st_SaveAdvValues *pst_SADV)
-  : CWZPropertyPage(dialog_lookup[iIndex], nIDCaption, nType), m_iIndex(iIndex), 
-  m_pst_SADV(pst_SADV), m_treatwhitespaceasempty(BST_CHECKED)
+  : CWZPropertyPage(dialog_lookup[iIndex], nIDCaption, nType), 
+  m_treatwhitespaceasempty(BST_CHECKED), m_iIndex(iIndex),
+  m_pst_SADV(pst_SADV)
 {
   ASSERT(sizeof(dialog_lookup) / sizeof(int) == WZAdvanced::LAST);
 
@@ -473,6 +474,11 @@ BOOL CWZAdvanced::OnInitDialog()
       m_bsAllowedFields.set(CItemData::PASSWORD);
       m_bsDefaultSelectedFields.set(CItemData::PASSWORD);
       m_bsMandatoryFields.set(CItemData::PASSWORD);
+
+      iItem = m_pLC_Selected->InsertItem(++iItem, CItemData::GetUserInterfaceFieldName(CItemData::TWOFACTORKEY).c_str());
+      m_pLC_Selected->SetItemData(iItem, CItemData::TWOFACTORKEY | NORMALFIELD);
+      m_bsAllowedFields.set(CItemData::TWOFACTORKEY);
+      m_bsDefaultSelectedFields.set(CItemData::TWOFACTORKEY);
       break;
 
     case WZAdvanced::COMPARE:
@@ -503,6 +509,11 @@ BOOL CWZAdvanced::OnInitDialog()
       m_bsAllowedFields.set(CItemData::PASSWORD);
       m_bsDefaultSelectedFields.set(CItemData::PASSWORD);
 
+      iItem = m_pLC_Selected->InsertItem(++iItem, CItemData::GetUserInterfaceFieldName(CItemData::TWOFACTORKEY).c_str());
+      m_pLC_Selected->SetItemData(iItem, CItemData::TWOFACTORKEY | NORMALFIELD);
+      m_bsAllowedFields.set(CItemData::TWOFACTORKEY);
+      m_bsDefaultSelectedFields.set(CItemData::TWOFACTORKEY);
+
       cs_text.LoadString(IDS_PWPOLICY);
       iItem = m_pLC_Selected->InsertItem(++iItem, cs_text);
       m_pLC_Selected->SetItemData(iItem, CItemData::POLICY | NORMALFIELD);
@@ -528,6 +539,11 @@ BOOL CWZAdvanced::OnInitDialog()
       m_pLC_Selected->SetItemData(iItem, CItemData::PASSWORD | NORMALFIELD);
       m_bsAllowedFields.set(CItemData::PASSWORD);
       m_bsDefaultSelectedFields.set(CItemData::PASSWORD);
+
+      iItem = m_pLC_Selected->InsertItem(++iItem, CItemData::GetUserInterfaceFieldName(CItemData::TWOFACTORKEY).c_str());
+      m_pLC_Selected->SetItemData(iItem, CItemData::TWOFACTORKEY | NORMALFIELD);
+      m_bsAllowedFields.set(CItemData::TWOFACTORKEY);
+      m_bsDefaultSelectedFields.set(CItemData::TWOFACTORKEY);
       break;
 
     case WZAdvanced::EXPORT_TEXT:
@@ -556,6 +572,11 @@ BOOL CWZAdvanced::OnInitDialog()
       m_pLC_Selected->SetItemData(iItem, CItemData::PASSWORD | NORMALFIELD);
       m_bsAllowedFields.set(CItemData::PASSWORD);
       m_bsDefaultSelectedFields.set(CItemData::PASSWORD);
+
+      iItem = m_pLC_Selected->InsertItem(++iItem, CItemData::GetUserInterfaceFieldName(CItemData::TWOFACTORKEY).c_str());
+      m_pLC_Selected->SetItemData(iItem, CItemData::TWOFACTORKEY | NORMALFIELD);
+      m_bsAllowedFields.set(CItemData::TWOFACTORKEY);
+      m_bsDefaultSelectedFields.set(CItemData::TWOFACTORKEY);
       break;
 
     default:
@@ -1022,19 +1043,21 @@ int CALLBACK CWZAdvanced::AdvCompareFunc(LPARAM lParam1, LPARAM lParam2,
      103 /* XTIME      = 0x0a */,
       -1 /* RESERVED   = 0x0b */,
      104 /* RMTIME     = 0x0c */,
-      12 /* URL        = 0x0d */,
-      15 /* AUTOTYPE   = 0x0e */,
+      13 /* URL        = 0x0d */,
+      16 /* AUTOTYPE   = 0x0e */,
       50 /* PWHIST     = 0x0f */,
       61 /* POLICY     = 0x10 */,
      505 /* XTIME_INT  = 0x11 */,
-      14 /* RUNCMD     = 0x12 */,
+      15 /* RUNCMD     = 0x12 */,
       81 /* DCA        = 0x13 */,
-      13 /* EMAIL      = 0x14 */,
+      14 /* EMAIL      = 0x14 */,
       80 /* PROTECTED  = 0x15 */,
       60 /* SYMBOLS    = 0x16 */,
       82 /* SHIFTDCA   = 0x17 */,
       62 /* POLICYNAME = 0x18 */,
       63 /* KBSHORTCUT = 0x19 */,
+      -1 /* ATTREF     = 0x1a */,
+      12 /* TWOFACTORKEY = 0x1b*/,
   };
 
   const int i1 = iSortOrder[lParam1 & 0xff];

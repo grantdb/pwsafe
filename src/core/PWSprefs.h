@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -128,6 +128,14 @@ public:
     VKPlaySound, // Windows only
     ListSortAscending,
     EnableWindowTransparency,
+    ShowMenuSeparator,
+    AutoAdjColWidth,
+    ToolbarShowText,
+    DragAndDropShowRoot,
+    ShowAliasSelection,
+    ExcludeFromClipboardHistory, // Windows only
+    FindToolBarActive, // To persist Find toolbar's visibility
+    ExcludeFromScreenCapture,
     NumBoolPrefs};
 
   enum IntPrefs {Column1Width, Column2Width, Column3Width, Column4Width,
@@ -140,7 +148,7 @@ public:
     DlgOrientation, TimedTaskChainDelay,
     AutotypeSelectAllKeyCode, AutotypeSelectAllModMask, //X only
     TreeFontPtSz, PasswordFontPtSz, NotesFontPtSz, AddEditFontPtSz, VKFontPtSz,
-    WindowTransparency,
+    WindowTransparency, DefaultExpiryDays, DNDMaxMemSize,
     NumIntPrefs};
 
   enum StringPrefs {CurrentBackup, CurrentFile, LastView, DefaultUsername,
@@ -149,7 +157,7 @@ public:
     MainToolBarButtons, PasswordFont, TreeListSampleText, PswdSampleText,
     LastUsedKeyboard, VKeyboardFontName, VKSampleText, AltNotesEditor,
     LanguageFile, DefaultSymbols, NotesFont, NotesSampleText, AutotypeTaskDelays,
-    AddEditFont, AddEditSampleText, AltNotesEditorCmdLineParms,
+    AddEditFont, AddEditSampleText, AltNotesEditorCmdLineParms, TreeSort,
     NumStringPrefs};
 
   // for DoubleClickAction and ShiftDoubleClickAction
@@ -202,7 +210,7 @@ public:
 
   bool GetPrefDefVal(BoolPrefs pref_enum) const;
   unsigned int GetPrefDefVal(IntPrefs pref_enum) const;
-  StringX GetPrefDefVal(StringPrefs pref_enum) const;
+    const TCHAR* GetPrefDefVal(StringPrefs pref_enum) const;
 
   int GetPrefMinVal(IntPrefs pref_enum) const;
   int GetPrefMaxVal(IntPrefs pref_enum) const;
@@ -217,8 +225,8 @@ public:
   void SetPrefRect(long top, long bottom, long left, long right);
   void GetPrefPSSRect(long &top, long &bottom, long &left, long &right) const;
   void SetPrefPSSRect(long top, long bottom, long left, long right);
-  int GetMRUList(stringT *MRUFiles) const;
-  int SetMRUList(const stringT *MRUFiles, int n, int max_MRU);
+  unsigned int GetMRUList(std::vector<stringT> &MRUFiles) const;
+  unsigned int SetMRUList(const std::vector<stringT> &MRUFiles, int max_MRU);
   PWPolicy GetDefaultPolicy(const bool bUseCopy = false) const;
   void SetDefaultPolicy(const PWPolicy &pol, const bool bUseCopy = false);
 
@@ -241,7 +249,11 @@ public:
   // for display in status bar (debug)
   int GetConfigIndicator() const;
 
-  // Get & set vector of user shortcuts (only in XML cnfig file)
+  // Get & set layout data (only in XML config file)
+  stringT GetPrefLayout() const { return m_PrefLayout; };
+  void SetPrefLayout(const stringT& preferences) { m_PrefLayout = preferences; };
+
+  // Get & set vector of user shortcuts (only in XML config file)
   std::vector<st_prefShortcut> GetPrefShortcuts() const {return m_vShortcuts;}
   void SetPrefShortcuts(const std::vector<st_prefShortcut> &vShortcuts);
 
@@ -314,7 +326,8 @@ private:
   unsigned int m_intCopyValues[NumIntPrefs];
   StringX m_stringCopyValues[NumStringPrefs];
 
-  stringT *m_MRUitems;
+  std::vector<stringT> m_MRUitems;
+  stringT m_PrefLayout;
   std::vector<st_prefShortcut> m_vShortcuts;
 
   // Preferences we don't know in this version of PWS

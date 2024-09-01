@@ -16,7 +16,7 @@
 ; first edit : Karlo Van der Gucht
 ;---------------------------------------------------
 ; Copyright 2004, David Lacy Kusters (dkusters@yahoo.com)
-; Copyright 2005-2007 Rony Shapiro <ronys@pwsafe.org>
+; Copyright 2005-2024 Rony Shapiro <ronys@pwsafe.org>
 ; 2009 extended by Karlo Van der Gucht for multiple language use
 ; 2010 extended by Karlo Van der Gucht Danish language
 ; This script may be redistributed and/or modified under the Artistic
@@ -58,6 +58,9 @@ LangString UNINSTALL_SHORTCUT ${LANG_NEW} "TRANSLATION"
 
 ; DESC_ProgramFiles "Installs the basic files necessary to run Password Safe."
 LangString DESC_ProgramFiles ${LANG_NEW} "TRANSLATION"
+
+; DESC_CliTool "Installs pwsafe-cli, a command line utility."
+LangString DESC_CliTool ${LANG_NEW} "TRANSLATION"
 
 ; DESC_LangSupport "Please select the language(s) that PasswordSafe will use."
 LangString DESC_LangSupport ${LANG_NEW} "TRANSLATION"
@@ -105,6 +108,9 @@ LangString LANG_INSTALL ${LANG_NEW} "TRANSLATION"
 ; LANG_SELECT "Please select the language for the installation"
 LangString LANG_SELECT ${LANG_NEW} "TRANSLATION"
 
+; CLI_TOOL "Command-line tool"
+LangString CLI_TOOL ${LANG_NEW} "TRANSLATION"
+
 ; LANGUAGE_SUPPORT "Language Support"
 LangString LANGUAGE_SUPPORT ${LANG_NEW} "TRANSLATION"
 ; ENGLISH_SUPPORT "English"
@@ -137,6 +143,16 @@ LangString KOREAN_SUPPORT ${LANG_NEW} "TRANSLATION"
 LangString CZECH_SUPPORT ${LANG_NEW} "TRANSLATION"
 ; TURKISH_SUPPORT "Turkish"
 LangString TURKISH_SUPPORT ${LANG_NEW} "TRANSLATION"
+; HUNGARIAN_SUPPORT "Hungarian"
+LangString HUNGARIAN_SUPPORT ${LANG_NEW} "TRANSLATION"
+; SLOVENIAN_SUPPORT "Slovenian"
+LangString SLOVENIAN_SUPPORT ${LANG_NEW} "TRANSLATION"
+; ARABIC_SUPPORT "Arabic"
+LangString ARABIC_SUPPORT ${LANG_NEW} "TRANSLATION"
+; PORTUGUESEBR_SUPPORT "Portuguese (Brazil)"
+LangString PORTUGUESEBR_SUPPORT ${LANG_NEW} "TRANSLATION"
+; LATVIAN_SUPPORT "Latvian"
+LangString LATVIAN_SUPPORT ${LANG_NEW} "TRANSLATION"
 
 ; LANG_PROGRAM "Program Language"
 LangString LANG_PROGRAM ${LANG_NEW} "TRANSLATION"
@@ -152,6 +168,25 @@ LangString SORRY_NO_ME ${LANG_NEW} "TRANSLATION"
 
 ; SORRY_NO_2K "Sorry, Windows 2000 is no longer supported. Try PasswordSafe 3.18"
 LangString SORRY_NO_2K ${LANG_NEW} "TRANSLATION"
+
+; LangString Icon_description_Uninstall "Password Safe Uninstall"
+LangString Icon_description_Uninstall ${LANG_NEW} "TRANSLATION"
+
+; LangString Icon_description_Help  "Password Safe Help"
+LangString Icon_description_Help ${LANG_NEW} "TRANSLATION"
+
+; Screen Capture Protection texts:
+; LangString SCRCAP_PROTECTION "Screen capture protection"
+LangString SCRCAP_PROTECTION ${LANG_NEW} "TRANSLATION"
+
+; LangString SORRY_CANNOT_DISABLE_SCRCAP  "An error occurred disabling screen capture protection. Screen capture protection is not disabled."
+LangString SORRY_CANNOT_DISABLE_SCRCAP ${LANG_NEW} "TRANSLATION"
+
+; LangString SORRY_CANNOT_ENABLE_SCRCAP "An error occurred setting screen capture protection to default (enabled)."
+LangString SORRY_CANNOT_ENABLE_SCRCAP ${LANG_NEW} "TRANSLATION"
+
+; LangString DESC_ScrCapProtection "Enables screen capture protection."
+LangString DESC_ScrCapProtection ${LANG_NEW} "TRANSLATION"
 
 ;=================================================================
 ; End of pwsafe_xx.lng

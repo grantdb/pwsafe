@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -129,7 +129,7 @@ bool CUTF8Conv::FromUTF8(const unsigned char *utf8, size_t utf8Len,
                                   LPSTR(utf8),   // string to map
                                   -1,            // -1 means null-terminated
                                   m_wc,          // output buffer
-                                  reinterpret_cast<int &>(wcLen));  // output buffer size
+                                  static_cast<int>(wcLen));  // output buffer size
       if (wcLen > 0) {
         pws_os::Trace0(_T("FromUTF8: recovery succeeded!"));
       }

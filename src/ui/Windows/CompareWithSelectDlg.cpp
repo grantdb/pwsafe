@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -27,10 +27,11 @@ CCompareWithSelectDlg::CCompareWithSelectDlg(CWnd *pParent,
   CItemData *pci, PWScore *pcore,
   CString &csProtect, CString &csAttachment)
   : CPWDialog(CCompareWithSelectDlg::IDD, pParent),
-  m_pci(pci), m_pcore(pcore), m_csProtect(csProtect),
-  m_csAttachment(csAttachment), m_pSelected(NULL), m_pImageList(NULL)
+  m_pImageList(nullptr), 
+  m_pcore(pcore), m_pci(pci), m_pSelected(nullptr), m_csProtect(csProtect),
+  m_csAttachment(csAttachment) 
 {
-  ASSERT(pci != NULL && m_pcore != NULL);
+  ASSERT(pci != nullptr && m_pcore != nullptr);
 
   m_group = pci->GetGroup();
   m_title = pci->GetTitle();
@@ -102,7 +103,7 @@ BOOL CCompareWithSelectDlg::OnInitDialog()
     IDB_SHORTCUT
   };
 
-  for (int i = 1; i < sizeof(bitmapResIDs) / sizeof(bitmapResIDs[0]); i++) {
+  for (size_t i = 1; i < sizeof(bitmapResIDs) / sizeof(bitmapResIDs[0]); i++) {
     bitmap.LoadBitmap(bitmapResIDs[i]);
     m_pImageList->Add(&bitmap, crTransparent);
     bitmap.DeleteObject();

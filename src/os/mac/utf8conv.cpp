@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -47,7 +47,7 @@ wstring pws_os::towc(const char *val)
 {
   wstring retval(L"");
   assert(val != NULL);
-  int len = strlen(val);
+  long len = static_cast<long>(strlen(val));
   int wsize;
   const char *p = val;
   wchar_t wvalue;

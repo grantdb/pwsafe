@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -19,25 +19,20 @@
 int main(int argc, char **argv)
 {
   testing::InitGoogleTest(&argc, argv);
-  int rc = RUN_ALL_TESTS();
-
 #ifdef WIN32
-  system("pause");
+  // initialize MFC -- needed for string lookup in error handling
+  if (!AfxWinInit(::GetModuleHandle(nullptr), nullptr, ::GetCommandLine(), 0)) {
+    std::cerr << _T("Fatal Error: MFC initialization failed") << std::endl;
+  }
+  AfxGetInstanceHandle();
 #endif
 
-  // Need to find these in order to delete them
-  PWSLog *pwslog = PWSLog::GetLog();
-  PWSprefs *pwsprefs = PWSprefs::GetInstance();
-  PWSrand *pwsrand = PWSrand::GetInstance();
+  int rc = RUN_ALL_TESTS();
 
-  pwsprefs->DeleteInstance();
-  pwslog->DeleteLog();
-  pwsrand->DeleteInstance();
-
-  // To stop Compiler warning C4189
-  pwsprefs = NULL;
-  pwslog = NULL;
-  pwsrand = NULL;
+  // Delete singletons
+  PWSLog::GetLog()->DeleteLog();
+  PWSprefs::GetInstance()->DeleteInstance();
+  PWSrand::GetInstance()->DeleteInstance();
 
   return rc;
 }

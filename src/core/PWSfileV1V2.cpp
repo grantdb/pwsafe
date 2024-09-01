@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -8,7 +8,7 @@
 #include "PWSfileV1V2.h"
 #include "PWSrand.h"
 #include "core.h"
-#include "sha1.h"
+#include "crypto/sha1.h"
 #include "os/file.h"
 #include "os/utf8conv.h"
 #include "os/UUID.h"
@@ -32,7 +32,7 @@ PWSfileV1V2::~PWSfileV1V2()
 }
 
 // Used to warn pre-2.0 users, and to identify the database as 2.x:
-static const StringX V2ItemName(_T(" !!!Version 2 File Format!!! Please upgrade to PasswordSafe 2.0 or later"));
+static const StringX V2ItemName(_T(" !!!Version 2 File Format!!! Upgrade to PasswordSafe 2.0 or later"));
 // Used to specify the exact version
 static const StringX VersionString(_T("2.0"));
 static const StringX AltVersionString(_T("pre-2.0"));
@@ -111,6 +111,12 @@ int PWSfileV1V2::ReadV2Header()
     if (_ret != cnt) { status = FAILURE; goto exit;} \
   }
 
+#define SAFE_FREAD(p, sz, cnt, stream) \
+  { \
+    size_t _ret = fread(p, sz, cnt, stream); \
+    if (_ret != cnt) { status = FAILURE; goto exit;} \
+  }
+
 int PWSfileV1V2::Open(const StringX &passkey)
 {
   int status = SUCCESS;
@@ -153,8 +159,8 @@ int PWSfileV1V2::Open(const StringX &passkey)
     PWSrand::GetInstance()->GetRandomData( m_ipthing, 8);
     SAFE_FWRITE(m_ipthing, 1, 8, m_fd);
 
-    m_fish = BlowFish::MakeBlowFish(pstr, reinterpret_cast<unsigned int &>(passLen),
-                                    m_salt, SaltLength);
+    m_fish = makeFish<BlowFish, SHA1>(pstr, static_cast<unsigned int>(passLen),
+                                m_salt, SaltLength);
     if (m_curversion == V20) {
       status = WriteV2Header();
     }
@@ -166,11 +172,11 @@ int PWSfileV1V2::Open(const StringX &passkey)
       Close();
       return status;
     }
-    fread(m_salt, 1, SaltLength, m_fd);
-    fread(m_ipthing, 1, 8, m_fd);
+    SAFE_FREAD(m_salt, 1, SaltLength, m_fd);
+    SAFE_FREAD(m_ipthing, 1, 8, m_fd);
 
-    m_fish = BlowFish::MakeBlowFish(pstr, reinterpret_cast<unsigned int &>(passLen),
-                                    m_salt, SaltLength);
+    m_fish = makeFish<BlowFish, SHA1>(pstr, static_cast<unsigned int>(passLen),
+                                m_salt, SaltLength);
     if (m_curversion == V20)
       status = ReadV2Header();
   } // read mode
@@ -200,9 +206,14 @@ int PWSfileV1V2::CheckPasskey(const StringX &filename,
   unsigned char randstuff[StuffSize];
   unsigned char randhash[SHA1::HASHLEN];
 
-  fread(randstuff, 1, 8, fd);
+  if (fread(randstuff, 1, 8, fd) != 8 ||
+      fread(randhash, 1, sizeof(randhash), fd) != sizeof(randhash)) {
+        if (a_fd == nullptr)
+          fclose(fd);
+        return READ_FAIL;
+      }
+
   randstuff[8] = randstuff[9] = '\0'; // Gross fugbix
-  fread(randhash, 1, sizeof(randhash), fd);
 
   if (a_fd == nullptr) // if we opened the file, we close it...
     fclose(fd);

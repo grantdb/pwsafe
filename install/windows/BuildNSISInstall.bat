@@ -37,12 +37,12 @@ if $%1 == $x64 goto :buildx64
   echo   platform = [x86 ^| x64]
   echo Build all platforms: BuildNSISInstall
   echo Build only x86: BuildNSISInstall x86
-  echo Build only x54: BuildNSISInstall x64
+  echo Build only x64: BuildNSISInstall x64
   echo. 
   goto :exit
   
 ::
-:: Build the MSI installer
+:: Build the NSIS installer
 ::
 :buildx86
 

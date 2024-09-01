@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -16,9 +16,11 @@
 #include "SMemFile.h"
 #include "GeneralMsgBox.h"
 
+#include "core/core.h"
 #include "core/ItemData.h"
 #include "core/Util.h"
-#include "core/Pwsprefs.h"
+#include "core/UTF8Conv.h"
+#include "core/PWSprefs.h"
 
 #include "os/debug.h"
 
@@ -35,8 +37,8 @@ static char THIS_FILE[] = __FILE__;
 // Hover time of 1.5 seconds before expanding a group during D&D
 #define HOVERTIME 1500
 
-extern const wchar_t GROUP_SEP = L'.';
-extern const wchar_t *GROUP_SEP2 = L".";
+const wchar_t CPWTreeCtrlX::GROUP_SEP = L'.';
+const wchar_t *CPWTreeCtrlX::GROUP_SEP2 = L".";
 
 // following header for D&D data passed over OLE:
 // Process ID of sender (to determine if src == tgt)
@@ -168,8 +170,9 @@ private:
 
 CPWTreeCtrlX::CPWTreeCtrlX()
   : m_isRestoring(false), m_bWithinThisInstance(true),
-  m_bMouseInWindow(false), m_nHoverNDTimerID(0), m_nShowNDTimerID(0),
-  m_hgDataALL(NULL), m_hgDataTXT(NULL), m_hgDataUTXT(NULL),
+  m_hgDataALL(nullptr), m_hgDataUTXT(nullptr), m_hgDataTXT(nullptr),
+  m_nHoverInfoDisplayTimerID(0), m_nShowInfoDisplayTimerID(0),
+  m_bMouseInWindow(false), 
   m_bTreeFilterActive(false), m_bUseHighLighting(false)
 {
   // Register a clipboard format for column drag & drop.
@@ -1072,13 +1075,13 @@ static StringX GetFirstPathElem(StringX &sxPath)
    // (assuming GROUP_SEP is '.')
 
   StringX sxElement;
-  size_t dotPos = sxPath.find_first_of(GROUP_SEP);
+  size_t dotPos = sxPath.find_first_of(CPWTreeCtrl::GROUP_SEP);
   size_t len=sxPath.length();
   if (dotPos == StringX::npos){
     sxElement = sxPath;
     sxPath = L"";
   } else {
-    while ((dotPos < len) && (sxPath[dotPos] == GROUP_SEP)) {// look for consecutive dots
+    while ((dotPos < len) && (sxPath[dotPos] == CPWTreeCtrl::GROUP_SEP)) {// look for consecutive dots
       dotPos++;
     }
     if (dotPos < len) {
@@ -1191,7 +1194,7 @@ bool CPWTreeCtrlX::MoveItem(MultiCommands *pmulticmds, HTREEITEM hitemDrag, HTRE
     // Get information from current selected entry
     CSecString ci_user = pci->GetUser();
     CSecString ci_title0 = pci->GetTitle();
-    CSecString ci_title = app.GetMainDlg()->GetUniqueTitle(path, ci_title0, ci_user, IDS_DRAGNUMBER);
+    CSecString ci_title = app.GetMainDlg()->GetUniqueTitle(path, ci_title0, ci_user, IDSC_DRAGNUMBER);
 
     // Update list field with new group
     pmulticmds->Add(UpdateEntryCommand::Create(app.GetCore(), *pci,
@@ -1316,7 +1319,7 @@ bool CPWTreeCtrlX::CopyItem(MultiCommands *pmulticmds, HTREEITEM hitemDrag, HTRE
     CSecString ci_user = pci->GetUser();
     CSecString ci_title0 = pci->GetTitle();
     CSecString ci_title = app.GetMainDlg()->GetUniqueTitle(sNewPath, ci_title0,
-                                                 ci_user, IDS_DRAGNUMBER);
+                                                 ci_user, IDSC_DRAGNUMBER);
 
     ci_temp.CreateUUID(); // Copy needs its own UUID
     ci_temp.SetGroup(sNewPath);
@@ -1538,7 +1541,7 @@ BOOL CPWTreeCtrlX::OnDrop(CWnd *, COleDataObject *pDataObject,
 
           // If there is a matching entry in our list, generate unique one
           if (app.GetMainDlg()->Find(cs_group, cs_title, cs_user) != app.GetMainDlg()->End()) {
-            cs_title = app.GetMainDlg()->GetUniqueTitle(cs_group, cs_title, cs_user, IDS_DRAGNUMBER);
+            cs_title = app.GetMainDlg()->GetUniqueTitle(cs_group, cs_title, cs_user, IDSC_DRAGNUMBER);
           }
           StringX sxNewDBPrefsString(L"");
           app.GetMainDlg()->CreateShortcutEntry(pci, cs_group, cs_title, cs_user, sxNewDBPrefsString);
@@ -1800,21 +1803,22 @@ void CPWTreeCtrlX::OnTimer(UINT_PTR nIDEvent)
 {
   switch (nIDEvent) {
     case TIMER_ND_HOVER:
-      KillTimer(m_nHoverNDTimerID);
-      m_nHoverNDTimerID = 0;
-      if (app.GetMainDlg()->SetNotesWindow(m_HoverNDPoint)) {
-        if (m_nShowNDTimerID) {
-          KillTimer(m_nShowNDTimerID);
-          m_nShowNDTimerID = 0;
+      KillTimer(m_nHoverInfoDisplayTimerID);
+      m_nHoverInfoDisplayTimerID = 0;
+      if (app.GetMainDlg()->SetInfoDisplay(m_HoverInfoDisplayPoint)) {
+        // setup timer to hide InfoDisplay
+        if (m_nShowInfoDisplayTimerID) {
+          KillTimer(m_nShowInfoDisplayTimerID);
+          m_nShowInfoDisplayTimerID = 0;
         }
-        m_nShowNDTimerID = SetTimer(TIMER_ND_SHOWING, TIMEINT_ND_SHOWING, NULL);
+        m_nShowInfoDisplayTimerID = SetTimer(TIMER_ND_SHOWING, TIMEINT_ND_SHOWING, NULL);
       }
       break;
     case TIMER_ND_SHOWING:
-      KillTimer(m_nShowNDTimerID);
-      m_nShowNDTimerID = 0;
-      m_HoverNDPoint = CPoint(0, 0);
-      app.GetMainDlg()->SetNotesWindow(m_HoverNDPoint, false);
+      KillTimer(m_nShowInfoDisplayTimerID);
+      m_nShowInfoDisplayTimerID = 0;
+      m_HoverInfoDisplayPoint = CPoint(0, 0);
+      app.GetMainDlg()->SetInfoDisplay(m_HoverInfoDisplayPoint, false);
       break;
     default:
       CTreeCtrl::OnTimer(nIDEvent);
@@ -1825,22 +1829,20 @@ void CPWTreeCtrlX::OnTimer(UINT_PTR nIDEvent)
 void CPWTreeCtrlX::OnMouseMove(UINT nFlags, CPoint point)
 {
   app.GetMainDlg()->ResetIdleLockCounter();
-  if (!m_bShowNotes)
-    return;
 
-  if (m_nHoverNDTimerID) {
-    if (HitTest(m_HoverNDPoint) == HitTest(point))
+  if (m_nHoverInfoDisplayTimerID) {
+    if (HitTest(m_HoverInfoDisplayPoint) == HitTest(point))
       return;
-    KillTimer(m_nHoverNDTimerID);
-    m_nHoverNDTimerID = 0;
+    KillTimer(m_nHoverInfoDisplayTimerID);
+    m_nHoverInfoDisplayTimerID = 0;
   }
 
-  if (m_nShowNDTimerID) {
-    if (HitTest(m_HoverNDPoint) == HitTest(point))
+  if (m_nShowInfoDisplayTimerID) {
+    if (HitTest(m_HoverInfoDisplayPoint) == HitTest(point))
       return;
-    KillTimer(m_nShowNDTimerID);
-    m_nShowNDTimerID = 0;
-    app.GetMainDlg()->SetNotesWindow(CPoint(0, 0), false);
+    KillTimer(m_nShowInfoDisplayTimerID);
+    m_nShowInfoDisplayTimerID = 0;
+    app.GetMainDlg()->SetInfoDisplay(CPoint(0, 0), false);
   }
 
   if (!m_bMouseInWindow) {
@@ -1849,19 +1851,19 @@ void CPWTreeCtrlX::OnMouseMove(UINT nFlags, CPoint point)
     VERIFY(TrackMouseEvent(&tme));
   }
 
-  m_nHoverNDTimerID = SetTimer(TIMER_ND_HOVER, HOVER_TIME_ND, NULL);
-  m_HoverNDPoint = point;
+  m_nHoverInfoDisplayTimerID = SetTimer(TIMER_ND_HOVER, HOVER_TIME_ND, NULL);
+  m_HoverInfoDisplayPoint = point;
 
   CTreeCtrl::OnMouseMove(nFlags, point);
 }
 
 LRESULT CPWTreeCtrlX::OnMouseLeave(WPARAM, LPARAM)
 {
-  KillTimer(m_nHoverNDTimerID);
-  KillTimer(m_nShowNDTimerID);
-  m_nHoverNDTimerID = m_nShowNDTimerID = 0;
-  m_HoverNDPoint = CPoint(0, 0);
-  app.GetMainDlg()->SetNotesWindow(m_HoverNDPoint, false);
+  KillTimer(m_nHoverInfoDisplayTimerID);
+  KillTimer(m_nShowInfoDisplayTimerID);
+  m_nHoverInfoDisplayTimerID = m_nShowInfoDisplayTimerID = 0;
+  m_HoverInfoDisplayPoint = CPoint(0, 0);
+  app.GetMainDlg()->SetInfoDisplay(m_HoverInfoDisplayPoint, false);
   m_bMouseInWindow = false;
   return 0L;
 }
@@ -2654,7 +2656,7 @@ void CPWTreeCtrlX::OnCustomDraw(NMHDR *pNotifyStruct, LRESULT *pLResult)
   static bool bchanged_item_font(false);
   static bool bitem_selected(false);
   static CFont *pTreeListFont;
-  static CDC *pDC = NULL;
+  static CDC *pDC = nullptr;
   
   HTREEITEM hItem = (HTREEITEM)pTVCD->nmcd.dwItemSpec;
   CItemData *pci = (CItemData *)pTVCD->nmcd.lItemlParam;
@@ -2674,7 +2676,8 @@ void CPWTreeCtrlX::OnCustomDraw(NMHDR *pNotifyStruct, LRESULT *pLResult)
       if (m_bUseHighLighting) {
         COLORREF cf;
         CFont *uFont = GetFontBasedOnStatus(hItem, pci, cf);
-        if (uFont != NULL) {
+        if (uFont != nullptr && pDC != nullptr) {
+          pDC = CDC::FromHandle(pTVCD->nmcd.hdc);
           bchanged_item_font = true;
           pDC->SelectObject(uFont);
           // Set text color only when current node isn't selected

@@ -6,11 +6,13 @@ if (WIN32)
     windows/dir.cpp
     windows/env.cpp
     windows/file.cpp
+    windows/getopt.c
     windows/KeySend.cpp
     windows/lib.cpp
     windows/logit.cpp
     windows/media.cpp
     windows/mem.cpp
+    windows//pws_str.cpp
     windows/rand.cpp
     windows/registry.cpp
     windows/run.cpp
@@ -53,7 +55,7 @@ endif ()
     mac/UUID.cpp
     mac/media.cpp
     )
-  elseif (${CMAKE_SYSTEM_NAME} MATCHES "(Linux|FreeBSD)")
+  elseif (${CMAKE_SYSTEM_NAME} MATCHES "(Linux|FreeBSD|OpenBSD)")
   set (OS_SRCS
     unix/KeySend.cpp
     unix/UUID.cpp
@@ -87,4 +89,5 @@ if(HAVE_YKPERS_H)
     list(APPEND OS_SRCS ${OS_YUBI_SRC})
 endif()
 
-add_library(os ${OS_SRCS})
+add_library(os STATIC ${OS_SRCS})
+target_link_libraries(os PRIVATE harden_interface)

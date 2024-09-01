@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -11,7 +11,8 @@
 #endif
 
 #include "core/ItemField.h"
-#include "core/BlowFish.h"
+#include "core/crypto/BlowFish.h"
+#include "crypto/sha1.h"
 #include "gtest/gtest.h"
 
 class NullFish : public Fish
@@ -49,8 +50,8 @@ public:
         0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89,
         0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99,
       };
-      m_bf = BlowFish::MakeBlowFish(sessionkey, sizeof(sessionkey),
-                                    salt, sizeof(salt));
+      m_bf = makeFish<BlowFish, SHA1>(sessionkey, sizeof(sessionkey),
+                                salt, sizeof(salt));
 #else
       m_bf = new NullFish;
 #endif 

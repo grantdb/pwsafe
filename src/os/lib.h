@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -17,7 +17,7 @@ namespace pws_os {
    * loadLibraryTypes::SYS -- load from system dir
    * loadLibraryTypes::APP -- load from application dir
    * loadLibraryTypes::CUSTOM -- use specified path (ask system to find it)
-   * loadLibraryTypes::RESOURCE -- language tranalation resource file
+   * loadLibraryTypes::RESOURCE -- language translation resource file
    *
    * Linux: 'type' maps to 'flags' for dlopen()
    */

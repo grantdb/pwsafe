@@ -1,14 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
 <meta http-equiv="content-type" content="text/html; charset=Windows-1251">
-<title>Настройки</title><!-- pwsafe version: 3.06--><!-- Modified: 21/02/2007 --><!--Popup control -->
-
+<title>Настройки</title>
+<!-- pwsafe version: 3.06--><!-- Modified: 21/02/2007 --><!--Popup control -->
 <script language="javascript" src="html/popups.js">
 </script>
 <link rel="stylesheet" type="text/css" href="style.css"></head>
 <body>
-<object id="popup" type="application/x-oleobject" classid="clsid:adb880a6-d8ff-11cf-9377-00aa003b7a11"></object><!-- Popup Source File -->
-
+<object id="popup" type="application/x-oleobject" classid="clsid:adb880a6-d8ff-11cf-9377-00aa003b7a11"></object>
+<!-- Popup Source File -->
 
 <h1>Настройки <b>Password Safe</b>
 </h1>
@@ -29,7 +29,8 @@
 
 <p>Оставшиеся настройки хранятся в файле pwsafe.cfg. Файл имеет формат XML. Для каждого пользователя и машины создаются отдельные элементы, чтобы несколько пользователей могли использовать один и тот же файл на различных машинах.</p>
 
-<p>По умолчанию pwsafe.cfg сохраняется в том же каталоге, что и pwsafe.exe. Но, если задана переменная окружения <b>PWS_PREFSDIR</b>, Password Safe будет использовать файл настроек, указанный в ней. Может пригодится если доступ к каталогу, в котором установлен pwsafe.exe ограничен (см. также описание параметра <b>-g</b> в разделе <a href="cli.html">Параметры командной строки</a>) или требуется запустить программу через скрипт-обёртку со сменного носителя.</p>
+<p>По умолчанию pwsafe.cfg сохраняется в каталоге локальных данных приложений пользователей: «C:\Users\<code>имя_пользователя</code>\AppData\Local\PasswordSafe». Путь сохранения можно переопределить через переменную окружения <b>PWS_PREFSDIR</b>. Для изменения имени файла или указания абсолютного пути можно использовать параметр командной строки <b>-g</b> (см.&nbsp;<a href="cli.html">Параметры командной строки</a>) . <br/> Ранее (до версии Password Safe 3.22) файл с настройками сохранялся в том же каталоге, что и pwsafe.exe. Поэтому, Password Safe будет искать файл и в этом каталоге, если он не найдётся в каталоге локальных данных приложений пользователей.
+</p>
 
 <p>Таблица описывает настраиваемые параметры. Большинство из них задаются в диалоге, открываемом через пункт меню <a href="manage_menu.html">Сервис&rarr;Настройки</a>. Т. к. используется XML-формат, имена полей чувствительны к регистру. Настройки из файла «pwsafe.cfg» применяются ко всем открытым контейнерам. Настройки, сохраняемые в контейнере, применяются только к нему. В Windows Vista и последующих версиях файл «pwsafe.cfg» находится в каталоге <code>C:\Users\&lt;имя_пользователя&gt;\AppData\Local\PasswordSafe</code>, а в Windows XP — в каталоге <code>C:\Documents and Settings\&lt;имя_пользователя&gt;\Application Data\PasswordSafe</code>. Данные каталоги могут быть скрытыми, и для их отображения может потребоваться изменение настроек Проводника.</p>
 
@@ -47,7 +48,7 @@
 
 <p>Примечание.&nbsp;Параметры сохраняются в контейнер только тогда, когда их значение отличается от значения по умолчанию.
 
-<h4>Настройки с логическими значениями (true («1») [истина]/false («0») [ложь])</h4>
+</p><h4>Настройки с логическими значениями (true («1») [истина]/false («0») [ложь])</h4>
 
 <table border="1" cellpadding="2" cellspacing="2" width="100%">
 <col style="font-size:10pt;" align="left" width="150px;" />
@@ -94,7 +95,7 @@
 <tr>
 <td>PWUseEasyVision</td>
 <td>false</td>
-<td>Политика создания паролей: использовать только легкоотличимые символы</td>
+<td>Политика создания паролей: использовать только удобочитаемые символы</td>
 </tr>
 
 <tr>
@@ -136,7 +137,7 @@
 <tr>
 <td>ShowDragbar</td>
 <td>true</td>
-<td>Отображать панель Dragbar</td>
+<td>Отображать панель значков для перетаскивания</td>
 </tr>
 
 <tr>
@@ -168,6 +169,18 @@
 <td>UseDefaultUser</td>
 <td>false</td>
 <td>Использование имени пользователя по умолчанию</td>
+</tr>
+
+<tr>
+    <td>ExcludeFromClipboardHistory</td>
+    <td>true</td>
+    <td>Не сохранять помещаемые в буфер обмена данные в его журнале (поддерживается в ОС Windows 10 и более поздних версиях).</td>
+</tr>
+
+<tr>
+    <td>ExcludeFromScreenCapture</td>
+    <td>true</td>
+    <td>Скрывать окна <b>Password Safe</b> при захвате экрана (скриншоты, запись видео, RDP, ...) в ОС Windows.</td>
 </tr>
 </tbody>
 </table>
@@ -292,8 +305,8 @@
 <td>TreeListSampleText</td>
 <td>«AaBbYyZzАаБбЖжЯя 0O1lIL»</td>
 <td>Текст образца для шрифта, используемого в древовидном списке</td>
-</tbody>
-</tr></table>
+</tr></tbody>
+</table>
 
 <h3>Связанные с приложением настройки (хранятся в файле pwsafe.cfg)</h3>
 
@@ -337,7 +350,7 @@
 </tr>
 <tr>
 
-</tr><tr>
+<tr>
 <td>DatabaseClear</td>
 <td>false</td>
 <td>Блокировать (выгружать из памяти) контейнер при сворачивании</td>
@@ -448,7 +461,7 @@
 <tr>
 <td>ShowDragbar</td>
 <td>true</td>
-<td>Отображать панель Dragbar</td>
+<td>Отображать панель значков для перетаскивания</td>
 </tr>
 
 <tr>
@@ -486,7 +499,7 @@
 <td>true</td>
 <td>Отображать значок <b>Password Safe</b> в области уведомлений</td>
 </tr>
-</tbody>
+</tr></tbody>
 </table>
 
 <h4>Настройки с числовыми значениями (в алфавитном порядке)</h4>
@@ -828,9 +841,9 @@
 <td>Текст образца для шрифта, используемого в экранной клавиатуре</td>
 </tr>
 </tbody>
-</table><!-- Added some white space at the bottom for natural scrolling -->
+</table>
 
-
+<!-- Added some white space at the bottom for natural scrolling -->
 <br>
 <br>
 <br>

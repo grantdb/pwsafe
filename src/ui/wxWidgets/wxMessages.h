@@ -1,13 +1,17 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
 * http://www.opensource.org/licenses/artistic-license-2.0.php
 */
 
-#ifndef __WXMESSAGES_H
-#define __WXMESSAGES_H
+/** \file wxMessages.h
+* 
+*/
+
+#ifndef _WXMESSAGES_H_
+#define _WXMESSAGES_H_
 
 #include "core/Proxy.h"
 #include <wx/msgdlg.h>
@@ -42,4 +46,4 @@ class wxReporter : public Reporter
   }
 };
 
-#endif /* __WXMESSAGES_H */
+#endif /* _WXMESSAGES_H_ */

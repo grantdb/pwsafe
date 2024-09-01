@@ -32,6 +32,97 @@ msgstr ""
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 
+# msgid/msgstr fields for Accelerator keys
+# Format is: "ID:xxxxxx:VACS+X" where:
+#    ID:xxxxx = the menu ID corresponding to the accelerator
+#    V = Virtual key (or blank if not used) - nearly always set!
+#    A = Alt key     (or blank if not used)
+#    C = Ctrl key    (or blank if not used)
+#    S = Shift key   (or blank if not used)
+#    X = upper case character
+# e.g. "V CS+Q" == Ctrl + Shift + 'Q'
+# ONLY Accelerator Keys with corresponding alphanumeric characters can be
+# updated i.e. function keys (F2), special keys (Delete, HoMe) etc. will not.
+# ONLY change the msgstr field. Do NOT change any other.
+# If you do not want to change an Accelerator Key, copy msgid to msgstr
+# msgid/msgstr fields for Accelerator keys
+# Format is: "ID:xxxxxx:VACS+X" where:
+#    ID:xxxxx = the menu ID corresponding to the accelerator
+#    V = Virtual key (or blank if not used) - nearly always set!
+#    A = Alt key     (or blank if not used)
+#    C = Ctrl key    (or blank if not used)
+#    S = Shift key   (or blank if not used)
+#    X = upper case character
+# e.g. "V CS+Q" == Ctrl + Shift + 'Q'
+# ONLY Accelerator Keys with corresponding alphanumeric characters can be
+# updated i.e. function keys (F2), special keys (Delete, HoMe) etc. will not.
+# ONLY change the msgstr field. Do NOT change any other.
+# If you do not want to change an Accelerator Key, copy msgid to msgstr
+# msgid/msgstr fields for Accelerator keys
+# Format is: "ID:xxxxxx:VACS+X" where:
+#    ID:xxxxx = the menu ID corresponding to the accelerator
+#    V = Virtual key (or blank if not used) - nearly always set!
+#    A = Alt key     (or blank if not used)
+#    C = Ctrl key    (or blank if not used)
+#    S = Shift key   (or blank if not used)
+#    X = upper case character
+# e.g. "V CS+Q" == Ctrl + Shift + 'Q'
+# ONLY Accelerator Keys with corresponding alphanumeric characters can be
+# updated i.e. function keys (F2), special keys (Delete, HoMe) etc. will not.
+# ONLY change the msgstr field. Do NOT change any other.
+# If you do not want to change an Accelerator Key, copy msgid to msgstr
+# msgid/msgstr fields for Accelerator keys
+# Format is: "ID:xxxxxx:VACS+X" where:
+#    ID:xxxxx = the menu ID corresponding to the accelerator
+#    V = Virtual key (or blank if not used) - nearly always set!
+#    A = Alt key     (or blank if not used)
+#    C = Ctrl key    (or blank if not used)
+#    S = Shift key   (or blank if not used)
+#    X = upper case character
+# e.g. "V CS+Q" == Ctrl + Shift + 'Q'
+# ONLY Accelerator Keys with corresponding alphanumeric characters can be
+# updated i.e. function keys (F2), special keys (Delete, HoMe) etc. will not.
+# ONLY change the msgstr field. Do NOT change any other.
+# If you do not want to change an Accelerator Key, copy msgid to msgstr
+# msgid/msgstr fields for Accelerator keys
+# Format is: "ID:xxxxxx:VACS+X" where:
+#    ID:xxxxx = the menu ID corresponding to the accelerator
+#    V = Virtual key (or blank if not used) - nearly always set!
+#    A = Alt key     (or blank if not used)
+#    C = Ctrl key    (or blank if not used)
+#    S = Shift key   (or blank if not used)
+#    X = upper case character
+# e.g. "V CS+Q" == Ctrl + Shift + 'Q'
+# ONLY Accelerator Keys with corresponding alphanumeric characters can be
+# updated i.e. function keys (F2), special keys (Delete, HoMe) etc. will not.
+# ONLY change the msgstr field. Do NOT change any other.
+# If you do not want to change an Accelerator Key, copy msgid to msgstr
+# msgid/msgstr fields for Accelerator keys
+# Format is: "ID:xxxxxx:VACS+X" where:
+#    ID:xxxxx = the menu ID corresponding to the accelerator
+#    V = Virtual key (or blank if not used) - nearly always set!
+#    A = Alt key     (or blank if not used)
+#    C = Ctrl key    (or blank if not used)
+#    S = Shift key   (or blank if not used)
+#    X = upper case character
+# e.g. "V CS+Q" == Ctrl + Shift + 'Q'
+# ONLY Accelerator Keys with corresponding alphanumeric characters can be
+# updated i.e. function keys (F2), special keys (Delete, HoMe) etc. will not.
+# ONLY change the msgstr field. Do NOT change any other.
+# If you do not want to change an Accelerator Key, copy msgid to msgstr
+# msgid/msgstr fields for Accelerator keys
+# Format is: "ID:xxxxxx:VACS+X" where:
+#    ID:xxxxx = the menu ID corresponding to the accelerator
+#    V = Virtual key (or blank if not used) - nearly always set!
+#    A = Alt key     (or blank if not used)
+#    C = Ctrl key    (or blank if not used)
+#    S = Shift key   (or blank if not used)
+#    X = upper case character
+# e.g. "V CS+Q" == Ctrl + Shift + 'Q'
+# ONLY Accelerator Keys with corresponding alphanumeric characters can be
+# updated i.e. function keys (F2), special keys (Delete, HoMe) etc. will not.
+# ONLY change the msgstr field. Do NOT change any other.
+# If you do not want to change an Accelerator Key, copy msgid to msgstr
 #. Resource IDs: (3263)
 msgid "  All Password History ignored."
 msgstr "모든 비밀번호 내역이 무시되었습니다."
@@ -46,7 +137,7 @@ msgstr "필드 값이 너무 짧습니다."
 
 #. Resource IDs: (3069)
 msgid "  Field length is incorrect."
-msgstr ""
+msgstr "비밀번호 길이:"
 
 #. Resource IDs: (3037)
 msgid "  Invalid date/time value."
@@ -159,6 +250,10 @@ msgstr ""
 msgid " 'Title'"
 msgstr "'주제'"
 
+#. Resource IDs: (5396)
+msgid " 'Two Factor Key'"
+msgstr ""
+
 #. Resource IDs: (5366)
 msgid " 'URL'"
 msgstr " '사이트 주소'"
@@ -169,14 +264,26 @@ msgstr " '사용자 이름'"
 
 #. Resource IDs: (5864)
 msgid " 'protected'"
-msgstr ""
+msgstr "보호됨"
 
 #. Resource IDs: (5843)
 msgid " 'symbols'"
+msgstr "특수문자 사용 (i.e. &, %, $, etc.)(&S)"
+
+#. Resource IDs: (4105)
+msgid " (EasyVision Symbols)"
+msgstr ""
+
+#. Resource IDs: (4106)
+msgid " (Pronounceable Symbols)"
 msgstr ""
 
 #. Resource IDs: (4011)
 msgid " (application default)"
+msgstr ""
+
+#. Resource IDs: (4115)
+msgid " (at least N restrictions may be ignored)"
 msgstr ""
 
 #. Resource IDs: (5781)
@@ -269,7 +376,7 @@ msgstr "#uuid"
 msgid "#what"
 msgstr "#what"
 
-#. Resource IDs: (1196)
+#. Resource IDs: (1196, 1199)
 msgid "#when"
 msgstr "#when"
 
@@ -332,6 +439,16 @@ msgstr "%d 항목 내보내짐"
 msgid "%d entries synchronized"
 msgstr "%d 항목 동기화됨"
 
+#. Resource IDs: (6061)
+#, c-format
+msgid "%d entries under group"
+msgstr ""
+
+#. Resource IDs: (6060)
+#, c-format
+msgid "%d entry under group"
+msgstr ""
+
 #. Resource IDs: (5240)
 #, c-format
 msgid "%d items"
@@ -350,6 +467,11 @@ msgstr "%d/%d 항목"
 #. Resource IDs: (3445)
 #, c-format
 msgid "%ls - Copied %ls"
+msgstr ""
+
+#. Resource IDs: (5907)
+#, c-format
+msgid "%ls - Drag & Drop %ls"
 msgstr ""
 
 #. Resource IDs: (3431)
@@ -415,11 +537,6 @@ msgstr ""
 #. Resource IDs: (5841)
 #, c-format
 msgid "%s (database-specific)"
-msgstr ""
-
-#. Resource IDs: (5907)
-#, c-format
-msgid "%s - Drag & Drop %s"
 msgstr ""
 
 #. Resource IDs: (5998)
@@ -545,8 +662,8 @@ msgid "&Browse to URL"
 msgstr "URL 탐색(&B)"
 
 #. Resource IDs: (32151 - MenuEx)
-msgid "&Change Safe Combination..."
-msgstr "보안 비밀번호 바꾸기(&C)"
+msgid "&Change Master Password..."
+msgstr "폰트 바꾸기(&F)"
 
 #. Resource IDs: (32105 - MenuEx)
 msgid "&Classic Toolbar"
@@ -557,14 +674,14 @@ msgid "&Clear Recent History"
 msgstr "최근 내역 삭제(&C)"
 
 #. Resource IDs: (32008 - MenuEx)
-msgid "&Clear Recent Safe List"
-msgstr "최근 보안 비밀번호 내역 삭제(&C)"
+msgid "&Clear Recently Opened List"
+msgstr ""
 
 #. Resource IDs: (5606)
 msgid "&Clear current"
 msgstr "현재 항목 삭제(&C)"
 
-#. Resource IDs: (32004 - Menu, 32004 - MenuEx)
+#. Resource IDs: (2, 32004 - Menu, 32004 - MenuEx)
 msgid "&Close"
 msgstr "닫기(&C)"
 
@@ -576,7 +693,7 @@ msgstr "비교(&C)"
 msgid "&Continue"
 msgstr "계속(&C)"
 
-#. Resource IDs: (1343, 34102)
+#. Resource IDs: (1343, 1615, 34102)
 msgid "&Copy"
 msgstr "복사(&C)"
 
@@ -608,6 +725,14 @@ msgstr "다시 묻지 않기(&D)"
 msgid "&Don't remind me again"
 msgstr "다시 나타내지 않기(&D)"
 
+#. Resource IDs: (65535)
+msgid "&Double-Click Action:"
+msgstr ""
+
+#. Resource IDs: (65535)
+msgid "&Double-Click\nAction:"
+msgstr ""
+
 #. Resource IDs: (32107 - MenuEx)
 msgid "&Dragbar visible"
 msgstr "드래그바 보이기(&D)"
@@ -616,7 +741,7 @@ msgstr "드래그바 보이기(&D)"
 msgid "&Duplicate Entry"
 msgstr "항목 복제(&D)"
 
-#. Resource IDs: (32086 - Menu)
+#. Resource IDs: (32087 - Menu)
 msgid "&Duplicate Group"
 msgstr "그룹 복제(&D)"
 
@@ -628,7 +753,7 @@ msgstr ""
 msgid "&Edit"
 msgstr "편집(&E)"
 
-#. Resource IDs: (32081 - Menu, 32081 - MenuEx)
+#. Resource IDs: (32082 - Menu, 32082 - MenuEx)
 msgid "&Edit Base entry"
 msgstr "기본 항목 편집(&E)"
 
@@ -652,13 +777,9 @@ msgstr "필터(&F)"
 msgid "&Find"
 msgstr "찾기(&F)"
 
-#. Resource IDs: (32079 - MenuEx)
+#. Resource IDs: (32080 - MenuEx)
 msgid "&Find..."
 msgstr "찾기...(&F)"
-
-#. Resource IDs: (2)
-msgid "&Finish"
-msgstr "완료(&F)"
 
 #. Resource IDs: (1088)
 msgid "&Font:"
@@ -668,7 +789,7 @@ msgstr "글꼴(&F):"
 msgid "&Generate"
 msgstr "생성(&G)"
 
-#. Resource IDs: (32078 - Menu, 32078 - MenuEx)
+#. Resource IDs: (32079 - Menu, 32079 - MenuEx)
 msgid "&Go to Base entry"
 msgstr "기본 항목으로 이동(&G)"
 
@@ -720,6 +841,10 @@ msgstr "합치기(&M)"
 msgid "&Minimize"
 msgstr "최소화하기(&M)"
 
+#. Resource IDs: (1229)
+msgid "&Never"
+msgstr ""
+
 #. Resource IDs: (1041, 1341, 5553)
 msgid "&New"
 msgstr "새로 만들기(&N)"
@@ -760,6 +885,10 @@ msgstr ""
 msgid "&Open"
 msgstr "열기(&O)"
 
+#. Resource IDs: (32002 - Menu)
+msgid "&Open Another"
+msgstr ""
+
 #. Resource IDs: (32002 - MenuEx)
 msgid "&Open..."
 msgstr "열기(&O)..."
@@ -780,7 +909,7 @@ msgstr "비밀번호(&P):"
 msgid "&Paste"
 msgstr "붙여넣기(&P)"
 
-#. Resource IDs: (32010 - MenuEx, 32084 - Menu, 32084 - MenuEx, 32093 - Menu, 32093 - MenuEx)
+#. Resource IDs: (32010 - MenuEx, 32085 - Menu, 32085 - MenuEx, 32094 - Menu, 32094 - MenuEx)
 msgid "&Plain Text (tab separated)..."
 msgstr "탭으로 구분된 텍스트...(&P)"
 
@@ -792,9 +921,9 @@ msgstr "텍스트...(&P)"
 msgid "&Properties"
 msgstr "속성(&P)"
 
-#. Resource IDs: (32089 - Menu)
+#. Resource IDs: (32090 - Menu)
 msgid "&Protect All Entries"
-msgstr ""
+msgstr "모든 항목 보호하기"
 
 #. Resource IDs: (65535 - PopupMenu)
 msgid "&Recent Entries History"
@@ -803,6 +932,10 @@ msgstr "최근 항목 내역(&R)"
 #. Resource IDs: (5217)
 msgid "&Recent Safes"
 msgstr "최근 보안 비밀번호(&R)"
+
+#. Resource IDs: (1297)
+msgid "&Recurring"
+msgstr ""
 
 #. Resource IDs: (32111 - MenuEx)
 msgid "&Refresh"
@@ -824,7 +957,11 @@ msgstr "복귀(&R)"
 msgid "&Retry"
 msgstr "재시도(&R)"
 
-#. Resource IDs: (32076 - Menu, 32076 - MenuEx, 5656)
+#. Resource IDs: (1358)
+msgid "&Run Cmd:"
+msgstr ""
+
+#. Resource IDs: (32077 - Menu, 32077 - MenuEx, 5656)
 msgid "&Run Command"
 msgstr "명령 실행(&R)"
 
@@ -851,6 +988,14 @@ msgstr ""
 #. Resource IDs: (5605)
 msgid "&Set current"
 msgstr "현재 항목 선택(&S)"
+
+#. Resource IDs: (65535)
+msgid "&Shift Double-Click Action:"
+msgstr ""
+
+#. Resource IDs: (65535)
+msgid "&Shift Double-Click\nAction:"
+msgstr ""
 
 #. Resource IDs: (1014, 5245)
 msgid "&Show"
@@ -884,9 +1029,9 @@ msgstr "재시도(&T)"
 msgid "&Undo"
 msgstr "되돌리기(&U)"
 
-#. Resource IDs: (32090 - Menu)
+#. Resource IDs: (32091 - Menu)
 msgid "&Unprotect All Entries"
-msgstr ""
+msgstr "모든 항목을 보호하지 않기"
 
 #. Resource IDs: (32127 - MenuEx)
 msgid "&Unsaved Changes"
@@ -904,7 +1049,7 @@ msgstr "유효화(&V)"
 msgid "&View"
 msgstr "보기(&V)"
 
-#. Resource IDs: (32097 - Menu)
+#. Resource IDs: (32098 - Menu)
 msgid "&View Attachment"
 msgstr ""
 
@@ -920,7 +1065,7 @@ msgstr "보고서 보기(&V)"
 msgid "&Virtual Keyboard Font"
 msgstr "가상 키보드 글꼴(&V)"
 
-#. Resource IDs: (32013 - MenuEx, 32015 - MenuEx, 32085 - Menu, 32085 - MenuEx, 32094 - Menu, 32094 - MenuEx)
+#. Resource IDs: (32013 - MenuEx, 32015 - MenuEx, 32086 - Menu, 32086 - MenuEx, 32095 - Menu, 32095 - MenuEx)
 msgid "&XML format..."
 msgstr "XML 형식...(&X)"
 
@@ -932,6 +1077,14 @@ msgstr "네(&Y)"
 msgid "&Yubikey..."
 msgstr ""
 
+#. Resource IDs: (1298)
+msgid "&days"
+msgstr ""
+
+#. Resource IDs: (1144)
+msgid "&last passwords"
+msgstr ""
+
 #. Resource IDs: (8159)
 msgid "'Alt Gr' (right Alt) key"
 msgstr "'Alt Gr' (right Alt) key"
@@ -941,7 +1094,7 @@ msgid "'Browse to URL' copies password to clipboard"
 msgstr ""
 
 #. Resource IDs: (5645)
-msgid "'Clear Clipboard on Minimize' and Double Click Action 'Copy Password and Minimize' conflict. Please change one or both."
+msgid "'Clear Clipboard on Minimize' and Double Click Action 'Copy Password and Minimize' conflict. Change one or both."
 msgstr ""
 
 #. Resource IDs: (5714)
@@ -979,6 +1132,10 @@ msgstr "(대소문자 무시)"
 #. Resource IDs: (3311, 5525)
 msgid "(case sensitive)"
 msgstr "(대소문자 구별)"
+
+#. Resource IDs: (6070, 6080, 6090)
+msgid "(state error)"
+msgstr ""
 
 #. Resource IDs: (1286, 1288, 1290, 1292)
 msgid ")"
@@ -1093,6 +1250,10 @@ msgstr "11"
 msgid "12"
 msgstr "12"
 
+#. Resource IDs: (1622)
+msgid "123456"
+msgstr ""
+
 #. Resource IDs: (8042)
 msgid "13"
 msgstr "13"
@@ -1164,6 +1325,10 @@ msgstr "28"
 #. Resource IDs: (8058)
 msgid "29"
 msgstr "29"
+
+#. Resource IDs: (6105)
+msgid "2FA copied "
+msgstr ""
 
 #. Resource IDs: (8023)
 msgid "3"
@@ -1293,6 +1458,11 @@ msgstr "<<"
 msgid "<Not Set>"
 msgstr ""
 
+#. Resource IDs: (5470)
+#, c-format
+msgid "<a href=\"%s\">Check</a> for the latest version."
+msgstr ""
+
 #. Resource IDs: (1154)
 msgid ">"
 msgstr ">"
@@ -1306,7 +1476,7 @@ msgid "A dot cannot be used as the first character of the Group field."
 msgstr ""
 
 #. Resource IDs: (5212)
-msgid "A fatal error occured: "
+msgid "A fatal error occurred: "
 msgstr "치명적인 오류가 발생했습니다: "
 
 #. Resource IDs: (3363)
@@ -1318,11 +1488,11 @@ msgid "A future date is not valid for this field"
 msgstr "이 필드에 미래의 날짜는 적합하지 않습니다"
 
 #. Resource IDs: (5116)
-msgid "A hidden password needs to be entered in the Confirm Password field too. If it's not hidden, Confirm shows numbers that may be used to help count the password's characters."
+msgid "A hidden password needs to be entered in the Confirm Password field too. If it's not hidden, the Confirm field shows numbers that may be used to help count the password's characters."
 msgstr ""
 
 #. Resource IDs: (65535)
-msgid "A new password database will be created. The safe combination you enter will be used to encrypt the password database file. The Safe Combination can use any keyboard character and is case-sensitive."
+msgid "A new password database will be created. The Master Password you enter will be used to encrypt the password database file. The Master Password can use any keyboard character and is case-sensitive."
 msgstr "새로운 비밀번호 데이터베이스가 만들어질 것입니다. 당신이 입력할 보안 비밀번호가 비밀번호 데이터베이스 파일을 암호화하는 데 사용됩니다. 보안 비밀번호는 키보드의 모든 문자를 사용할 수 있고, 대소문자를 구별합니다."
 
 #. Resource IDs: (5861)
@@ -1478,6 +1648,10 @@ msgstr ""
 msgid "Allow multiple instances (requires all instances to be restarted)"
 msgstr "다중 접근 허용(모든 접근 인스턴스를 재시작해야 함)"
 
+#. Resource IDs: (3504)
+msgid "Allowed characters are a-z, 2-7, space and dash"
+msgstr ""
+
 #. Resource IDs: (1434)
 msgid "Also used to replace periods in the Title field."
 msgstr "주제 필드의 구분자를 대체하는 데에 사용됩니다."
@@ -1522,10 +1696,18 @@ msgstr "보조 항목은 자기 자신을 참조할 수 없습니다"
 msgid "An entry or shortcut with the same Group, Title and Username already exists."
 msgstr ""
 
+#. Resource IDs: (6107)
+msgid "An error occurred obtaining the authentication code."
+msgstr ""
+
 #. Resource IDs: (61862)
 #, c-format
 msgid "An incorrect file handle was associated with %1."
 msgstr "잘못된 파일 핸들이 %1에 연결되었습니다."
+
+#. Resource IDs: (3501)
+msgid "An unknown Authentication Code error occurred"
+msgstr ""
 
 #. Resource IDs: (61476)
 msgid "An unknown error has occurred."
@@ -1586,7 +1768,7 @@ msgid "Armenian Western"
 msgstr "Armenian Western"
 
 #. Resource IDs: (5268)
-msgid "As the double quote character is used to delimit the whole notes field, it cannot be used within it to delimit multiple lines. Please enter another character."
+msgid "As the double quote character is used to delimit the whole notes field, it cannot be used within it to delimit multiple lines. Select another character."
 msgstr ""
 
 #. Resource IDs: (5292)
@@ -1632,6 +1814,42 @@ msgstr "%1을 쓰는 도중 읽기가 시도되었습니다."
 msgid "Attempted to write to the reading %1."
 msgstr "%1을 읽는 도중 쓰기가 시도되었습니다."
 
+#. Resource IDs: (600)
+msgid "Authentication Code"
+msgstr ""
+
+#. Resource IDs: (3081)
+msgid "Authentication Code Config"
+msgstr ""
+
+#. Resource IDs: (6106)
+msgid "Authentication Code Error"
+msgstr ""
+
+#. Resource IDs: (3082)
+msgid "Authentication Code Length"
+msgstr ""
+
+#. Resource IDs: (3084)
+msgid "Authentication Code Start Time"
+msgstr ""
+
+#. Resource IDs: (3083)
+msgid "Authentication Code Time Step"
+msgstr ""
+
+#. Resource IDs: (3080)
+msgid "Authentication Secret"
+msgstr ""
+
+#. Resource IDs: (6103)
+msgid "Authentication code requires secret key in Additional tab."
+msgstr ""
+
+#. Resource IDs: (65535)
+msgid "Authenticator Secret"
+msgstr ""
+
 #. Resource IDs: (3007)
 msgid "AutoType"
 msgstr "자동입력"
@@ -1676,9 +1894,13 @@ msgstr ""
 msgid "Backup Name"
 msgstr "백업본 이름"
 
-#. Resource IDs: (137, 505)
+#. Resource IDs: (137, 1599, 505)
 msgid "Backups"
 msgstr "백업본"
+
+#. Resource IDs: (3505)
+msgid "Bad length"
+msgstr ""
 
 #. Resource IDs: (65535)
 msgid "Base:"
@@ -1744,6 +1966,10 @@ msgstr ""
 msgid "Browse to URL + Autotype"
 msgstr "URL으로 탐색하고 자동입력"
 
+#. Resource IDs: (32074 - Menu, 32074 - MenuEx, 5679)
+msgid "Browse to URL w/Alt Browser"
+msgstr ""
+
 #. Resource IDs: (65535)
 msgid "Browser Command Line parameters:"
 msgstr ""
@@ -1775,6 +2001,10 @@ msgstr "바이트"
 #. Resource IDs: (32065 - Menu, 32065 - MenuEx)
 msgid "C&lear Clipboard"
 msgstr "클립보드 비우기(&C)"
+
+#. Resource IDs: (1174)
+msgid "C&opy All"
+msgstr ""
 
 #. Resource IDs: (1386)
 msgid "C++ Terminate"
@@ -1811,8 +2041,8 @@ msgstr "비밀번호 만료 전 %d~%d일 사이에만 경고할 수 있습니다
 
 #. Resource IDs: (3345)
 #, c-format
-msgid "Can't find XML Schema Definition file (%ls) in your PasswordSafe Application Directory.\nPlease copy it from your installation file, or re-install PasswordSafe."
-msgstr "Password Safe 실행 폴더에서 XML 스키마 정의 파일 (%ls) 을 찾을 수 없습니다.\n설치 파일에서 복사하시거나, Password Safe를 재설치 해 주십시오."
+msgid "Can't find XML Schema Definition file (%ls) in your PasswordSafe Application Directory.\nCopy it from your installation file, or re-install PasswordSafe."
+msgstr ""
 
 #. Resource IDs: (3320)
 msgid "Can't obtain the schema version."
@@ -1860,7 +2090,7 @@ msgid "Cannot read file. Please check file permissions."
 msgstr "파일을 읽을 수 없습니다. 파일 권한을 점검해 보십시오."
 
 #. Resource IDs: (5285)
-msgid "Cannot verify old safe combination - file gone?"
+msgid "Cannot verify old master password - file gone?"
 msgstr "이전 보안 비밀번호를 검사할 수 없습니다 - 파일이 삭제되었습니까?"
 
 #. Resource IDs: (8015)
@@ -1904,8 +2134,8 @@ msgid "Change Date"
 msgstr "날짜 바꾸기"
 
 #. Resource IDs: (127)
-msgid "Change Safe Combination"
-msgstr "보안 비밀번호 바꾸기"
+msgid "Change Master Password"
+msgstr "폰트 바꾸기(&F)"
 
 #. Resource IDs: (6039)
 #, c-format
@@ -1917,7 +2147,7 @@ msgid "Change database mode?"
 msgstr ""
 
 #. Resource IDs: (5858)
-msgid "Change status since last save:\n* \n  indicates the database has been changed\n° indicates a database preference has been changed"
+msgid "Change status since last save:\n* indicates the database has been changed\n° indicates a database preference has been changed"
 msgstr ""
 
 #. Resource IDs: (5913)
@@ -1956,6 +2186,54 @@ msgstr "Chinese Bopomofo"
 msgid "Chinese ChaJei"
 msgstr "Chinese ChaJei"
 
+#. Resource IDs: (5376)
+msgid "Choose a Backup to restore:"
+msgstr ""
+
+#. Resource IDs: (5791)
+msgid "Choose a Database to Validate:"
+msgstr ""
+
+#. Resource IDs: (5375)
+msgid "Choose a Name for this Backup:"
+msgstr ""
+
+#. Resource IDs: (5335)
+msgid "Choose a Text File to Import"
+msgstr ""
+
+#. Resource IDs: (5354)
+msgid "Choose a database to compare with current database"
+msgstr ""
+
+#. Resource IDs: (5348)
+msgid "Choose a database to merge into the current database"
+msgstr ""
+
+#. Resource IDs: (5753)
+msgid "Choose a database to synchronize with current database"
+msgstr ""
+
+#. Resource IDs: (5327)
+msgid "Choose a name for the current (Untitled) database:"
+msgstr ""
+
+#. Resource IDs: (5328)
+msgid "Choose a new name for the current database:"
+msgstr ""
+
+#. Resource IDs: (5343)
+msgid "Choose an XML File to Import"
+msgstr ""
+
+#. Resource IDs: (1)
+msgid "Cl&ose"
+msgstr ""
+
+#. Resource IDs: (1141)
+msgid "Clear &History"
+msgstr ""
+
 #. Resource IDs: (8001)
 msgid "Clear Buffer"
 msgstr "버퍼 비우기"
@@ -1974,7 +2252,7 @@ msgstr "내역 비우기"
 
 #. Resource IDs: (6032)
 msgid "Clear Recent Safe list"
-msgstr ""
+msgstr "최근 보안 비밀번호 내역 삭제(&C)"
 
 #. Resource IDs: (1062)
 msgid "Clear clipboard upon exit"
@@ -2014,6 +2292,10 @@ msgstr "대/소문자를 바꾸시려면 클릭하세요."
 
 #. Resource IDs: (5917)
 msgid "Click to copy generated password to clipboard"
+msgstr ""
+
+#. Resource IDs: (6102)
+msgid "Click to copy the current authentication code to clipboard."
 msgstr ""
 
 #. Resource IDs: (5646)
@@ -2063,6 +2345,10 @@ msgstr "값을 맞추기 위해 조건을 설정하려면 클릭"
 #. Resource IDs: (5619)
 msgid "Click to set the field to filter by"
 msgstr "Click to set the field to filter by"
+
+#. Resource IDs: (6104)
+msgid "Click to show/hide the current authentication code."
+msgstr ""
 
 #. Resource IDs: (8161)
 msgid "Click to switch to English"
@@ -2142,10 +2428,10 @@ msgstr "데이터베이스 비교 결과"
 
 #. Resource IDs: (5356)
 #, c-format
-msgid "Compare complete of current database:\n\t %s\n and:\n\t %s"
-msgstr "현재 데이터베이스의 비교 완료\n\t %s\n 그리고:\n\t %s"
+msgid "Compare complete of current database:\n\t %ls\n and:\n\t %ls\n"
+msgstr "현재 데이터베이스의 비교 완료\n\t %ls\n 그리고:\n\t %ls\n"
 
-#. Resource IDs: (32091 - Menu, 32091 - MenuEx)
+#. Resource IDs: (32092 - Menu, 32092 - MenuEx)
 msgid "Compare entries..."
 msgstr ""
 
@@ -2182,7 +2468,7 @@ msgstr "완료하였습니다만..."
 msgid "Completed successfully"
 msgstr "성공적으로 완료했습니다"
 
-#. Resource IDs: (65535)
+#. Resource IDs: (1602)
 msgid "Con&firm Password:"
 msgstr "비밀번호 확인(&F):"
 
@@ -2215,6 +2501,19 @@ msgstr ""
 msgid "Confirm deletion of items"
 msgstr "항목 삭제 확인"
 
+#. Resource IDs: (5635)
+#, c-format
+msgid "Confirm deletion of the %s filter %s?"
+msgstr ""
+
+#. Resource IDs: (5322)
+msgid "Confirm old master password"
+msgstr ""
+
+#. Resource IDs: (6033)
+msgid "Confirm that you wish to clear the recent Safe list."
+msgstr ""
+
 #. Resource IDs: (5930)
 #, c-format
 msgid "Confirm that you wish to copy these entries from %s to %s\n\nIf already present in the target database, they will be replaced!"
@@ -2230,7 +2529,11 @@ msgstr ""
 msgid "Confirm that you wish to synchronize these entries from %s to %s?\n\nSelected fields will be replaced in all entries!"
 msgstr ""
 
-#. Resource IDs: (65535)
+#. Resource IDs: (5287)
+msgid "Confirm to delete the current user's PasswordSafe configuration from the Windows registry.\n\n"
+msgstr ""
+
+#. Resource IDs: (1505, 65535)
 msgid "Confirmation:"
 msgstr "확인:"
 
@@ -2260,6 +2563,10 @@ msgstr "사용자 이름을 클립보드에 복사(&U)"
 msgid "Copy All"
 msgstr "모두 복사"
 
+#. Resource IDs: (32100 - Menu, 32100 - MenuEx)
+msgid "Copy Aut&h Code to Clipboard"
+msgstr ""
+
 #. Resource IDs: (32071 - Menu, 32071 - MenuEx, 5723)
 msgid "Copy Email to Clipboard"
 msgstr ""
@@ -2268,7 +2575,7 @@ msgstr ""
 msgid "Copy Here"
 msgstr "이곳에 복사"
 
-#. Resource IDs: (32080 - Menu, 32080 - MenuEx)
+#. Resource IDs: (32081 - Menu, 32081 - MenuEx)
 msgid "Copy Run Command to Clipboard"
 msgstr "실행 명령을 클립보드에 복사"
 
@@ -2352,7 +2659,7 @@ msgstr ""
 msgid "Couldn't save database - Please save manually"
 msgstr "데이터베이스를 저장하지 못했습니다 - 수동으로 저장해 주십시오"
 
-#. Resource IDs: (32077 - Menu, 32077 - MenuEx)
+#. Resource IDs: (32078 - Menu, 32078 - MenuEx)
 msgid "Create &Shortcut"
 msgstr "바로가기 만들기(&S)"
 
@@ -2391,7 +2698,23 @@ msgstr "생성된 일자:"
 
 #. Resource IDs: (65535)
 msgid "Creation date:"
+msgstr "'생성 시간'"
+
+#. Resource IDs: (3077)
+msgid "Credit card CVV"
 msgstr ""
+
+#. Resource IDs: (3078)
+msgid "Credit card PIN"
+msgstr ""
+
+#. Resource IDs: (3076)
+msgid "Credit card expiration"
+msgstr ""
+
+#. Resource IDs: (3075)
+msgid "Credit card number"
+msgstr "총 항목 개수:"
 
 #. Resource IDs: (5612)
 msgid "Criteria"
@@ -2418,8 +2741,8 @@ msgid "Current Entry"
 msgstr ""
 
 #. Resource IDs: (65535)
-msgid "Current Safe Combination:"
-msgstr ""
+msgid "Current Master Password:"
+msgstr "현재 항목의 과거 비밀번호 내역 관리"
 
 #. Resource IDs: (3460)
 msgid "Current database filters have been exported to this database."
@@ -2431,13 +2754,8 @@ msgstr ""
 
 #. Resource IDs: (5477)
 #, c-format
-msgid "Current version:\t%s\nLatest version:\t%s\n\nPlease visit the PasswordSafe website to download the latest version."
-msgstr "현재 버전:\t%s\n최신 버전:\t%s\n\nPassword Safe 홈페이지를 방문하여 최신 버전의 프로그램을 다운로드해 주십시오."
-
-#. Resource IDs: (5478)
-#, c-format
-msgid "Current version:\t%s\nLatest version:\t%s\n\nYour purchase includes free upgrades for one year.\nPlease contact the PasswordSafe Administrator for your upgrade."
-msgstr "현재 버전:\t%s\n최신 버전:\t%s\n\n소프트웨어 구입은 1년간 무료 업그레이드를 포함합니다\n업그레이드를 위해 Password Safe 관리자에게 연락하십시오."
+msgid "Current version:\t%s\nLatest version:\t%s\n\nVisit the Password Safe website to download the latest version."
+msgstr ""
 
 #. Resource IDs: (32155 - MenuEx)
 msgid "Customize &Main Toolbar"
@@ -2557,7 +2875,15 @@ msgstr ""
 msgid "Default number of saved password history entries must be between %d and %d."
 msgstr "저장된 비밀번호 내역 항목 수의 기본값은 반드시 %d 에서 %d 사이"
 
-#. Resource IDs: (5622)
+#. Resource IDs: (1447)
+msgid "Default password expiration (days)"
+msgstr ""
+
+#. Resource IDs: (65535)
+msgid "Default:"
+msgstr ""
+
+#. Resource IDs: (1, 5622)
 msgid "Delete"
 msgstr "삭제"
 
@@ -2575,6 +2901,10 @@ msgstr "항목 삭제"
 
 #. Resource IDs: (5882)
 msgid "Delete selected Password Policy\n(only an unused Named Password Policy may be deleted)"
+msgstr ""
+
+#. Resource IDs: (5876)
+msgid "Description"
 msgstr ""
 
 #. Resource IDs: (65535)
@@ -2609,6 +2939,10 @@ msgstr "Devanagari - INSCRIPT"
 msgid "Dialog"
 msgstr "Dialog"
 
+#. Resource IDs: (6063)
+msgid "Discard"
+msgstr ""
+
 #. Resource IDs: (61869)
 #, c-format
 msgid "Disk full while accessing %1."
@@ -2619,9 +2953,13 @@ msgstr "%1에 접근하는 동안 디스크 용량이 꽉 찼습니다."
 msgid "Dispatch exception: %1"
 msgstr "내보내기 예외 오류: %1"
 
-#. Resource IDs: (138, 506)
+#. Resource IDs: (138, 1599, 506)
 msgid "Display"
 msgstr "표시"
+
+#. Resource IDs: (32099 - Menu, 32099 - MenuEx)
+msgid "Display Auth Code"
+msgstr ""
 
 #. Resource IDs: (151, 152, 153, 154, 155, 156, 161, 163, 165, 166)
 msgid "Display Filter - "
@@ -2669,7 +3007,7 @@ msgstr "자동으로 저장된 문서를 열지 마십시오.\n정확히 마지�
 msgid "Double click an entry to Edit/View it."
 msgstr ""
 
-#. Resource IDs: (5738)
+#. Resource IDs: (5738, 65535)
 msgid "Double-Click Action"
 msgstr ""
 
@@ -2717,10 +3055,6 @@ msgstr ""
 msgid "Double-Click on entry to View/Edit it"
 msgstr "항목을 더블클릭하여 편집하기"
 
-#. Resource IDs: (65535)
-msgid "Double-click action"
-msgstr "더블클릭 행동"
-
 #. Resource IDs: (5910)
 msgid "Double-click an entry to Edit/View it"
 msgstr ""
@@ -2731,11 +3065,11 @@ msgstr ""
 
 #. Resource IDs: (5697)
 #, c-format
-msgid "Drag this image onto a another window to paste the '%s' field."
+msgid "Drag this image onto another window to paste the '%s' field."
 msgstr "'%s' 필드값을 복사하시려면 이 아이큰을 다른 윈도우 위로 드래그하십시오."
 
 #. Resource IDs: (5862)
-msgid "Drag this image onto a another window to start AutoType from there."
+msgid "Drag this image onto another window to start AutoType from there."
 msgstr ""
 
 #. Resource IDs: (5464)
@@ -2743,7 +3077,7 @@ msgstr ""
 msgid "Dropped entry '%s:%s:%s' password points to an entry that is also an alias.\n\nThe dropped entry now references that entry's base entry."
 msgstr "끊어진 항목 '%s:%s:%s' 의 비밀번호가 이미 보조 항목의 속성을 가진 항목을 가리키고 있습니다.\n\n끊어진 항목은 지금부터 그 항목의 기본 항목을 참조하게 됩니다."
 
-#. Resource IDs: (32086 - Menu, 32086 - MenuEx)
+#. Resource IDs: (32087 - Menu, 32087 - MenuEx)
 msgid "Duplicate Group"
 msgstr "그룹 복제"
 
@@ -2870,9 +3204,9 @@ msgstr "보고 중지"
 msgid "Enter Key:"
 msgstr "Enter Key:"
 
-#. Resource IDs: (130, 132)
-msgid "Enter Safe Combination"
-msgstr "보안 비빌번호를 입력하세요"
+#. Resource IDs: (130)
+msgid "Enter Master Password"
+msgstr "이 데이터베이스의 보안 비밀번호를 입력해 주십시오."
 
 #. Resource IDs: (61722)
 msgid "Enter a GUID."
@@ -2903,6 +3237,10 @@ msgstr "숫자를 입력하세요."
 msgid "Enter a positive integer."
 msgstr "정수를 입력하세요."
 
+#. Resource IDs: (5272)
+msgid "Enter a search string"
+msgstr ""
+
 #. Resource IDs: (61723)
 msgid "Enter a time."
 msgstr "시각을 입력하세요."
@@ -2930,12 +3268,32 @@ msgid "Enter no more than %1 characters."
 msgstr "%1자 이하의 문자열을 입력하세요."
 
 #. Resource IDs: (65535)
-msgid "Enter positions of password characters separated by spaces, commas or semi-colons."
+msgid "Enter positions of password characters separated by spaces, commas or semi-colons (or * for full password)."
+msgstr ""
+
+#. Resource IDs: (65535)
+msgid "Enter the Master Password to unlock the password database:"
+msgstr ""
+
+#. Resource IDs: (6101)
+msgid "Enter the authentication secret key. This usually taken from the authenticator setup page."
+msgstr ""
+
+#. Resource IDs: (65535)
+msgid "Enter the current master password, followed by a new one. \r\nType the new one again to confirm it."
+msgstr ""
+
+#. Resource IDs: (5255)
+msgid "Enter the key and verify it."
 msgstr ""
 
 #. Resource IDs: (149)
 msgid "Enter your Sample Text below"
 msgstr "아래에 임시 텍스트를 입력하세요"
+
+#. Resource IDs: (5388)
+msgid "Enter your backup database prefix."
+msgstr ""
 
 #. Resource IDs: (5362)
 msgid "Entries in both databases but with differences:"
@@ -3088,6 +3446,10 @@ msgstr ""
 msgid "Error parsing Run Command"
 msgstr "실행 명령 분석 실패"
 
+#. Resource IDs: (6009)
+msgid "Error reading YubiKey"
+msgstr "%1을 읽는 도중 쓰기가 시도되었습니다."
+
 #. Resource IDs: (3378)
 msgid "Error while writing file! Try saving in a different location"
 msgstr "파일 작성 중 오류가 발생했습니다! 다른 곳에 저장해 보십시오"
@@ -3111,6 +3473,14 @@ msgstr "Estonian"
 #. Resource IDs: (65535)
 msgid "Example:"
 msgstr "예제:"
+
+#. Resource IDs: (1601)
+msgid "Exclude from clipboard history"
+msgstr ""
+
+#. Resource IDs: (1603)
+msgid "Exclude from screen capture"
+msgstr ""
 
 #. Resource IDs: (1004, 32021)
 msgid "Exit"
@@ -3148,7 +3518,7 @@ msgstr "보내기(&T)"
 msgid "Export &XML"
 msgstr "XML으로 내보내기(&X)"
 
-#. Resource IDs: (32096 - Menu, 32096 - MenuEx)
+#. Resource IDs: (32097 - Menu, 32097 - MenuEx)
 msgid "Export Attachment..."
 msgstr ""
 
@@ -3265,6 +3635,10 @@ msgstr "문서를 저장하는 데 실패했습니다."
 msgid "Failed to save image"
 msgstr ""
 
+#. Resource IDs: (6008)
+msgid "Failed to save key in database"
+msgstr ""
+
 #. Resource IDs: (5850)
 #, c-format
 msgid "Failed to switch from R-O to R/W because database is already open in R/W mode by:\n%s %s\n(Only one R/W access at a time is allowed)"
@@ -3281,6 +3655,10 @@ msgstr ""
 #. Resource IDs: (5851)
 msgid "Failed to switch from R/W to R-O: Could not release database lock.\nTry exiting and restarting program."
 msgstr ""
+
+#. Resource IDs: (6006)
+msgid "Failed to update YubiKey"
+msgstr "명령 실행을 실패하였습니다."
 
 #. Resource IDs: (5766)
 msgid "Failsafe Backup Deletion"
@@ -3493,6 +3871,10 @@ msgstr "모두 접힘"
 msgid "Fully expanded"
 msgstr "모두 펼쳐짐"
 
+#. Resource IDs: (1379)
+msgid "G&o"
+msgstr ""
+
 #. Resource IDs: (8305)
 msgid "Gaelic"
 msgstr "Gaelic"
@@ -3545,10 +3927,6 @@ msgstr "도움말 얻기(&H)\tF1"
 msgid "Given path is a directory or file is read-only"
 msgstr "제시된 경로는 디렉토리이거나 파일이 읽기전용입니다"
 
-#. Resource IDs: (1379)
-msgid "Go"
-msgstr "이동"
-
 #. Resource IDs: (5667)
 msgid "Go "
 msgstr "이동"
@@ -3593,6 +3971,10 @@ msgstr "Greek Latin"
 msgid "Greek Polytonic"
 msgstr "Greek Polytonic"
 
+#. Resource IDs: (1350)
+msgid "Gro&up:"
+msgstr ""
+
 #. Resource IDs: (3055, 5221)
 msgid "Group"
 msgstr "그룹"
@@ -3609,7 +3991,7 @@ msgstr "그룹 복사됨"
 msgid "Group/Title"
 msgstr "그룹/주제"
 
-#. Resource IDs: (1350, 65535)
+#. Resource IDs: (65535)
 msgid "Group:"
 msgstr "그룹:"
 
@@ -3653,6 +4035,10 @@ msgstr "16진수 문자"
 msgid "Hexadecimal is mutually exclusive to all other options."
 msgstr ""
 
+#. Resource IDs: (5122)
+msgid "Hide Password Safe from screen capture and related apps."
+msgstr ""
+
 #. Resource IDs: (1426)
 msgid "Hide System Tray icon (Hot Key MUST be active)"
 msgstr "시스템 트레이 아이콘 감추기 (반드시 단축키를 설정해야함)"
@@ -3694,7 +4080,7 @@ msgstr "Hungarian"
 msgid "Hungarian 101-key"
 msgstr "Hungarian 101-key"
 
-#. Accelerator Entry for Menu ID:32002; '&Open...'
+#. Accelerator Entry for Menu ID:32002; '&Open Another'
 msgid "ID:32002:V C +O"
 msgstr "ID:32002:V C +O"
 
@@ -3750,33 +4136,45 @@ msgstr "ID:32072:V C +L"
 msgid "ID:32073:VA  +L"
 msgstr "ID:32073:VA  +L"
 
-#. Accelerator Entry for Menu ID:32074; 'Send &Email'
-msgid "ID:32074:V C +E"
-msgstr "ID:32074:V C +E"
+#. Accelerator Entry for Menu ID:32074; 'Browse to URL w/Alt Browser'
+msgid "ID:32074:VA S+L"
+msgstr ""
 
-#. Accelerator Entry for Menu ID:32075; 'Perform Auto&Type'
-msgid "ID:32075:V C +T"
-msgstr "ID:32075:V C +T"
+#. Accelerator Entry for Menu ID:32075; 'Send &Email'
+msgid "ID:32075:V C +E"
+msgstr ""
 
-#. Accelerator Entry for Menu ID:32076; '&Run Command'
-msgid "ID:32076:V C +R"
-msgstr "ID:32076:V C +R"
+#. Accelerator Entry for Menu ID:32076; 'Perform Auto&Type'
+msgid "ID:32076:V C +T"
+msgstr ""
 
-#. Accelerator Entry for Menu ID:32079; '&Find...'
-msgid "ID:32079:V C +F"
-msgstr "ID:32079:V C +F"
+#. Accelerator Entry for Menu ID:32077; '&Run Command'
+msgid "ID:32077:V C +R"
+msgstr ""
 
-#. Accelerator Entry for Menu ID:32080; 'Copy Run Command to Clipboard'
-msgid "ID:32080:VAC +R"
-msgstr "ID:32080:VAC +R"
+#. Accelerator Entry for Menu ID:32080; '&Find...'
+msgid "ID:32080:V C +F"
+msgstr ""
 
-#. Accelerator Entry for Menu ID:32082; 'Undo'
-msgid "ID:32082:V C +Z"
-msgstr "ID:32082:V C +Z"
+#. Accelerator Entry for Menu ID:32081; 'Copy Run Command to Clipboard'
+msgid "ID:32081:VAC +R"
+msgstr ""
 
-#. Accelerator Entry for Menu ID:32083; 'Redo'
-msgid "ID:32083:V C +Y"
-msgstr "ID:32083:V C +Y"
+#. Accelerator Entry for Menu ID:32083; 'Undo'
+msgid "ID:32083:V C +Z"
+msgstr ""
+
+#. Accelerator Entry for Menu ID:32084; 'Redo'
+msgid "ID:32084:V C +Y"
+msgstr ""
+
+#. Accelerator Entry for Menu ID:32099; 'Display Auth Code'
+msgid "ID:32099:VAC +2"
+msgstr ""
+
+#. Accelerator Entry for Menu ID:32100; 'Copy Aut&h Code to Clipboard'
+msgid "ID:32100:VA  +2"
+msgstr ""
 
 #. Accelerator Entry for Menu ID:32140; 'Last Find results'
 msgid "ID:32140:V C +K"
@@ -3903,8 +4301,12 @@ msgstr "XML 설정 불러오기"
 msgid "Import XML failed"
 msgstr "XML 설정 불러오기 실패"
 
+#. Resource IDs: (5340)
+msgid "Import a KeePass Text File"
+msgstr ""
+
 #. Resource IDs: (3425)
-msgid "Import aborted. Please see report."
+msgid "Import aborted, see report for details."
 msgstr ""
 
 #. Resource IDs: (5870)
@@ -3965,8 +4367,12 @@ msgstr ""
 msgid "Incorrect filename."
 msgstr "파일 이름이 올바르지 않습니다."
 
+#. Resource IDs: (5334)
+msgid "Incorrect master password"
+msgstr ""
+
 #. Resource IDs: (5280)
-msgid "Incorrect passkey, not a PasswordSafe database, or a corrupt database."
+msgid "Incorrect master password, not a Password Safe database,\nor a corrupt database."
 msgstr ""
 
 #. Resource IDs: (3251)
@@ -4007,6 +4413,10 @@ msgstr "입력란이 비어있습니다"
 #. Resource IDs: (8085)
 msgid "Insert"
 msgstr "삽입"
+
+#. Resource IDs: (6001)
+msgid "Insert your YubiKey"
+msgstr ""
 
 #. Resource IDs: (61706)
 msgid "Insufficient memory to perform operation."
@@ -4052,10 +4462,19 @@ msgstr "잘못된 필터 스키마"
 msgid "Invalid Parameter"
 msgstr "잘못된 변수"
 
+#. Resource IDs: (3462)
+msgid "Invalid field delimiter: must be within ASCII range."
+msgstr ""
+
 #. Resource IDs: (3017)
 #, c-format
 msgid "Invalid input on line %d.  Number of fields separated by '%c' is not as expected."
 msgstr "%d 행에서 잘못된 입력값이 있습니다..  Number of fields separated by '%c' is not as expected."
+
+#. Resource IDs: (4116)
+#, c-format
+msgid "Invalid lock file \"%ls\"."
+msgstr ""
 
 #. Resource IDs: (5684)
 msgid "Invalid shortcut ignored."
@@ -4089,6 +4508,10 @@ msgstr "Kannada"
 msgid "Kazakh"
 msgstr "Kazakh"
 
+#. Resource IDs: (65535)
+msgid "Ke&y:"
+msgstr ""
+
 #. Resource IDs: (32024 - MenuEx)
 msgid "KeePass V1 CSV File..."
 msgstr ""
@@ -4101,7 +4524,15 @@ msgstr ""
 msgid "Keep"
 msgstr "유지"
 
-#. Resource IDs: (3073, 5940, 65535)
+#. Resource IDs: (65535)
+msgid "Key&board Shortcut"
+msgstr ""
+
+#. Resource IDs: (65535)
+msgid "Key&board Shortcut:"
+msgstr ""
+
+#. Resource IDs: (3073, 5940)
 msgid "Keyboard Shortcut"
 msgstr ""
 
@@ -4147,7 +4578,7 @@ msgstr "최종 접근 시간:"
 
 #. Resource IDs: (5856)
 msgid "Last clipboard action"
-msgstr ""
+msgstr "더블클릭 행동:"
 
 #. Resource IDs: (3461)
 msgid "Last found entries"
@@ -4160,11 +4591,6 @@ msgstr "최종 편집자:"
 #. Resource IDs: (65535)
 msgid "Last saved on:"
 msgstr "최종 편집 시간:"
-
-#. Resource IDs: (5470)
-#, c-format
-msgid "Latest version? Click <a href=\"%s\">here</a> to check."
-msgstr "최신 버전은 <a href=\"%s\">이곳</a> 을 클릭하여 체크해주세요."
 
 #. Resource IDs: (8267)
 msgid "Latin American"
@@ -4247,8 +4673,8 @@ msgid "Lithuanian Standard"
 msgstr "Lithuanian Standard"
 
 #. Resource IDs: (5257)
-msgid "Lock Safe"
-msgstr "Safe 잠그기"
+msgid "Lock"
+msgstr ""
 
 #. Resource IDs: (65535)
 msgid "Lock password database "
@@ -4302,6 +4728,26 @@ msgstr "Maori"
 #. Resource IDs: (8256)
 msgid "Marathi"
 msgstr "Marathi"
+
+#. Resource IDs: (131)
+msgid "Master Password Entry"
+msgstr "기본 보조 항목 - 비밀번호 만료됨"
+
+#. Resource IDs: (133)
+msgid "Master Password Setup"
+msgstr "보안 비밀번호 설정"
+
+#. Resource IDs: (65535)
+msgid "Master Password last set on:"
+msgstr "항목의 비밀번호 정책 설정"
+
+#. Resource IDs: (1506, 65535)
+msgid "Master Password:"
+msgstr "'비밀번호 내역'"
+
+#. Resource IDs: (5800)
+msgid "Master password needed to save. Unlock database and try again"
+msgstr ""
 
 #. Resource IDs: (1212)
 msgid "Max."
@@ -4390,13 +4836,17 @@ msgstr ""
 msgid "Minimum uppercase characters"
 msgstr "최소 대문자 개수"
 
-#. Resource IDs: (139, 507)
+#. Resource IDs: (139, 1599, 507)
 msgid "Misc."
 msgstr "기타"
 
 #. Resource IDs: (3346)
 msgid "Missing XSD File"
 msgstr "xsd 파일 없음"
+
+#. Resource IDs: (6108)
+msgid "Missing authentication secret key."
+msgstr ""
 
 #. Resource IDs: (3354)
 msgid "Missing ending curly bracket for variable name"
@@ -4431,9 +4881,29 @@ msgstr "최소 %d 이상이어야 합니다"
 msgid "N/A"
 msgstr "N/A"
 
-#. Resource IDs: (5640)
+#. Resource IDs: (5640, 5875)
 msgid "Name"
 msgstr "이름"
+
+#. Resource IDs: (5333)
+msgid "Name the XML file"
+msgstr ""
+
+#. Resource IDs: (5961)
+msgid "Name the database file"
+msgstr ""
+
+#. Resource IDs: (5331)
+msgid "Name the exported database"
+msgstr ""
+
+#. Resource IDs: (5332)
+msgid "Name the plaintext file"
+msgstr ""
+
+#. Resource IDs: (5621)
+msgid "Name this filter"
+msgstr ""
 
 #. Resource IDs: (1039)
 msgid "Name. Name. Name."
@@ -4451,7 +4921,7 @@ msgstr ""
 msgid "Nested &Tree"
 msgstr "중첩된 트리(&T)"
 
-#. Resource IDs: (1229, 5241)
+#. Resource IDs: (5241)
 msgid "Never"
 msgstr "전혀"
 
@@ -4464,15 +4934,15 @@ msgid "New Group"
 msgstr "새 그룹 만들기"
 
 #. Resource IDs: (65535)
-msgid "New Safe Combination:"
-msgstr "새 보안 비밀번호:"
+msgid "New Master Password:"
+msgstr "새 도구모음(&N)"
 
 #. Resource IDs: (5476)
 msgid "New Version Found!"
 msgstr "새 버전 출시!"
 
 #. Resource IDs: (5286)
-msgid "New safe combination and confirmation do not match"
+msgid "New master password and confirmation do not match"
 msgstr "새 보안 비밀번호와 확인 비밀번호가 일치하지 않습니다"
 
 #. Resource IDs: (1003)
@@ -4506,10 +4976,6 @@ msgstr ""
 #. Resource IDs: (5353)
 msgid "No database open with which to compare against another database!"
 msgstr "다른 데이터베이스와 비교할 데이터베이스가 열리지 않았습니다."
-
-#. Resource IDs: (6034)
-msgid "No drive specified."
-msgstr ""
 
 #. Resource IDs: (5737)
 #, c-format
@@ -4746,13 +5212,13 @@ msgstr "확인"
 msgid "Off"
 msgstr "끄기"
 
+#. Resource IDs: (65535)
+msgid "Old Master Password:"
+msgstr "기존 보안 비밀번호:"
+
 #. Resource IDs: (6038)
 msgid "Old Pswd copied"
 msgstr ""
-
-#. Resource IDs: (65535)
-msgid "Old Safe Combination:"
-msgstr "기존 보안 비밀번호:"
 
 #. Resource IDs: (5265)
 msgid "On"
@@ -4766,10 +5232,6 @@ msgstr ""
 msgid "On workstation lock"
 msgstr ""
 
-#. Resource IDs: (5732)
-msgid "One of more preferences have been changed. Are you sure you wish to cancel?"
-msgstr "하나 이상의 설정이 변경되었습니다. 변경사항을 취소하시겠습니까?"
-
 #. Resource IDs: (5894)
 msgid "One or more Password Policies have been changed. Are you sure you wish to cancel?"
 msgstr ""
@@ -4777,6 +5239,14 @@ msgstr ""
 #. Resource IDs: (62180)
 msgid "One or more auto-saved documents were found."
 msgstr "최소 한 개 이상의 자동저장된 문서가 발견되었습니다."
+
+#. Resource IDs: (5732)
+msgid "One or more preferences have been changed. Are you sure you wish to cancel?"
+msgstr "하나 이상의 설정이 변경되었습니다. 변경사항을 취소하시겠습니까?"
+
+#. Resource IDs: (5650)
+msgid "One or more values have been changed. Do you want to discard the changes?"
+msgstr ""
 
 #. Resource IDs: (5428)
 #, c-format
@@ -4791,9 +5261,9 @@ msgstr ""
 msgid "Open"
 msgstr "열기"
 
-#. Resource IDs: (65535)
-msgid "Open Password Database:"
-msgstr "비밀번호 데이터베이스 열기:"
+#. Resource IDs: (5315)
+msgid "Open Password Database"
+msgstr ""
 
 #. Resource IDs: (1086)
 msgid "Open as read-only"
@@ -4835,7 +5305,7 @@ msgstr "Oriya"
 msgid "Other value last changed on:"
 msgstr ""
 
-#. Resource IDs: (1081, 1201)
+#. Resource IDs: (1081, 1201, 1206)
 msgid "Other:"
 msgstr "기타:"
 
@@ -4859,14 +5329,6 @@ msgstr "PWS_CPF_CDD"
 msgid "PWS_CPF_TVDD"
 msgstr "PWS_CPF_TVDD"
 
-#. Resource IDs: (5334)
-msgid "Passkey incorrect"
-msgstr "비밀번호 불일치"
-
-#. Resource IDs: (5800)
-msgid "Passkey needed to save. Please unlock database and try again"
-msgstr "보안 비밀번호를 저장해야 합니다. 데이터베이스의 잠금을 해제하시고 다시 시도해 보십시오."
-
 #. Resource IDs: (5757)
 msgid "Passphrase"
 msgstr "비밀번호 구문"
@@ -4879,7 +5341,7 @@ msgstr "비밀번호 구문의 문자열 개수:"
 msgid "Password"
 msgstr "비밀번호"
 
-#. Resource IDs: (5809)
+#. Resource IDs: (5809, 65535)
 msgid "Password Database:"
 msgstr "비밀번호 데이터베이스:"
 
@@ -4899,7 +5361,7 @@ msgstr "비밀번호 만료 간격"
 msgid "Password Generated based on displayed policy"
 msgstr "표시된 규칙대로 비밀번호가 생성됨"
 
-#. Resource IDs: (120, 1381, 1382, 140, 5425, 5589)
+#. Resource IDs: (120, 1381, 1382, 140, 1599, 5425, 5589)
 msgid "Password History"
 msgstr "비밀번호 내역"
 
@@ -4950,6 +5412,10 @@ msgstr "Password Safe"
 #. Resource IDs: (5377)
 msgid "Password Safe - <Untitled Restored Backup>"
 msgstr "Password Safe - <복원된 이름없는 백업본>"
+
+#. Resource IDs: (132)
+msgid "Password Safe - Enter Master Password"
+msgstr "이 데이터베이스의 보안 비밀번호를 입력해 주십시오."
 
 #. Resource IDs: (5955)
 msgid "Password Safe Application HotKey"
@@ -5004,8 +5470,8 @@ msgid "Password implies this is an alias entry, but specifies a base entry with 
 msgstr ""
 
 #. Resource IDs: (3000)
-msgid "Password is too short"
-msgstr "비밀번호가 너무 짧습니다"
+msgid "Password is too short."
+msgstr ""
 
 #. Resource IDs: (1110)
 msgid "Password last changed on:"
@@ -5032,7 +5498,7 @@ msgstr "비밀번호 길이:"
 msgid "Password should be mixed case, with at least one digit or punctuation character"
 msgstr "비밀번호가 반드시 대소문자를 혼합하고, 최소한 1개의 숫자 혹은 알파벳 문자를 입력해야 합니다"
 
-#. Resource IDs: (32092 - Menu, 32092 - MenuEx, 32095 - Menu, 32095 - MenuEx)
+#. Resource IDs: (32093 - Menu, 32093 - MenuEx, 32096 - Menu, 32096 - MenuEx)
 msgid "Password&Safe..."
 msgstr ""
 
@@ -5049,7 +5515,7 @@ msgstr ""
 msgid "PasswordSafe: Entries exist with expired or soon-to-expire passwords"
 msgstr ""
 
-#. Resource IDs: (32075 - Menu, 32075 - MenuEx, 5296)
+#. Resource IDs: (32076 - Menu, 32076 - MenuEx, 5296)
 msgid "Perform Auto&Type"
 msgstr "자동입력 실행(&T)"
 
@@ -5069,154 +5535,17 @@ msgstr ""
 msgid "Play sound on key press"
 msgstr ""
 
-#. Resource IDs: (5376)
-msgid "Please Choose a Backup to restore:"
-msgstr "복원할 백업본을 선택하세요:"
-
-#. Resource IDs: (5315)
-msgid "Please Choose a Database to Open:"
-msgstr "불러올 데이터베이스를 선택하세요:"
-
-#. Resource IDs: (5791)
-msgid "Please Choose a Database to Validate:"
-msgstr "유효성 검사를 할 데이터베이스를 선택하세요:"
-
-#. Resource IDs: (5340)
-msgid "Please Choose a KeePass Text File to Import"
-msgstr "불러올 KeePass 텍스트 파일을 선택해 주십시오"
-
-#. Resource IDs: (5375)
-msgid "Please Choose a Name for this Backup:"
-msgstr "이 백업본에 사용할 이름을 선택해 주십시오:"
-
-#. Resource IDs: (5335)
-msgid "Please Choose a Text File to Import"
-msgstr "불러올 텍스트 파일을 선택해 주십시오"
-
-#. Resource IDs: (5343)
-msgid "Please Choose a XML File to Import"
-msgstr "불러올 XML 파일을 선택해 주십시오"
-
-#. Resource IDs: (5354)
-msgid "Please choose a database to compare with current database"
-msgstr ""
-
-#. Resource IDs: (5348)
-msgid "Please choose a database to merge into current database"
-msgstr ""
-
-#. Resource IDs: (5753)
-msgid "Please choose a database to synchronize with current database"
-msgstr ""
-
-#. Resource IDs: (5327)
-msgid "Please choose a name for the current (Untitled) database:"
-msgstr "현재 (제목없는) 데이터베이스에 사용할 이름을 지정해 주십시오:"
-
 #. Resource IDs: (5395)
 msgid "Please choose a name for the new database"
 msgstr "새 데이터베이스에 사용할 이름을 지정해 주십시오"
-
-#. Resource IDs: (5328)
-msgid "Please choose a new name for the current database:"
-msgstr "현재 데이터베이스의 새 이름을 지정해 주십시오:"
-
-#. Resource IDs: (5635)
-#, c-format
-msgid "Please confirm delete of the %s filter %s?"
-msgstr ""
-
-#. Resource IDs: (6033)
-msgid "Please confirm that you wish to clear the recent Safe list."
-msgstr ""
-
-#. Resource IDs: (5287)
-msgid "Please confirm that you wish to delete current user's PasswordSafe configuration from the Windows registry.\n\n"
-msgstr ""
-
-#. Resource IDs: (5272)
-msgid "Please enter a search string"
-msgstr "검색할 문자열을 입력해 주십시오."
 
 #. Resource IDs: (65535)
 msgid "Please enter an encryption or decryption key"
 msgstr "암호화 혹은 복호화 키를 입력해 주십시오."
 
 #. Resource IDs: (1504)
-msgid "Please enter the combination for the NEW database to contain exported entry/entries."
+msgid "Please enter the master password for the NEW database to contain exported entry/entries."
 msgstr ""
-
-#. Resource IDs: (65535)
-msgid "Please enter the current combination, followed by a new combination. \r\nType the new combination once again to confirm it."
-msgstr ""
-
-#. Resource IDs: (5255)
-msgid "Please enter the key and verify it."
-msgstr "비밀번호를 입력하시고 검사해보세요."
-
-#. Resource IDs: (5876)
-msgid "Please enter the new database description"
-msgstr ""
-
-#. Resource IDs: (5875)
-msgid "Please enter the new database name"
-msgstr ""
-
-#. Resource IDs: (65535)
-msgid "Please enter the safe combination for this password database."
-msgstr "이 데이터베이스의 보안 비밀번호를 입력해 주십시오."
-
-#. Resource IDs: (5388)
-msgid "Please enter your backup database prefix."
-msgstr ""
-
-#. Resource IDs: (6001)
-msgid "Please insert your YubiKey"
-msgstr ""
-
-#. Resource IDs: (5333)
-msgid "Please name the XML file"
-msgstr "XML 파일의 이름을 지정해주세요"
-
-#. Resource IDs: (5961)
-msgid "Please name the database file"
-msgstr ""
-
-#. Resource IDs: (5331)
-msgid "Please name the exported database"
-msgstr "내보낼 데이터베이스의 이름을 지정해 주십시오"
-
-#. Resource IDs: (5332)
-msgid "Please name the plaintext file"
-msgstr "텍스트 파일의 이름을 지정해 주십시오"
-
-#. Resource IDs: (5621)
-msgid "Please name this filter"
-msgstr "이 필터의 이름을 지정해 주십시오"
-
-#. Resource IDs: (5993)
-msgid "Please select media type"
-msgstr ""
-
-#. Resource IDs: (5487)
-msgid "Please select report to view."
-msgstr "열람할 리포트를 선택해 주십시오."
-
-#. Resource IDs: (5566)
-msgid "Please specify text"
-msgstr "텍스트를 명시해 주십시오"
-
-#. Resource IDs: (5390)
-msgid "Please specify the destination location to contain all backups."
-msgstr "모든 백업본을 저장할 위치를 지정해 주십시오."
-
-#. Resource IDs: (5389)
-msgid "Please specify the sub-directory to contain all backups."
-msgstr "모든 백업본을 저장하기 위한 하위 폴더를 지정해 주십시오."
-
-#. Resource IDs: (5489)
-msgid "Please visit the <a href=\"https://pwsafe.org/\">PasswordSafe website.</a>"
-msgstr "<a href=\"https://pwsafe.org/\">Password Safe 웹사이트 </a>를 방문해주세요."
 
 #. Resource IDs: (5879)
 msgid "Policy Name"
@@ -5263,8 +5592,8 @@ msgid "Press to delete all added characters."
 msgstr "추가된 모든 문자열을 삭제하시려면 Delete를 누르세요"
 
 #. Resource IDs: (65535)
-msgid "Pressing OK will copy the password of the selected item to the clipboard. The clipboard will be securely cleared when Password Safe is closed.\n\nPressing Cancel stops the password being copied."
-msgstr "예를 누르시면 선택한 항목이 클립보드로 복사됩니다. 클립보드는 Password Safe의 창이 닫기면 안전하게 비워집니다.\n\n비밀번호를 복사하지 않으려면 아니오를 클릭하세요."
+msgid "Pressing OK will copy the password of the selected item to the clipboard. The clipboard will be securely cleared when Password Safe is closed.\n\nPressing Cancel stops the password from being copied."
+msgstr ""
 
 #. Resource IDs: (1517)
 msgid "Preview Unavailable"
@@ -5278,6 +5607,11 @@ msgstr ""
 msgid "Previous Passwords"
 msgstr "이전 비밀번호"
 
+#. Resource IDs: (6100)
+#, c-format
+msgid "Problem with authenticator secret: %s"
+msgstr ""
+
 #. Resource IDs: (1436)
 msgid "Processing entry:"
 msgstr "처리중인 항목:"
@@ -5289,6 +5623,10 @@ msgstr ""
 #. Resource IDs: (5058)
 msgid "Programs (*.exe)|*.exe|All files (*.*)|*.*||"
 msgstr "응용 프로그램 (*.exe)|*.exe|모든 파일 (*.*)|*.*||"
+
+#. Resource IDs: (1030)
+msgid "Prompt user for default username"
+msgstr "기본 사용자 이름을 설정하시겠습니까?"
 
 #. Resource IDs: (4112)
 msgid "Pronounceable passwords"
@@ -5306,11 +5644,11 @@ msgstr "속성"
 msgid "Properties of the currently selected database."
 msgstr "현재 데이터베이스의 속성"
 
-#. Resource IDs: (32089 - MenuEx)
+#. Resource IDs: (32090 - MenuEx)
 msgid "Protect All Entries"
 msgstr "모든 항목 보호하기"
 
-#. Resource IDs: (32087 - Menu, 32087 - MenuEx)
+#. Resource IDs: (32088 - Menu, 32088 - MenuEx)
 msgid "Protect Entry"
 msgstr "항목 보호하기"
 
@@ -5338,10 +5676,6 @@ msgstr "트리보기에서 그룹을 첫번째로 놓기"
 #. Resource IDs: (1072)
 msgid "Put icon in System Tray"
 msgstr "시스템 트레이에 아이콘 감추기"
-
-#. Resource IDs: (1030)
-msgid "Query user to set default username"
-msgstr "사용자를 기본 사용자 이름으로 요청"
 
 #. Resource IDs: (8010)
 msgid "R Ctrl"
@@ -5384,8 +5718,8 @@ msgid "Recent Databases on File Menu rather than as a sub-menu."
 msgstr "최근 데이터베이스 목록을 파일 메뉴에 표시"
 
 #. Resource IDs: (1095)
-msgid "Recent PasswordSafe Databases"
-msgstr "최근 Password Safe 데이터베이스"
+msgid "Recent Password Safe Databases"
+msgstr ""
 
 #. Resource IDs: (3012)
 msgid "Record Modified Time"
@@ -5399,11 +5733,7 @@ msgstr "마지막 기록 변경 시점"
 msgid "Recover the auto-saved documents\nOpen the auto-saved versions instead of the explicitly saved versions"
 msgstr "자동 저장된 문서 복구\n바로 이전에 저장한 파일 대신 자동 저장된 파일을 열어 주십시오"
 
-#. Resource IDs: (1297)
-msgid "Recurring"
-msgstr "되풀이"
-
-#. Resource IDs: (1487, 32083 - MenuEx)
+#. Resource IDs: (1487, 32084 - MenuEx)
 msgid "Redo"
 msgstr "되돌리기"
 
@@ -5411,7 +5741,7 @@ msgstr "되돌리기"
 msgid "Redo the last change to password policies that was previously undone"
 msgstr ""
 
-#. Resource IDs: (1228)
+#. Resource IDs: (1228, 3397)
 msgid "Relative"
 msgstr "연관"
 
@@ -5539,7 +5869,7 @@ msgstr "Romanian (Standard)"
 
 #. Resource IDs: (5567)
 #, c-format
-msgid "Row %d is incomplete. Please set both Field and Criteria."
+msgid "Row %d is incomplete. Both Field and Criteria must be set."
 msgstr ""
 
 #. Resource IDs: (5614)
@@ -5553,10 +5883,6 @@ msgstr "규칙"
 #. Resource IDs: (65535)
 msgid "Rule:"
 msgstr "규칙:"
-
-#. Resource IDs: (1358)
-msgid "Run Cmd:"
-msgstr "명령 실행:"
 
 #. Resource IDs: (3063, 4009, 5654)
 msgid "Run Command"
@@ -5574,6 +5900,10 @@ msgstr "Russian"
 msgid "Russian (Typewriter)"
 msgstr "Russian (Typewriter)"
 
+#. Resource IDs: (1613)
+msgid "S&how"
+msgstr ""
+
 #. Resource IDs: (32022 - MenuEx)
 msgid "S&ynchronize..."
 msgstr "동기화(&Y)..."
@@ -5587,18 +5917,6 @@ msgstr "%ls 도중 SAX 분석 오류가 발생했습니다.\n%ls."
 #, c-format
 msgid "SAX Parse60 Error 0x%08X during %ls."
 msgstr ""
-
-#. Resource IDs: (131)
-msgid "Safe Combination Entry"
-msgstr "보안 비밀번호 항목"
-
-#. Resource IDs: (133)
-msgid "Safe Combination Setup"
-msgstr "보안 비밀번호 설정"
-
-#. Resource IDs: (1506, 65535)
-msgid "Safe Combination:"
-msgstr "보안 비밀번호:"
 
 #. Resource IDs: (1205)
 msgid "Same as database's"
@@ -5624,7 +5942,7 @@ msgstr "임시"
 msgid "Sample text cannot be empty"
 msgstr "임시 텍스트는 공백으로 남겨질 수 없습니다"
 
-#. Resource IDs: (1137)
+#. Resource IDs: (1137, 6064)
 msgid "Save"
 msgstr "저장"
 
@@ -5661,6 +5979,35 @@ msgstr "스크립트(&C):"
 msgid "Schema does not have a version number."
 msgstr "스키마가 버전 정보를 가지고 있지 않습니다."
 
+#. Resource IDs: (6073)
+msgid "Screen capture protection disabled by a setup option."
+msgstr "설정 옵션으로 인해 화면 캡처 보호가 비활성화되었습니다."
+
+#. Resource IDs: (6092)
+msgid "Screen capture protection disabled by command line.\n\nContact support if this is unexpected.\n\nClick OK to continue."
+msgstr ""
+
+#. Resource IDs: (6082)
+#, c-format
+msgid "Screen capture protection disabled by command line.\n\nContact support if this is unexpected.\n\nYou can click OK to continue in %d seconds."
+msgstr ""
+
+#. Resource IDs: (6072)
+msgid "Screen capture protection has been overridden by command line."
+msgstr "화면 캡처 보호가 명령줄에 의해 무시되었습니다."
+
+#. Resource IDs: (6069)
+msgid "Screen capture protection is off."
+msgstr "화면 캡처 보호가 꺼져 있습니다."
+
+#. Resource IDs: (6068, 6071)
+msgid "Screen capture protection is on."
+msgstr "화면 캡처 보호가 켜져 있습니다."
+
+#. Resource IDs: (6067)
+msgid "Screen capture protection: unexpected system error"
+msgstr "화면 캡처 보호: 예상치 못한 시스템 오류"
+
 #. Resource IDs: (5276)
 #, c-format
 msgid "Search has wrapped, continuing from the %s."
@@ -5672,9 +6019,9 @@ msgstr "두 번째 날짜는 첫 번째 날짜보다 뒤에 있어야 합니다"
 
 #. Resource IDs: (5561)
 msgid "Second number must be greater than first"
-msgstr ""
+msgstr "두 번째 날짜는 첫 번째 날짜보다 뒤에 있어야 합니다"
 
-#. Resource IDs: (142)
+#. Resource IDs: (142, 1599)
 msgid "Security"
 msgstr "보안"
 
@@ -5739,12 +6086,20 @@ msgstr ""
 msgid "Select a button."
 msgstr "버튼을 누르십시오."
 
+#. Resource IDs: (5487)
+msgid "Select a report to view."
+msgstr ""
+
 #. Resource IDs: (5431)
 msgid "Select all entries"
 msgstr "모든 항목 선택"
 
 #. Resource IDs: (523)
 msgid "Select entry to compare"
+msgstr ""
+
+#. Resource IDs: (5993)
+msgid "Select media type"
 msgstr ""
 
 #. Resource IDs: (5430)
@@ -5771,7 +6126,7 @@ msgstr ""
 msgid "Send"
 msgstr "보내기"
 
-#. Resource IDs: (32074 - Menu, 32074 - MenuEx)
+#. Resource IDs: (32075 - Menu, 32075 - MenuEx)
 msgid "Send &Email"
 msgstr ""
 
@@ -5888,11 +6243,11 @@ msgid "Shift"
 msgstr "Shift"
 
 #. Resource IDs: (65535)
-msgid "Shift + Double-Click Action:"
+msgid "Shift Double-Click Action"
 msgstr ""
 
 #. Resource IDs: (65535)
-msgid "Shift Double-click action"
+msgid "Shift Double-Click Action:"
 msgstr ""
 
 #. Resource IDs: (5689)
@@ -5941,7 +6296,7 @@ msgstr ""
 msgid "Shortcut to %s"
 msgstr ""
 
-#. Resource IDs: (452, 509)
+#. Resource IDs: (1599, 452, 509)
 msgid "Shortcuts"
 msgstr "바로가기"
 
@@ -5950,7 +6305,7 @@ msgid "Show"
 msgstr ""
 
 #. Resource IDs: (1590)
-msgid "Show Combination"
+msgid "Show Master Password"
 msgstr ""
 
 #. Resource IDs: (5653)
@@ -6034,7 +6389,7 @@ msgid "Some characters may be missing or not be displayed correctly, as we were 
 msgstr "Arial Unicode MS 폰트를 찾을 수 없어 일부 문자열이 표시되지 않거나 비정상적으로 보이게 됩니다."
 
 #. Resource IDs: (5923)
-msgid "Some consistency issues were found while opening the database.\n\nYou should save this database before proceeding. Please view report for details."
+msgid "Some consistency issues were found while opening the database.\n\nYou should save this database before proceeding. More details may be found in the report."
 msgstr ""
 
 #. Resource IDs: (5821)
@@ -6093,8 +6448,20 @@ msgstr "Spanish Variation"
 msgid "Specify a program for editing an entry's Notes field via the right-click context menu during Add/Edit. You can specify command line options to the external editor via the external  editor command line parameters field. Do not enclose this value in single or double quotes unless your chosen external editor requires them."
 msgstr ""
 
+#. Resource IDs: (5566)
+msgid "Specify text"
+msgstr ""
+
 #. Resource IDs: (5108)
 msgid "Specify the browser to use when an entry's URL field starts with [alt], e.g., '[alt]http://foo.com'. You can specify command line options to the browser via the Browser command line parameters field. Do not enclose this value in single or double quotes unless your chosen browser requires them."
+msgstr ""
+
+#. Resource IDs: (5390)
+msgid "Specify the destination location to contain all backups."
+msgstr ""
+
+#. Resource IDs: (5389)
+msgid "Specify the sub-directory to contain all backups."
 msgstr ""
 
 #. Resource IDs: (1497)
@@ -6102,8 +6469,8 @@ msgid "Standard"
 msgstr ""
 
 #. Resource IDs: (1220)
-msgid "Start PasswordSafe at Login"
-msgstr "로그인 때 Password Safe 시작"
+msgid "Start Password Safe at Login"
+msgstr ""
 
 #. Resource IDs: (3255)
 msgid "Start Report"
@@ -6117,7 +6484,7 @@ msgstr "모든 항목들의 비밀번호 내역 저장 시작(위의 항목의 �
 msgid "Start saving previous passwords"
 msgstr "이전 비밀번호 저장 시작"
 
-#. Resource IDs: (1264, 1370, 1408, 1410, 1423, 1424, 1428, 1464, 1521, 1561, 1562, 1588, 8103)
+#. Resource IDs: (1264, 1370, 1408, 1410, 1423, 1424, 1428, 1464, 1521, 1561, 1562, 1588, 1614, 8103)
 msgid "Static"
 msgstr "정적"
 
@@ -6202,7 +6569,7 @@ msgstr "현재 데이터베이스와 동기화 할 대상:"
 msgid "Synchronizing from database: %s\n"
 msgstr "데이터베이스로부터 동기화 중: %s\n"
 
-#. Resource IDs: (143, 510)
+#. Resource IDs: (143, 1599, 510)
 msgid "System"
 msgstr "시스템"
 
@@ -6311,6 +6678,14 @@ msgstr ""
 msgid "The Alt, Ctrl and Shift keys have been added."
 msgstr ""
 
+#. Resource IDs: (3502)
+msgid "The Authentication Code configuration is invalid"
+msgstr ""
+
+#. Resource IDs: (3500)
+msgid "The Authentication Code operation was successful"
+msgstr ""
+
 #. Resource IDs: (5946)
 msgid "The Ctrl and Shift keys have been added."
 msgstr ""
@@ -6327,9 +6702,9 @@ msgstr ""
 msgid "The YubiKey appears uninitialized. Initialize it?"
 msgstr ""
 
-#. Resource IDs: (5279)
-msgid "The combination cannot be blank."
-msgstr "비밀번호 조합은 공백으로 남겨질 수 없습니다"
+#. Resource IDs: (3503)
+msgid "The authentication secret was not found"
+msgstr ""
 
 #. Resource IDs: (5311)
 #, c-format
@@ -6337,7 +6712,7 @@ msgid "The database %s couldn't be opened.\nDo you wish to look for it elsewhere
 msgstr "데이터베이스 %s 를 열 수 없었습니다.\n다른 곳에서 파일을 찾아보시겠습니까 (검색), 새 데이터베이스를 만드시겠습니까 (새로 만들기), 아니면 종료하시겠습니까?"
 
 #. Resource IDs: (5852)
-msgid "The database has been changed since you opened it in R-O mode, so it is not possible to switch to R/W mode.\n\nPlease close the database and re-open it in R/W mode."
+msgid "The database has been changed since you opened it in R-O mode, so it is not possible to switch to R/W mode.\n\nClose the database and re-open it in R/W mode."
 msgstr ""
 
 #. Resource IDs: (5412)
@@ -6352,12 +6727,12 @@ msgstr ""
 
 #. Resource IDs: (5775)
 #, c-format
-msgid "The database:\n\n%s\n\nhas duplicate entries with the same group/title/user combination. Please fix by validating database."
-msgstr "데이터베이스:\n\n%s\n\n가 같은 그룹/제목/사용자 모음의 항목들을 복제했습니다. 데이터베이스 유효성 검사를 통해 수정해 주십시오."
+msgid "The database:\n\n%s\n\nhas duplicate entries with the same group/title/user combination. You can fix this by validating the database."
+msgstr ""
 
 #. Resource IDs: (5250)
-msgid "The entered passwords do not match.  Please re-enter them."
-msgstr "입력한 비밀번호가 맞지 않습니다. 다시 입력해 주십시오."
+msgid "The entered passwords do not match.  Please re-enter."
+msgstr ""
 
 #. Resource IDs: (61701)
 msgid "The file is too large to open."
@@ -6395,6 +6770,10 @@ msgstr ""
 
 #. Resource IDs: (6055)
 msgid "The following base entries have been exported because one or more of their dependents have been included."
+msgstr ""
+
+#. Resource IDs: (3262)
+msgid "The following columns are unrecognized by PasswordSafe and will be ignored: "
 msgstr ""
 
 #. Resource IDs: (3375)
@@ -6482,7 +6861,16 @@ msgstr ""
 
 #. Resource IDs: (5950)
 #, c-format
-msgid "The keyboard shortcut '%s' is already in use by:\n\t«%s» «%s» «%s»\nPlease select another shortcut (it has been reset)."
+msgid "The keyboard shortcut '%s' is already in use by:\n\t«%s» «%s» «%s»\nSelect another shortcut (it has been reset)."
+msgstr ""
+
+#. Resource IDs: (5279)
+msgid "The master password cannot be blank."
+msgstr ""
+
+#. Resource IDs: (5958)
+#, c-format
+msgid "The master password has been entered %d times without success:\n- Is Caps Lock off?\n- Is the language correct (if multilingual)?\n- Is this the correct database?\n- Perhaps the database was damaged. Try opening a backup copy."
 msgstr ""
 
 #. Resource IDs: (5792)
@@ -6491,8 +6879,8 @@ msgid "The notes field of this entry has more text than can be displayed. Changi
 msgstr ""
 
 #. Resource IDs: (5284)
-msgid "The old safe combination is not correct"
-msgstr "이전 보안 비밀번호가 일치하지 않습니다"
+msgid "The old master password is not correct"
+msgstr ""
 
 #. Resource IDs: (5323)
 #, c-format
@@ -6502,11 +6890,6 @@ msgstr ""
 #. Resource IDs: (5465)
 #, c-format
 msgid "The referenced entry '%s:%s:%s' is itself an alias or shortcut. This is not supported."
-msgstr ""
-
-#. Resource IDs: (5958)
-#, c-format
-msgid "The safe combination has been entered %d times without success:\n- Is Caps Lock off?\n- Is the language correct (if multilingual)?\n- Is this the correct database?\n- Perhaps the database was damaged. Try opening a backup copy."
 msgstr ""
 
 #. Resource IDs: (5770)
@@ -6526,8 +6909,8 @@ msgid "The user specified that the following fields be excluded from the export:
 msgstr "사용자가 입력한 다음 필드는 내보내기 중에 제외됩니다:"
 
 #. Resource IDs: (5505)
-msgid "There are more than one entry that fits your selection. Please be more specific."
-msgstr "최소 하나 이상의 항목을 선택하셨습니다. 좀 더 구체적으로 선택해 주십시오."
+msgid "There are more than one entry that fits your selection. Be more specific."
+msgstr ""
 
 #. Resource IDs: (3358)
 msgid "There are unmatched quotes in the run command"
@@ -6554,18 +6937,14 @@ msgstr ""
 msgid "This database is the same as the current database!"
 msgstr "이 데이터베이스는 현재 데이터베이스와 같습니다."
 
-#. Resource IDs: (5650)
-msgid "This entry has been changed. Are you sure you wish to cancel?"
-msgstr "이 항목이 막 변경되었습니다. 변경을 취소하시겠습니까?"
-
 #. Resource IDs: (3404)
 #, c-format
-msgid "This entry has the following %d %ls:\n%ls\nPlease confirm to continue (All shortcuts to this entry will be deleted)?"
+msgid "This entry has the following %d %ls:\n%ls\nConfirm to continue (All shortcuts to this entry will be deleted)?"
 msgstr ""
 
 #. Resource IDs: (3403)
 #, c-format
-msgid "This entry has the following %d %ls:\n%ls\nPlease confirm to continue (alias entry's passwords will be replaced by this entry's password)?"
+msgid "This entry has the following %d %ls:\n%ls\nConfirm to continue (alias entry's passwords will be replaced by this entry's password)?"
 msgstr ""
 
 #. Resource IDs: (5248)
@@ -6606,6 +6985,10 @@ msgstr "이 항목은 기본 보조 항목입니다."
 
 #. Resource IDs: (1269)
 msgid "This is an alias of:"
+msgstr ""
+
+#. Resource IDs: (6115)
+msgid "This is the current authentication code. Click the button to copy it to the clipboard."
 msgstr ""
 
 #. Resource IDs: (5121)
@@ -6727,6 +7110,10 @@ msgstr "Turkish Q"
 msgid "Turkmen"
 msgstr "Turkmen"
 
+#. Resource IDs: (3079)
+msgid "Two Factor Key"
+msgstr ""
+
 #. Resource IDs: (1355)
 msgid "U&RL:"
 msgstr "U&RL:"
@@ -6760,8 +7147,9 @@ msgid "Unable to create a new XML configuration file or add your settings to an 
 msgstr "XML 설정 파일을 만들 수 없거나 XML 설정 사항에 변경 사항을 추가할 수 없습니다.\n\n응용 프로그램의 모든 설정이 이 컴퓨터의 레지스트리에 저장됩니다.\n\n데이터베이스와 관련된 설정은 데이터베이스가 닫힐 때 데이터베이스로 저장되지만, 읽기 전용이 아니고 다른 사용자들로부터 잠기지 않습니다."
 
 #. Resource IDs: (5385)
-msgid "Unable to create intermediate backup."
-msgstr "임시 백업본을 생성하는 데 실패했습니다."
+#, c-format
+msgid "Unable to create intermediate backup in %s.\n"
+msgstr ""
 
 #. Resource IDs: (5310)
 msgid "Unable to display URL"
@@ -6834,7 +7222,7 @@ msgstr "%1을 작성하는 데 실패했습니다. 읽기전용 특성을 가지
 msgid "Uncheck"
 msgstr "Uncheck"
 
-#. Resource IDs: (1486, 32082 - MenuEx)
+#. Resource IDs: (1486, 32083 - MenuEx)
 msgid "Undo"
 msgstr "되돌리기"
 
@@ -6882,7 +7270,7 @@ msgstr "알 수 없는 기능"
 msgid "Unknown object"
 msgstr "알 수 없는 객체"
 
-#. Resource IDs: (32251 - Menu)
+#. Resource IDs: (32251 - Menu, 5258)
 msgid "Unlock"
 msgstr "잠금 해제"
 
@@ -6890,15 +7278,11 @@ msgstr "잠금 해제"
 msgid "Unlock Difficulty"
 msgstr ""
 
-#. Resource IDs: (5258)
-msgid "Unlock Safe"
-msgstr "Safe 해제"
-
-#. Resource IDs: (32090 - MenuEx)
+#. Resource IDs: (32091 - MenuEx)
 msgid "Unprotect All Entries"
 msgstr "모든 항목 보호 해제하기"
 
-#. Resource IDs: (32088 - Menu, 32088 - MenuEx)
+#. Resource IDs: (32089 - Menu, 32089 - MenuEx)
 msgid "Unprotect Entry"
 msgstr "항목 보호 해제하기"
 
@@ -6968,12 +7352,12 @@ msgstr "특수문자 사용 (i.e. &, %, $, etc.)(&S)"
 msgid "Use &UPPERCASE letters"
 msgstr "대문자 사용"
 
-#. Resource IDs: (1476)
-msgid "Use Database Policy"
+#. Resource IDs: (1476, 1481)
+msgid "Use Named Policy"
 msgstr ""
 
-#. Resource IDs: (1481)
-msgid "Use Named Policy"
+#. Resource IDs: (6062)
+msgid "Use anyway"
 msgstr ""
 
 #. Resource IDs: (5888)
@@ -7036,7 +7420,7 @@ msgstr "Uyghur"
 msgid "Uzbek Cyrillic"
 msgstr "Uzbek Cyrillic"
 
-#. Resource IDs: (3440, 5537)
+#. Resource IDs: (5537)
 msgid "Validate"
 msgstr "유효화"
 
@@ -7069,13 +7453,9 @@ msgstr "변수 이름은 반드시 알파벳과 숫자로 구성되어야 합니
 msgid "Verify Key:"
 msgstr "검증 키:"
 
-#. Resource IDs: (1505, 65535)
-msgid "Verify:"
-msgstr "검증:"
-
 #. Resource IDs: (5690)
-msgid "Version mismatch with On Screen Keyboard DLL. Please install version that came with this version of Password Safe."
-msgstr "화상키보드의 DLL 버전이 맞지 않습니다. 이 버전을 동봉한 다른 버전의 Password Safe를 설치해 주십시오."
+msgid "Version mismatch with On Screen Keyboard DLL. Please install the dll that came with this version of Password Safe."
+msgstr ""
 
 #. Resource IDs: (8236)
 msgid "Vietnamese"
@@ -7085,7 +7465,7 @@ msgstr "Vietnamese"
 msgid "View"
 msgstr "보기"
 
-#. Resource IDs: (32097 - MenuEx, 548, 6025)
+#. Resource IDs: (32098 - MenuEx, 548, 6025)
 msgid "View Attachment"
 msgstr ""
 
@@ -7118,14 +7498,18 @@ msgstr "선택한 항목을 편집"
 msgid "Visit Password Safe &website..."
 msgstr "Password Safe 웹사이트 방문...(&W)"
 
+#. Resource IDs: (5489)
+msgid "Visit the <a href=\"https://pwsafe.org/\">Password Safe website.</a>"
+msgstr ""
+
 #. Resource IDs: (5803)
 msgid "WARNING: If you continue, fields will be updated in entries in your existing database from your selected input database."
 msgstr "경고: 계속 진행하시면, 현재 존재하는 데이터베이스 내의 항목의 필드가 선택하신 입력 데이터베이스의 내용으로 교체됩니다."
 
 #. Resource IDs: (5804)
 #, c-format
-msgid "WARNING: This operation will create an unprotected copy of %s in the database. Deleting this copy after use is NOT sufficient.\n\nPlease do not use this option unless you understand and accept the risks. This option bypasses the security provided by this program."
-msgstr "경고: 이 작업은 데이터베이스 내에 보호되지 않은 %s 개의 복사본을 만들 것입니다. 사용 후에 이 항목들을 삭제하는 것은 충분하지 않습니다.\n\n이 설정을 이해하고 위험을 부담하는 경우에만 사용해 주십시오. 이 설정은 프로그램에서 제공되는 보안을 건너뜁니다."
+msgid "WARNING: This operation will create an unprotected copy of %s in the database. Deleting this copy after use is NOT sufficient.\n\nDo not use this option unless you understand and accept the risks. This option bypasses the security provided by this program."
+msgstr ""
 
 #. Resource IDs: (5447)
 msgid "WARNING: Use of an external editor may leave sensitive data on your hard disk.\n\nDo you wish to continue?"
@@ -7149,8 +7533,8 @@ msgstr ""
 
 #. Resource IDs: (5281)
 #, c-format
-msgid "Weak passphrase:\n\n %s"
-msgstr "취약한 비밀번호:\n\n %s"
+msgid "Weak master password:\n\n %s"
+msgstr ""
 
 #. Resource IDs: (5763)
 msgid "What saved"
@@ -7190,12 +7574,12 @@ msgstr "Windows Registry"
 
 #. Resource IDs: (6036)
 #, c-format
-msgid "Windows can't expand '%s'. Please make sure that you have set this correctly."
+msgid "Windows can't expand '%s'. Make sure that you have set this correctly."
 msgstr ""
 
 #. Resource IDs: (5972)
 #, c-format
-msgid "Windows can't find '%s'. Please make sure that you have set the external editor correctly and that it is installed. External Edit cancelled."
+msgid "Windows can't find '%s'. Make sure that you have set the external editor correctly and that it is installed. External Edit cancelled."
 msgstr ""
 
 #. Resource IDs: (8264)
@@ -7267,17 +7651,7 @@ msgstr ""
 
 #. Resource IDs: (4107)
 #, c-format
-msgid "Yes - At least %d from %ls: %ls"
-msgstr ""
-
-#. Resource IDs: (4105)
-#, c-format
-msgid "Yes - EasyVision Symbols: %ls"
-msgstr ""
-
-#. Resource IDs: (4106)
-#, c-format
-msgid "Yes - Pronounceable Symbols: %ls"
+msgid "Yes - At least %d from %ls: %ls%ls"
 msgstr ""
 
 #. Resource IDs: (1084)
@@ -7332,11 +7706,15 @@ msgid "YubiKey Serial Number:"
 msgstr ""
 
 #. Resource IDs: (1469)
-msgid "YubiKey for PasswordSafe can be purchased at http://www.yubico.com/PasswordSafe"
+msgid "YubiKey for PasswordSafe can be purchased at https://www.yubico.com/works-with-yubikey/catalog/password-safe/"
 msgstr ""
 
 #. Resource IDs: (6005)
 msgid "YubiKey initialized successfully, close this message box and activate it."
+msgstr ""
+
+#. Resource IDs: (6007)
+msgid "YubiKey updated successfully, you may close this window."
 msgstr ""
 
 #. Resource IDs: (1452, 1455)
@@ -7383,6 +7761,10 @@ msgstr "\nURL 탐색"
 msgid "\nBrowse to URL + AutoType"
 msgstr ""
 
+#. Resource IDs: (32074)
+msgid "\nBrowse to URL with Alternate Browser"
+msgstr ""
+
 #. Resource IDs: (32305)
 msgid "\nCase insensitive search"
 msgstr "\n대소문자 무시하고 검색"
@@ -7415,13 +7797,17 @@ msgstr "\n검색 바 닫기"
 msgid "\nCollapse All"
 msgstr "\n모두 펼치기"
 
-#. Resource IDs: (32091)
+#. Resource IDs: (32092)
 msgid "\nCompare entries..."
 msgstr ""
 
 #. Resource IDs: (32019)
 msgid "\nCompare two Databases"
 msgstr "\n데이터베이스 비교"
+
+#. Resource IDs: (32100)
+msgid "\nCopy Auth Code to Clipboard"
+msgstr ""
 
 #. Resource IDs: (32069)
 msgid "\nCopy Notes to Clipboard"
@@ -7431,7 +7817,7 @@ msgstr "\n클립보드에 노트 복사"
 msgid "\nCopy Password to Clipboard"
 msgstr "\n클립보드에 비밀번호 복사"
 
-#. Resource IDs: (32080)
+#. Resource IDs: (32081)
 msgid "\nCopy Run Command to Clipboard"
 msgstr "\n클립보드에 실행 명령 복사"
 
@@ -7447,6 +7833,10 @@ msgstr "\n이전 검색 내역에 대한 보고서 생성"
 msgid "\nDelete an Entry"
 msgstr "\n항목 지우기"
 
+#. Resource IDs: (32099)
+msgid "\nDisplay Auth Code"
+msgstr ""
+
 #. Resource IDs: (32067)
 msgid "\nDisplay subset of Password"
 msgstr "\n비밀번호 조합 보여주기"
@@ -7455,11 +7845,11 @@ msgstr "\n비밀번호 조합 보여주기"
 msgid "\nDuplicate Entry"
 msgstr "\n항목 복제"
 
-#. Resource IDs: (32086)
+#. Resource IDs: (32087)
 msgid "\nDuplicate Group"
 msgstr "\n그룹 복제"
 
-#. Resource IDs: (32081)
+#. Resource IDs: (32082)
 msgid "\nEdit Base entry"
 msgstr "\n기본 항목 편집"
 
@@ -7484,31 +7874,31 @@ msgstr "\n비밀번호 내역의 다음 항목에서 에러가 발생했습니�
 msgid "\nExpand All"
 msgstr "\n모두 펼치기"
 
-#. Resource IDs: (32096)
+#. Resource IDs: (32097)
 msgid "\nExport Attachment..."
 msgstr ""
 
-#. Resource IDs: (32085)
+#. Resource IDs: (32086)
 msgid "\nExport Entry in XML format..."
 msgstr "\n항목을 XML 형식으로 내보내기..."
 
-#. Resource IDs: (32084)
+#. Resource IDs: (32085)
 msgid "\nExport Entry to Plain Text..."
 msgstr "\n항목을 텍스트 파일로 내보내기..."
 
-#. Resource IDs: (32092)
+#. Resource IDs: (32093)
 msgid "\nExport Entry to another Safe..."
 msgstr ""
 
-#. Resource IDs: (32094)
+#. Resource IDs: (32095)
 msgid "\nExport Group in XML format..."
 msgstr ""
 
-#. Resource IDs: (32093)
+#. Resource IDs: (32094)
 msgid "\nExport Group to Plain Text..."
 msgstr ""
 
-#. Resource IDs: (32095)
+#. Resource IDs: (32096)
 msgid "\nExport Group to another Safe..."
 msgstr ""
 
@@ -7548,7 +7938,7 @@ msgstr "\n다음 찾기"
 msgid "\nFind Previous"
 msgstr "\n이전 찾기"
 
-#. Resource IDs: (32079)
+#. Resource IDs: (32080)
 msgid "\nFind..."
 msgstr ""
 
@@ -7556,7 +7946,7 @@ msgstr ""
 msgid "\nGenerate Password"
 msgstr "\n비밀번호 생성"
 
-#. Resource IDs: (32078)
+#. Resource IDs: (32079)
 msgid "\nGo to Base entry"
 msgstr "\n기본 항목으로 이동"
 
@@ -7609,7 +7999,7 @@ msgstr "\n옵션"
 msgid "\nPassword Policies"
 msgstr ""
 
-#. Resource IDs: (32075)
+#. Resource IDs: (32076)
 msgid "\nPerform AutoType"
 msgstr ""
 
@@ -7621,15 +8011,15 @@ msgstr "\n다른 "
 msgid "\nProgram will terminate."
 msgstr "\n프로그램이 곧 종료됩니다."
 
-#. Resource IDs: (32089)
+#. Resource IDs: (32090)
 msgid "\nProtect All Entries"
 msgstr "\n모든 항목 보호하기"
 
-#. Resource IDs: (32087)
+#. Resource IDs: (32088)
 msgid "\nProtect Entry"
 msgstr "\n항목 보호하기"
 
-#. Resource IDs: (32083)
+#. Resource IDs: (32084)
 msgid "\nRedo"
 msgstr "\n되돌리기 취소"
 
@@ -7638,7 +8028,7 @@ msgstr "\n되돌리기 취소"
 msgid "\nRenamed %d %s"
 msgstr "\n%d %s 이름 변경됨"
 
-#. Resource IDs: (32076)
+#. Resource IDs: (32077)
 msgid "\nRun Command"
 msgstr "\n명령 실행"
 
@@ -7654,7 +8044,7 @@ msgstr "\n다른 이름으로 데이터베이스 저장"
 msgid "\nSelect Entry"
 msgstr "\n항목 선택"
 
-#. Resource IDs: (32074)
+#. Resource IDs: (32075)
 msgid "\nSend Email"
 msgstr ""
 
@@ -7696,9 +8086,9 @@ msgstr "\n다음 %ls %ls 가 갱신됨:"
 #. Resource IDs: (3419)
 #, c-format
 msgid "\nThe following new %ls %ls merged into this database:"
-msgstr "다음 새 데이터베이스 %ls %ls 가 이 데이터베이스로 병합됩니다:"
+msgstr "\n다음 새 데이터베이스 %ls %ls 가 이 데이터베이스로 병합됩니다:"
 
-#. Resource IDs: (32082)
+#. Resource IDs: (32083)
 msgid "\nUndo"
 msgstr "\n되돌리기"
 
@@ -7706,11 +8096,11 @@ msgstr "\n되돌리기"
 msgid "\nUnexpected exception during parsing."
 msgstr "\n분석 중 예기치 못한 예외가 발생했습니다."
 
-#. Resource IDs: (32090)
+#. Resource IDs: (32091)
 msgid "\nUnprotect All Entries"
 msgstr "\n모든 항목을 보호하지 않기"
 
-#. Resource IDs: (32088)
+#. Resource IDs: (32089)
 msgid "\nUnprotect Entry"
 msgstr "\n항목을 보호하지 않기"
 
@@ -7718,7 +8108,7 @@ msgstr "\n항목을 보호하지 않기"
 msgid "\nUse it anyway?"
 msgstr "\n그냥 사용하시겠습니까?"
 
-#. Resource IDs: (32097)
+#. Resource IDs: (32098)
 msgid "\nView Attachment"
 msgstr ""
 
@@ -7731,8 +8121,8 @@ msgid "\nView Reports"
 msgstr "\n보고서 보기"
 
 #. Resource IDs: (5238)
-msgid "\n\nCannot open database. It probably does not exist.\nPlease select to Open another database, create a New database or Cancel."
-msgstr "\n\n데이터베이스를 열 수 없습니다. 파일이 존재하지 않는 것 같습니다.\n다른 데이터베이스를 여시거나, 새로운 데이터베이스를 만드시거나, 혹은 취소를 눌러 주십시오."
+msgid "\n\nCannot open database. It probably does not exist.\nYou can Open another database, create a New one or Cancel."
+msgstr ""
 
 #. Resource IDs: (5662)
 msgid "\n\nIgnore this and save anyway - Yes/no?"
@@ -7760,7 +8150,7 @@ msgid "\nwith warnings"
 msgstr ""
 
 #. Resource IDs: (5448)
-msgid "\r\nThis field is being edited in your default text editor.\r\nPlease complete this action before continuing.\r\n\r\n(You may cancel this edit using the Close [X] button above)"
+msgid "\r\nThis field is being edited in your default text editor.\r\nComplete this action before continuing.\r\n\r\n(You may cancel this edit using the Close [X] button above)"
 msgstr ""
 
 #. Resource IDs: (5526)
@@ -7775,8 +8165,8 @@ msgstr "\t그룹:\"%s\"; 제목:\"%s\"; 사용자 이름:\"%s\"를 포함한 항
 
 #. Resource IDs: (5359)
 #, c-format
-msgid "\tGroup:'%s'; Title:'%s'; User:'%s'"
-msgstr "\t그룹:'%s'; 제목:'%s'; 사용자 이름:'%s'"
+msgid "\tGroup:'%ls'; Title:'%ls'; User:'%ls'"
+msgstr "\t그룹:'%ls'; 제목:'%ls'; 사용자 이름:'%ls'"
 
 #. Resource IDs: (3391)
 #, c-format
@@ -7790,7 +8180,7 @@ msgstr ""
 
 #. Resource IDs: (5538)
 #, c-format
-msgid "\tNo entries were found containing search string '%s'"
+msgid "\tNo entries were found containing search string '%ls' %ls"
 msgstr ""
 
 #. Resource IDs: (3434)
@@ -7813,7 +8203,7 @@ msgstr ""
 
 #. Resource IDs: (5539)
 #, c-format
-msgid "\tThe following entries contain search string '%s'"
+msgid "\tThe following entries contain search string '%ls' %ls"
 msgstr ""
 
 #. Resource IDs: (5522)
@@ -7869,7 +8259,7 @@ msgstr "보조 항목"
 msgid "an unnamed file"
 msgstr "이름없는 파일"
 
-#. Resource IDs: (1307, 1419)
+#. Resource IDs: (1307, 1419, 5969)
 msgid "and"
 msgstr "and"
 
@@ -7932,10 +8322,6 @@ msgstr "databases."
 #. Resource IDs: (1321)
 msgid "day(s)"
 msgstr "day(s)"
-
-#. Resource IDs: (1298)
-msgid "days"
-msgstr "days"
 
 #. Resource IDs: (65535)
 msgid "days before passwords expire"
@@ -8162,6 +8548,10 @@ msgstr "항목별 비밀번호 내역의 수"
 msgid "pwsafe"
 msgstr "pwsafe"
 
+#. Resource IDs: (5968)
+msgid "relative"
+msgstr "연관"
+
 #. Resource IDs: (3279)
 msgid "shortcut"
 msgstr "바로가기"
@@ -8264,4 +8654,9 @@ msgstr ""
 #. Resource IDs: (8004)
 msgid "xxxxxx"
 msgstr "xxxxxx"
+
+#. Resource IDs: (6116)
+#, c-format
+msgid "«%s» «%s» «%s»"
+msgstr ""
 

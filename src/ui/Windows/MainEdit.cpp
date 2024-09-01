@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -26,6 +26,7 @@
 #include "CompareWithSelectDlg.h"
 #include "ShowCompareDlg.h"
 #include "ViewAttachmentDlg.h"
+#include "DisplayAuthCodeDlg.h"
 
 #include "core/pwsprefs.h"
 #include "core/PWSAuxParse.h"
@@ -42,14 +43,23 @@
 #include <vector>
 #include <algorithm>
 
-extern const wchar_t *GROUP_SEP2;
-
 using pws_os::CUUID;
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
+#endif
+
+
+
+#ifdef _DEBUG
+// Uncomment this to force using the "short" variations of the property sheets (for development/testing).
+//#define FORCE_SHORT_PROPERTY_SHEET
+#else
+#ifdef FORCE_SHORT_PROPERTY_SHEET
+#error Do not force for release builds
+#endif
 #endif
 
 //Add an item
@@ -92,7 +102,12 @@ void DboxMain::OnAdd()
   // Remove Apply button
   pAddEntryPSH->m_psh.dwFlags |= PSH_NOAPPLYNOW;
 
-  INT_PTR rc = pAddEntryPSH->DoModal();
+  INT_PTR rc;
+#ifdef FORCE_SHORT_PROPERTY_SHEET
+  rc = -1;
+#else
+  rc = pAddEntryPSH->DoModal();
+#endif
 
   if (rc < 0) {
     // Try again with Wide version
@@ -180,9 +195,10 @@ void DboxMain::OnAdd()
     UpdateToolBarForSelectedItem(&iter->second);
 
     // Now select item
-    DisplayInfo *pdi = GetEntryGUIInfo(iter->second);
-    ASSERT(pdi->list_index != -1);
-    SelectEntry(pdi->list_index);
+    const DisplayInfo *pdi = GetEntryGUIInfo(iter->second);
+    // may be -1 if we're in a filtered view (BR1570)
+    if (pdi->list_index != -1)
+      SelectEntry(pdi->list_index);
 
     m_RUEList.AddRUEntry(newentry_uuid);
 
@@ -834,7 +850,7 @@ void DboxMain::OnDelete()
                                      GetPref(PWSprefs::DeleteQuestion));
   bool dodelete = true;
   int num_children = 0;
-  m_sxOriginalGroup = L""; // Needed if deleting a groups due to Delete recusrsion
+  m_sxOriginalGroup = L""; // Needed if deleting a group due to Delete recursion
 
   // Entry to be selected after deletion
   bool bSelectNext(false), bSelectPrev(false);
@@ -896,7 +912,7 @@ void DboxMain::OnDelete()
           }
 
           // Was this empty group the only child of its parent?
-          // If so - make it empty too.
+          // If so - make the parent empty too.
           HTREEITEM parent = m_ctlItemTree.GetParentItem(hStartItem);
           num_children = m_ctlItemTree.CountChildren(parent);
           if (num_children == 1 && parent != NULL && parent != TVI_ROOT) {
@@ -914,11 +930,11 @@ void DboxMain::OnDelete()
           ChangeOkUpdate();
           goto Select_Next_Prev;
         }
-      } else {
+      } else { // an entry, not a group
         pci = (CItemData *)m_ctlItemTree.GetItemData(hStartItem);
       }
     }
-  } else {
+  } else { // list view
     // Ignore if more than one selected - List view only
     if (m_ctlItemList.GetSelectedCount() > 1)
       return;
@@ -942,7 +958,7 @@ void DboxMain::OnDelete()
         prevUUID = pci_prev->GetUUID();
       }
     }
-  }
+  } // tree or list view
 
   if (pci != NULL) {
     if (pci->IsProtected())
@@ -986,6 +1002,7 @@ void DboxMain::OnDelete()
       Execute(pmcmd);
     } else {
       delete pmcmd;
+      return;
     }
 
     // Only refresh views if an entry or a non-empty group was deleted
@@ -995,6 +1012,8 @@ void DboxMain::OnDelete()
       RefreshViews();
 
     ChangeOkUpdate();
+  } else { // !dodelete
+    return; // BR1509 - don't change selection if user cancelled.
   }
 
 Select_Next_Prev:
@@ -1057,7 +1076,7 @@ Select_Next_Prev:
   UpdateToolBarForSelectedItem(pci_select);
 }
 
-void DboxMain::Delete(MultiCommands *pmcmd)
+void DboxMain::Delete(MultiCommands *&pmcmd)
 {
   // "Top level" element delete:
   // 1. Sets up Command mechanism
@@ -1111,8 +1130,18 @@ void DboxMain::Delete(MultiCommands *pmcmd)
                   [&] (Command *cmd) {pmcmd->Add(cmd);});
 
     // Delete alias & shortcut bases
-    std::for_each(vbases.begin(), vbases.end(),
-                  [&] (Command *cmd) {pmcmd->Add(cmd);});
+    // If we have a null value, this means the user decided not to delete a base element,
+    // so bail out entirely
+    for (auto cmd : vbases)
+    {
+      if (cmd != nullptr)
+        pmcmd->Add(cmd);
+      else { // bail out!
+        delete pmcmd;
+        pmcmd = MultiCommands::Create(&m_core); // alternate is to add an Empty() member function to MultiCommand;
+        return;
+      }
+    }
 
     // This will either delete the empty groups or convert non-empty groups
     // to empty ones once all entries have been deleted
@@ -1141,7 +1170,7 @@ Command *DboxMain::Delete(const CItemData *pci)
   // ConfirmDelete asks for user confirmation
   // when deleting a shortcut or alias base.
   // Otherwise it just returns true
-  if (m_core.ConfirmDelete(pci))
+  if (m_core.ConfirmDelete(pci, m_sxOriginalGroup)) // pass group to be deleted to ignore dependents under it.
     return DeleteEntryCommand::Create(&m_core, *pci);
   else
     return NULL;
@@ -1338,7 +1367,13 @@ bool DboxMain::EditItem(CItemData *pci, PWScore *pcore)
   if (uicaller == IDS_VIEWENTRY)
     pEditEntryPSH->m_psh.dwFlags |= PSH_NOAPPLYNOW;
 
-  INT_PTR rc = pEditEntryPSH->DoModal();
+  INT_PTR rc;
+
+#ifdef FORCE_SHORT_PROPERTY_SHEET
+  rc = -1;
+#else
+  rc = pEditEntryPSH->DoModal();
+#endif
 
   if (rc < 0) {
     // Try again with Wide version
@@ -1657,16 +1692,11 @@ bool DboxMain::EditShortcut(CItemData *pci, PWScore *pcore)
 
   // As pci may be invalidated if database is Locked while in this routine,
   // we use a clone
-  CItemData ci_original(*pci);
+  const CItemData ci_original(*pci);
 
   pci = NULL; // Set to NULL - use ci_original
 
   pws_os::CUUID entryuuid = ci_original.GetUUID();
-
-  // Determine if last entry in this group just in case the user changes the group
-  DisplayInfo *pdi = GetEntryGUIInfo(ci_original);
-  bool bLastEntry = (m_ctlItemTree.GetNextSiblingItem(pdi->tree_item) == NULL) &&
-                    (m_ctlItemTree.GetPrevSiblingItem(pdi->tree_item) == NULL);
 
   const CItemData *pbci = GetBaseEntry(&ci_original);
 
@@ -1688,6 +1718,11 @@ bool DboxMain::EditShortcut(CItemData *pci, PWScore *pcore)
   INT_PTR rc = dlg_editshortcut.DoModal();
 
   if (rc == IDOK && dlg_editshortcut.IsEntryModified()) {
+    // Determine if last entry in this group just in case the user changed the group
+    DisplayInfo *pdi = GetEntryGUIInfo(ci_original);
+    bool bLastEntry = (m_ctlItemTree.GetNextSiblingItem(pdi->tree_item) == NULL) &&
+        (m_ctlItemTree.GetPrevSiblingItem(pdi->tree_item) == NULL);
+
     // Out with the old, in with the new
     // User cannot change a shortcut entry to anything else!
     ItemListIter listpos = Find(ci_original.GetUUID());
@@ -1742,7 +1777,7 @@ bool DboxMain::EditShortcut(CItemData *pci, PWScore *pcore)
 
     UpdateToolBarForSelectedItem(&ci_edit);
     return true;
-  } // rc == IDOK
+  } // rc == IDOK && dlg_editshortcut.IsEntryModified()
   return false;
 }
 
@@ -1819,11 +1854,31 @@ void DboxMain::OnDuplicateEntry()
 
     m_RUEList.AddRUEntry(ci2.GetUUID());
 
+    // Select new duplicated entry
+    pdi = GetEntryGUIInfo(ci2);
+    SelectEntry(pdi->list_index);
+
+
     ChangeOkUpdate();
   }
 }
 
-void DboxMain::OnDisplayPswdSubset()
+void DboxMain::OnViewTwoFactorAuthCode()
+{
+  CItemData* pci = getSelectedItem();
+  ASSERT(pci != NULL);
+  if (!pci)
+    return;
+  CDisplayAuthCodeDlg dlg(this, m_core, pci->GetUUID());
+  dlg.DoModal();
+}
+    
+void DboxMain::OnCopyTwoFactorAuthCode()
+{
+  CopyDataToClipBoard(ClipboardDataSource::AuthCode);
+}
+
+void DboxMain::OnDisplayPasswordSubset()
 {
   if (!SelItemOk())
     return;
@@ -1886,8 +1941,10 @@ void DboxMain::OnCopyRunCommand()
   CopyDataToClipBoard(CItemData::RUNCMD, bDoNotExpand);
 }
 
-void DboxMain::CopyDataToClipBoard(const CItemData::FieldType ft, const bool bSpecial)
+void DboxMain::CopyDataToClipBoard(ClipboardDataSource cds, const bool bSpecial)
 {
+  StopAuthCodeUpdateClipboardTimer();
+
   // bSpecial's meaning depends on ft:
   //
   //   For "CItemData::PASSWORD": "bSpecial" == true means "Minimize after copy"
@@ -1896,6 +1953,7 @@ void DboxMain::CopyDataToClipBoard(const CItemData::FieldType ft, const bool bSp
     return;
 
   CItemData *pci = getSelectedItem();
+  CItemData *pci_credential = pci;
   ASSERT(pci != NULL);
 
   CItemData *pbci(NULL);
@@ -1903,12 +1961,14 @@ void DboxMain::CopyDataToClipBoard(const CItemData::FieldType ft, const bool bSp
 
   if (pci->IsDependent()) {
     pbci = GetBaseEntry(pci);
+    pci_credential = pbci;
     ASSERT(pbci != NULL);
   }
 
-  StringX sxData = pci->GetEffectiveFieldValue(ft, pbci);
-
-  switch (ft) {
+  StringX sxData;
+  if (cds.IsField()) {
+    sxData = pci->GetEffectiveFieldValue(cds, pbci);
+    switch (cds.GetFieldType()) {
     case CItemData::PASSWORD:
     {
       //Remind the user about clipboard security
@@ -1952,11 +2012,11 @@ void DboxMain::CopyDataToClipBoard(const CItemData::FieldType ft, const bool bSp
         bool bURLSpecial;
 
         sxData = PWSAuxParse::GetExpandedString(sxData,
-                                                 m_core.GetCurFile(),
-                                                 pci, pbci,
-                                                 m_bDoAutoType,
-                                                 m_sxAutoType,
-                                                 errmsg, st_column, bURLSpecial);
+                                                m_core.GetCurFile(),
+                                                pci, pbci,
+                                                m_bDoAutoType,
+                                                m_sxAutoType,
+                                                errmsg, st_column, bURLSpecial);
         if (!errmsg.empty()) {
           CGeneralMsgBox gmb;
           CString cs_title(MAKEINTRESOURCE(IDS_RUNCOMMAND_ERROR));
@@ -1970,21 +2030,30 @@ void DboxMain::CopyDataToClipBoard(const CItemData::FieldType ft, const bool bSp
       break;
     default:
       ASSERT(0);
+    }
+  } else if (cds.IsDerived() && cds.GetDerivedType() == ClipboardDataSource::AuthCode) {
+    GetTwoFactoryAuthenticationCode(*pci_credential, sxData);
+    if (sxData.empty())
+      return;
+    StartAuthCodeUpdateClipboardTimer(uuid);
+  } else {
+    ASSERT(FALSE);
+    return;
   }
 
   SetClipboardData(sxData);
-  UpdateLastClipboardAction(ft);
+  UpdateLastClipboardAction(cds);
   UpdateAccessTime(uuid);
 }
 
-void DboxMain::UpdateLastClipboardAction(const int iaction)
+void DboxMain::UpdateLastClipboardAction(const ClipboardDataSource& cds)
 {
   // Note use of CItemData::RESERVED for indicating in the
   // Status bar that an old password has been copied
   int imsg(0);
   m_lastclipboardaction = L"";
-  switch (iaction) {
-    case -1:
+  switch (cds.GetAsInt()) {
+    case ClipboardDataSource::ClearClipboard:
       // Clipboard cleared
       m_lastclipboardaction = L"";
       break;
@@ -1999,6 +2068,9 @@ void DboxMain::UpdateLastClipboardAction(const int iaction)
       break;
     case CItemData::PASSWORD:
       imsg = IDS_PSWDCOPIED;
+      break;
+    case ClipboardDataSource::AuthCode:
+      imsg = IDS_TWOFACTORCODE_COPIED;
       break;
     case CItemData::NOTES:
       imsg = IDS_NOTESCOPIED;
@@ -2018,7 +2090,7 @@ void DboxMain::UpdateLastClipboardAction(const int iaction)
     case CItemData::PWHIST:
       imsg = IDS_PWHISTORYCOPIED;
       break;
-    case CItemData::RESERVED:
+    case ClipboardDataSource::PasswordHistoryList:
       imsg = IDS_OLDPSWDCOPIED;
       break;
     default:
@@ -2026,7 +2098,7 @@ void DboxMain::UpdateLastClipboardAction(const int iaction)
       return;
   }
 
-  if (iaction > 0) {
+  if (!cds.IsNone()) {
     wchar_t szTimeFormat[80], szTimeString[80];
     VERIFY(::GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_STIMEFORMAT,
                            szTimeFormat, 80 /* sizeof(szTimeFormat) / sizeof(wchar_t) */));
@@ -2036,14 +2108,101 @@ void DboxMain::UpdateLastClipboardAction(const int iaction)
     m_lastclipboardaction += szTimeString;
   }
 
-  m_ilastaction = iaction;
+  m_ilastaction = cds;
   UpdateStatusBar();
 }
 
 void DboxMain::OnClearClipboard()
 {
-  UpdateLastClipboardAction(-1);
+  UpdateLastClipboardAction(ClipboardDataSource::ClearClipboard);
   ClearClipboardData();
+}
+
+void DboxMain::StartAuthCodeUpdateClipboardTimer(const pws_os::CUUID& uuidEntry)
+{
+  m_uuidEntryTwoFactorAutoCopyToClipboard = uuidEntry;
+  SetTimer(TIMER_TWO_FACTOR_AUTH_CODE_UPDATE_CLIPBOARD, std::max(USER_TIMER_MINIMUM, 1000), nullptr);
+}
+
+void DboxMain::StopAuthCodeUpdateClipboardTimer()
+{
+  m_uuidEntryTwoFactorAutoCopyToClipboard = pws_os::CUUID::NullUUID();
+  m_sxLastAuthCode.clear();
+  KillTimer(TIMER_TWO_FACTOR_AUTH_CODE_UPDATE_CLIPBOARD);
+}
+
+void DboxMain::OnTwoFactorAuthCodeUpdateClipboardTimer()
+{
+  if (m_uuidEntryTwoFactorAutoCopyToClipboard == pws_os::CUUID::NullUUID()) {
+    StopAuthCodeUpdateClipboardTimer();
+    return;
+  }
+
+  ItemListIter iter = Find(m_uuidEntryTwoFactorAutoCopyToClipboard);
+  // The 'iter' can be end() if the entry has been deleted.
+  if (iter == End()) {
+    StopAuthCodeUpdateClipboardTimer();
+    return;
+  }
+
+  CItemData& item = iter->second;
+  CItemData* pci_credential = &item;
+  if (item.IsDependent()) {
+    pci_credential = GetBaseEntry(&item);
+    ASSERT(pci_credential != NULL);
+    if (!pci_credential) {
+      StopAuthCodeUpdateClipboardTimer();
+      return;
+    }
+  }
+
+  StringX sxAuthCode;
+  GetTwoFactoryAuthenticationCode(*pci_credential, sxAuthCode);
+  if (sxAuthCode.empty()) {
+    StopAuthCodeUpdateClipboardTimer();
+    return;
+  }
+
+  if (sxAuthCode == m_sxLastAuthCode)
+    return;
+
+  ClipboardStatus clipboardStatus = GetLastSensitiveClipboardItemStatus();
+  if (!m_sxLastAuthCode.empty() && clipboardStatus != SuccessSensitivePresent) {
+
+    if (clipboardStatus != ClipboardNotAvailable)
+      StopAuthCodeUpdateClipboardTimer();
+
+    return;
+  }
+
+  if (SetClipboardData(sxAuthCode))
+    m_sxLastAuthCode = sxAuthCode;
+}
+
+PWSTotp::TOTP_Result DboxMain::GetTwoFactoryAuthenticationCode(const CItemData& ci, StringX& sxAuthCode, double* pRatio)
+{
+  sxAuthCode.clear();
+ 
+  if (ci.GetTwoFactorKey().empty()) {
+    CGeneralMsgBox gmb;
+    CString cs_title(MAKEINTRESOURCE(IDS_TWOFACTORCODE_ERROR_TITLE));
+    CString cs_message(MAKEINTRESOURCE(IDS_TWOFACTORCODE_ERROR_KEYEMPTY));
+    gmb.MessageBox(cs_message, cs_title, MB_OK | MB_ICONEXCLAMATION);
+    return PWSTotp::TotpKeyNotFound;
+  }
+
+  PWSTotp::TOTP_Result r = PWSTotp::GetNextTotpAuthCodeString(ci, sxAuthCode, nullptr, pRatio);
+  if (r != PWSTotp::Success) {
+    CGeneralMsgBox gmb;
+    CString cs_title(MAKEINTRESOURCE(IDS_TWOFACTORCODE_ERROR_TITLE));
+    CString cs_message(MAKEINTRESOURCE(IDS_TWOFACTORCODE_ERROR_MESSAGE));
+    cs_message += L" ";
+    cs_message += PWSTotp::GetTotpErrorString(r).c_str();
+    cs_message += L".";
+    gmb.MessageBox(cs_message, cs_title, MB_OK | MB_ICONEXCLAMATION);
+    sxAuthCode.clear();
+  }
+  return r;
 }
 
 void DboxMain::MakeRandomPassword(StringX &password, PWPolicy &pwp, bool bIssueMsg)
@@ -2248,21 +2407,19 @@ void DboxMain::OnRunCommand()
     return;
 
   const CItemData *pbci = pci->IsDependent() ? m_core.GetBaseEntry(pci) : nullptr;
-  StringX sx_group, sx_title, sx_user, sx_pswd, sx_lastpswd, sx_notes, sx_url, sx_email, sx_autotype, sx_runcmd;
+  CItemData effci;
+  StringX sx_lastpswd, sx_totpauthcode;
 
-  if (!PWSAuxParse::GetEffectiveValues(pci, pbci, sx_group, sx_title, sx_user,
-                                       sx_pswd, sx_lastpswd,
-                                       sx_notes, sx_url, sx_email, sx_autotype, sx_runcmd))
-    return;
-
+  PWSAuxParse::GetEffectiveValues(pci, pbci, effci, sx_lastpswd, sx_totpauthcode);
+  
   StringX sx_Expanded_ES;
-  if (sx_runcmd.empty())
+  if (effci.GetRunCommand().empty())
     return;
 
   std::wstring errmsg;
   StringX::size_type st_column;
   bool bURLSpecial;
-  sx_Expanded_ES = PWSAuxParse::GetExpandedString(sx_runcmd,
+  sx_Expanded_ES = PWSAuxParse::GetExpandedString(effci.GetRunCommand(),
                                                    m_core.GetCurFile(), pci, pbci,
                                                    m_bDoAutoType, m_sxAutoType,
                                                    errmsg, st_column, bURLSpecial);
@@ -2282,10 +2439,9 @@ void DboxMain::OnRunCommand()
   if (m_sxAutoType.empty())
     m_sxAutoType = pci->GetAutoType();
 
-  m_sxAutoType = PWSAuxParse::GetAutoTypeString(m_sxAutoType,
-                                                sx_group, sx_title, sx_user,
-                                                sx_pswd, sx_lastpswd,
-                                                sx_notes, sx_url, sx_email,
+  m_sxAutoType = PWSAuxParse::GetAutoTypeString(m_sxAutoType, effci.GetGroup(), effci.GetTitle(), effci.GetUser(),
+                                                effci.GetPassword(), sx_lastpswd,
+                                                effci.GetNotes(), effci.GetURL(), effci.GetEmail(), sx_totpauthcode,
                                                 m_vactionverboffsets);
   UpdateAccessTime(uuid);
 
@@ -2308,6 +2464,12 @@ void DboxMain::OnRunCommand()
       sx_Expanded_ES = sxAltBrowser + StringX(L" ") + sx_Expanded_ES;
   }
 
+  // FR856 - Copy Password to Clipboard on Run-Command When copy-on-browse set.
+  if (PWSprefs::GetInstance()->GetPref(PWSprefs::CopyPasswordWhenBrowseToURL)) {
+    SetClipboardData(effci.GetPassword());
+    UpdateLastClipboardAction(CItemData::PASSWORD);
+  }
+  
   bool rc = m_runner.runcmd(sx_Expanded_ES, !m_sxAutoType.empty());
   if (!rc) {
     m_bDoAutoType = false;
@@ -2327,7 +2489,6 @@ void DboxMain::AddDDEntries(CDDObList &in_oblist, const StringX &DropGroup,
   std::map<StringX, StringX> mapRenamedPolicies;
   StringX sxgroup, sxtitle, sxuser;
   POSITION pos;
-  wchar_t *dot;
 
   const StringX sxDD_DateTime = PWSUtil::GetTimeStamp(true).c_str();
 
@@ -2348,6 +2509,7 @@ void DboxMain::AddDDEntries(CDDObList &in_oblist, const StringX &DropGroup,
     // Only set to false if adding a shortcut where the base isn't there (yet)
     bool bAddToViews = true;
     pDDObject->ToItem(ci_temp);
+    ASSERT(ci_temp.GetBaseUUID() != CUUID::NullUUID());
 
     StringX sxPolicyName = ci_temp.GetPolicyName();
     if (!sxPolicyName.empty()) {
@@ -2367,7 +2529,7 @@ void DboxMain::AddDDEntries(CDDObList &in_oblist, const StringX &DropGroup,
         if (st_pp != currentDB_st_pp) {
           // They are not the same - make this policy unique
           m_core.MakePolicyUnique(mapRenamedPolicies, sxPolicyName, sxDD_DateTime,
-                                  IDS_DRAGPOLICY);
+                                  IDSC_DRAGPOLICY);
           ci_temp.SetPolicyName(sxPolicyName);
           bChangedPolicy = true;
         }
@@ -2390,7 +2552,7 @@ void DboxMain::AddDDEntries(CDDObList &in_oblist, const StringX &DropGroup,
     }
 
     if (in_oblist.m_bDragNode) {
-      dot = (!DropGroup.empty() && !ci_temp.GetGroup().empty()) ? L"." : L"";
+      wchar_t *dot = (!DropGroup.empty() && !ci_temp.GetGroup().empty()) ? L"." : L"";
       sxgroup = DropGroup + dot + ci_temp.GetGroup();
     } else {
       sxgroup = DropGroup;
@@ -2398,7 +2560,7 @@ void DboxMain::AddDDEntries(CDDObList &in_oblist, const StringX &DropGroup,
 
     sxuser = ci_temp.GetUser();
     StringX sxnewtitle(ci_temp.GetTitle());
-    m_core.MakeEntryUnique(setGTU, sxgroup, sxnewtitle, sxuser, IDS_DRAGNUMBER);
+    m_core.MakeEntryUnique(setGTU, sxgroup, sxnewtitle, sxuser, IDSC_DRAGNUMBER);
 
     if (m_core.Find(ci_temp.GetUUID()) != End()) {
       // Already in use - get a new one!
@@ -2436,9 +2598,20 @@ void DboxMain::AddDDEntries(CDDObList &in_oblist, const StringX &DropGroup,
       pl.InputType = CItemData::ET_SHORTCUT;
     }
 
-    m_core.ParseBaseEntryPWD(cs_tmp, pl);
+    // If we have BASEUUID, life is simple
+    if (ci_temp.GetBaseUUID() != CUUID::NullUUID()) {
+      pl.ibasedata = 1;
+      pl.base_uuid = ci_temp.GetBaseUUID();
+      pl.TargetType = CItemData::ET_NORMAL;
+    } else {
+      m_core.ParseBaseEntryPWD(cs_tmp, pl);
+    }
     if (pl.ibasedata > 0) {
+      // Add to pwlist
+      pmulticmds->Add(AddEntryCommand::Create(&m_core,
+                                              ci_temp, ci_temp.GetBaseUUID())); // need to do this as well as AddDep...
       CGeneralMsgBox gmb;
+      CString cs_msg;
       // Password in alias/shortcut format AND base entry exists
       if (pl.InputType == CItemData::ET_ALIAS) {
         ItemListIter iter = m_core.Find(pl.base_uuid);
@@ -2446,15 +2619,12 @@ void DboxMain::AddDDEntries(CDDObList &in_oblist, const StringX &DropGroup,
         if (pl.TargetType == CItemData::ET_ALIAS) {
           // This base is in fact an alias. ParseBaseEntryPWD already found 'proper base'
           // So dropped entry will point to the 'proper base' and tell the user.
-          CString cs_msg;
           cs_msg.Format(IDS_DDBASEISALIAS, static_cast<LPCWSTR>(sxgroup.c_str()),
                         static_cast<LPCWSTR>(sxtitle.c_str()),
                         static_cast<LPCWSTR>(sxuser.c_str()));
           gmb.AfxMessageBox(cs_msg, NULL, MB_OK);
-        } else
-        if (pl.TargetType != CItemData::ET_NORMAL && pl.TargetType != CItemData::ET_ALIASBASE) {
+        } else if (pl.TargetType != CItemData::ET_NORMAL && pl.TargetType != CItemData::ET_ALIASBASE) {
           // Only normal or alias base allowed as target
-          CString cs_msg;
           cs_msg.Format(IDS_ABASEINVALID, static_cast<LPCWSTR>(sxgroup.c_str()),
                         static_cast<LPCWSTR>(sxtitle.c_str()),
                         static_cast<LPCWSTR>(sxuser.c_str()));
@@ -2468,13 +2638,11 @@ void DboxMain::AddDDEntries(CDDObList &in_oblist, const StringX &DropGroup,
 
         ci_temp.SetPassword(L"[Alias]");
         ci_temp.SetAlias();
-      } else
-      if (pl.InputType == CItemData::ET_SHORTCUT) {
+      } else if (pl.InputType == CItemData::ET_SHORTCUT) {
         ItemListIter iter = m_core.Find(pl.base_uuid);
         ASSERT(iter != End());
         if (pl.TargetType != CItemData::ET_NORMAL && pl.TargetType != CItemData::ET_SHORTCUTBASE) {
           // Only normal or shortcut base allowed as target
-          CString cs_msg;
           cs_msg.Format(IDS_SBASEINVALID, static_cast<LPCWSTR>(sxgroup.c_str()),
                         static_cast<LPCWSTR>(sxtitle.c_str()),
                         static_cast<LPCWSTR>(sxuser.c_str()));
@@ -2490,12 +2658,10 @@ void DboxMain::AddDDEntries(CDDObList &in_oblist, const StringX &DropGroup,
         ci_temp.SetPassword(L"[Shortcut]");
         ci_temp.SetShortcut();
       }
-    } else
-    if (pl.ibasedata == 0) {
+    } else if (pl.ibasedata == 0) {
       // Password NOT in alias/shortcut format
       ci_temp.SetNormal();
-    } else
-    if (pl.ibasedata < 0) {
+    } else if (pl.ibasedata < 0) {
       // Password in alias/shortcut format AND base entry does not exist or multiple possible
       // base entries exit.
       // Note: As more entries are added, what was "not exist" may become "OK",
@@ -2503,8 +2669,7 @@ void DboxMain::AddDDEntries(CDDObList &in_oblist, const StringX &DropGroup,
       // Let the code that processes the possible aliases after all have been added sort this out.
       if (pl.InputType == CItemData::ET_ALIAS) {
         Possible_Aliases.push_back(ci_temp.GetUUID());
-      } else
-      if (pl.InputType == CItemData::ET_SHORTCUT) {
+      } else if (pl.InputType == CItemData::ET_SHORTCUT) {
         Possible_Shortcuts.push_back(ci_temp.GetUUID());
         bAddToViews = false;
       }
@@ -2521,17 +2686,18 @@ void DboxMain::AddDDEntries(CDDObList &in_oblist, const StringX &DropGroup,
       ci_temp.SetKBShortcut(0);
     }
 
-    // Add to pwlist
-    Command *pcmd = AddEntryCommand::Create(&m_core, ci_temp);
+    if (!ci_temp.IsDependent()) { // Dependents handled later
+      // Add to pwlist
+      Command *pcmd = AddEntryCommand::Create(&m_core, ci_temp);
 
-    if (!bAddToViews) {
-      // ONLY Add to pwlist and NOT to Tree or List views
-      // After the call to AddDependentEntries for shortcuts, check if still
-      // in password list and, if so, then add to Tree + List views
-      pcmd->SetNoGUINotify();
+      if (!bAddToViews) {
+        // ONLY Add to pwlist and NOT to Tree or List views
+        // After the call to AddDependentEntries for shortcuts, check if still
+        // in password list and, if so, then add to Tree + List views
+        pcmd->SetNoGUINotify();
+      }
+      pmulticmds->Add(pcmd);
     }
-
-    pmulticmds->Add(pcmd);
   } // iteration over in_oblist
 
   // Now try to add aliases/shortcuts we couldn't add in previous processing

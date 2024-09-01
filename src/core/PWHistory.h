@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
@@ -83,23 +83,46 @@ namespace PWHist {
                CLEAR_INCL_PROT = -4,
                CLEAR_EXCL_PROT  = 4,
   };
+}
+
+typedef std::vector<PWHistEntry> PWHistVect;
+
+class PWHistList: public PWHistVect
+{
+private:
+    // These values are initialized from the input string parsed by the constructor
+    bool m_saveHistory;     // Saving history flag
+    size_t m_maxEntries;    // Maximum number of entries to allow
+    size_t m_numErr;        // Number of ill-formed entries
+
+    void sortList();
+
+public:
+    // Parse a password history string as defined
+    // in the format spec to a vector of PWHistEntry
+    PWHistList(const StringX &pwh_str, PWSUtil::TMC time_format);
+
+    PWHistList() : m_saveHistory(false), m_maxEntries(0), m_numErr(0) {};
+    PWHistList(PWHistList &) = default;
+    ~PWHistList() = default;
+
+    // Convert this object to a string in the canonical DB format
+    operator StringX();
+
+    bool isSaving() { return m_saveHistory; };
+    size_t getMax() { return m_maxEntries; };
+    size_t getErr() { return m_numErr; };
+
+    void setMax(size_t x) { m_maxEntries = x; };     // The list will be trimed, if necessary, when a StringX is generated
+    void setSaving(bool b) { m_saveHistory = b; };
+
+    void addEntry(const PWHistEntry &pwh_ent) { push_back(pwh_ent); };
+
+    static StringX GetPreviousPassword(const StringX &pwh_str);
+    static StringX MakePWHistoryHeader(bool status, size_t pwh_max, size_t pwh_num = 0);
+
+    StringX MakePWHistoryHeader() { return MakePWHistoryHeader(m_saveHistory, m_maxEntries, size()); };
 };
-
-typedef std::vector<PWHistEntry> PWHistList;
-
-// Parses a password history string as defined
-// in format spec to a vector of PWHistEntry
-// returns true iff password storing flag in string is set.
-// pwh_max is the max number passwords the string may have.
-// num_err will have the number of ill-formed entries.
-
-bool CreatePWHistoryList(const StringX &pwh_str,
-                         size_t &pwh_max, size_t &num_err,
-                         PWHistList &pwhl, PWSUtil::TMC time_format);
-
-StringX GetPreviousPassword(const StringX &pwh_str);
-
-StringX MakePWHistoryHeader(bool status, size_t pwh_max, size_t pwh_num);
 
 #endif
 //-----------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
@@ -9,22 +9,19 @@
 /** \file SizeRestrictedPanel.cpp
 * 
 */
+
 // For compilers that support precompilation, includes "wx/wx.h".
 #include "wx/wxprec.h"
-
-#ifdef __BORLANDC__
-#pragma hdrstop
-#endif
 
 #ifndef WX_PRECOMP
 #include "wx/wx.h"
 #endif
 
-#include "./SizeRestrictedPanel.h"
-
 #ifdef __WXMSW__
 #include <wx/msw/msvcrt.h>
 #endif
+
+#include "SizeRestrictedPanel.h"
 
 SizeRestrictedPanel::SizeRestrictedPanel(wxWindow* parent, wxWindow* sizingParent, wxWindowID id /*= wxID_ANY*/):
               wxPanel(parent, id), m_sizingParent(sizingParent)

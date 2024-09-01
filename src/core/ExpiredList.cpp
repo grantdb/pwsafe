@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -50,9 +50,7 @@ void ExpiredList::Add(const CItemData &ci)
 
 void ExpiredList::Remove(const CItemData &ci)
 {
-  ExpiredList::iterator iter = std::find_if(begin(), end(),
-                                            std::bind2nd(std::equal_to<pws_os::CUUID>(),
-                                                         ci.GetUUID()));
+  ExpiredList::iterator iter = std::find_if(begin(), end(),[ci](pws_os::CUUID v){return v == ci.GetUUID();});
   if (iter != end())
     erase(iter);
 }

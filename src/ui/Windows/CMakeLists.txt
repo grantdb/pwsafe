@@ -1,3 +1,4 @@
+
 list(APPEND PWSAFE_HDR_LIST
             src/ui/Windows/AboutDlg.h
             src/ui/Windows/AddEdit_Additional.h
@@ -23,6 +24,7 @@ list(APPEND PWSAFE_HDR_LIST
             src/ui/Windows/DboxMain.h
             src/ui/Windows/DDStatic.h
             src/ui/Windows/DDSupport.h
+            src/ui/Windows/DisplayAuthCodeDlg.h
             src/ui/Windows/DisplayFSBkupFiles.h
             src/ui/Windows/DropSource.h
             src/ui/Windows/DropTarget.h
@@ -30,6 +32,7 @@ list(APPEND PWSAFE_HDR_LIST
             src/ui/Windows/EBListCtrl.h
             src/ui/Windows/EditShortcutDlg.h
             src/ui/Windows/EntryKBHotKey.h
+            src/ui/Windows/ExcludeCaptureStateBitmapManager.h
             src/ui/Windows/ExpPswdLC.h
             src/ui/Windows/ExpPWListDlg.h
             src/ui/Windows/ExtThread.h
@@ -61,8 +64,7 @@ list(APPEND PWSAFE_HDR_LIST
             src/ui/Windows/ImportXMLDlg.h
             src/ui/Windows/InfoDisplay.h
             src/ui/Windows/InputBox.h
-            src/ui/Windows/jprdebug.h
-            src/ui/Windows/language/stdafx.h
+            src/ui/Windows/InvokeGuiThreadSupport.h
             src/ui/Windows/LVHdrCtrl.h
             src/ui/Windows/ManagePSWDPols.h
             src/ui/Windows/MenuShortcuts.h
@@ -84,6 +86,9 @@ list(APPEND PWSAFE_HDR_LIST
             src/ui/Windows/PasswordSafe.h
             src/ui/Windows/PasswordSubsetDlg.h
             src/ui/Windows/PKBaseDlg.h
+            src/ui/Windows/ProgressPieCommon.h
+            src/ui/Windows/ProgressPieCtrl.h
+            src/ui/Windows/ProgressPieStaticCtrl.h
             src/ui/Windows/Properties.h
             src/ui/Windows/PupText.h
             src/ui/Windows/PWDialog.h
@@ -111,6 +116,7 @@ list(APPEND PWSAFE_HDR_LIST
             src/ui/Windows/RichEditCtrlExtn.h
             src/ui/Windows/SampleTextDlg.h
             src/ui/Windows/SCWListCtrl.h
+            src/ui/Windows/ScreenCaptureStateControl.h
             src/ui/Windows/SecString.h
             src/ui/Windows/SetDBID.h
             src/ui/Windows/SHCTHotKey.h
@@ -119,6 +125,8 @@ list(APPEND PWSAFE_HDR_LIST
             src/ui/Windows/ShowCompareDlg.h
             src/ui/Windows/SingleInstance.h
             src/ui/Windows/SMemFile.h
+            src/ui/Windows/StateBitmapControl.h
+            src/ui/Windows/StateBitmapManager.h
             src/ui/Windows/StdAfx.h
             src/ui/Windows/Subclass.h
             src/ui/Windows/SysColStatic.h
@@ -133,6 +141,7 @@ list(APPEND PWSAFE_HDR_LIST
             src/ui/Windows/VirtualKeyboard/VKresource3.h
             src/ui/Windows/VirtualKeyboard/VKShiftState.h
             src/ui/Windows/Windowsdefs.h
+            src/ui/Windows/winutils.h
             src/ui/Windows/WZAdvanced.h
             src/ui/Windows/WZExecuteThreadParms.h
             src/ui/Windows/WZFinish.h
@@ -167,6 +176,7 @@ list(APPEND PWSAFE_SRC_LIST
             src/ui/Windows/DboxTray.cpp
             src/ui/Windows/DDStatic.cpp
             src/ui/Windows/DDSupport.cpp
+            src/ui/Windows/DisplayAuthCodeDlg.cpp
             src/ui/Windows/DisplayFSBkupFiles.cpp
             src/ui/Windows/DropSource.cpp
             src/ui/Windows/DropTarget.cpp
@@ -174,6 +184,7 @@ list(APPEND PWSAFE_SRC_LIST
             src/ui/Windows/EBListCtrl.cpp
             src/ui/Windows/EditShortcutDlg.cpp
             src/ui/Windows/EntryKBHotKey.cpp
+            src/ui/Windows/ExcludeCaptureStateBitmapManager.cpp
             src/ui/Windows/ExpPswdLC.cpp
             src/ui/Windows/ExpPWListDlg.cpp
             src/ui/Windows/ExtThread.cpp
@@ -204,8 +215,6 @@ list(APPEND PWSAFE_SRC_LIST
             src/ui/Windows/ImportXMLDlg.cpp
             src/ui/Windows/InfoDisplay.cpp
             src/ui/Windows/InputBox.cpp
-            src/ui/Windows/language/languageDLL.cpp
-            src/ui/Windows/language/stdafx.cpp
             src/ui/Windows/LVHdrCtrl.cpp
             src/ui/Windows/main.cpp
             src/ui/Windows/MainEdit.cpp
@@ -217,7 +226,6 @@ list(APPEND PWSAFE_SRC_LIST
             src/ui/Windows/ManagePSWDPols.cpp
             src/ui/Windows/MenuShortcuts.cpp
             src/ui/Windows/MenuTipper.cpp
-            src/ui/Windows/MigratePrefs.cpp
             src/ui/Windows/OptionsBackup.cpp
             src/ui/Windows/OptionsDisplay.cpp
             src/ui/Windows/OptionsMisc.cpp
@@ -233,6 +241,9 @@ list(APPEND PWSAFE_SRC_LIST
             src/ui/Windows/PasswordPolicyDlg.cpp
             src/ui/Windows/PasswordSubsetDlg.cpp
             src/ui/Windows/PKBaseDlg.cpp
+            src/ui/Windows/ProgressPieCommon.cpp
+            src/ui/Windows/ProgressPieCtrl.cpp
+            src/ui/Windows/ProgressPieStaticCtrl.cpp
             src/ui/Windows/Properties.cpp
             src/ui/Windows/PupText.cpp
             src/ui/Windows/PWDialog.cpp
@@ -256,6 +267,7 @@ list(APPEND PWSAFE_SRC_LIST
             src/ui/Windows/RichEditCtrlExtn.cpp
             src/ui/Windows/SampleTextDlg.cpp
             src/ui/Windows/SCWListCtrl.cpp
+            src/ui/Windows/ScreenCaptureStateControl.cpp
             src/ui/Windows/SecString.cpp
             src/ui/Windows/SetDBID.cpp
             src/ui/Windows/SHCTHotKey.cpp
@@ -264,6 +276,8 @@ list(APPEND PWSAFE_SRC_LIST
             src/ui/Windows/ShowCompareDlg.cpp
             src/ui/Windows/SingleInstance.cpp
             src/ui/Windows/SMemFile.cpp
+            src/ui/Windows/StateBitmapControl.cpp
+            src/ui/Windows/StateBitmapManager.cpp
             src/ui/Windows/StdAfx.cpp
             src/ui/Windows/Subclass.cpp
             src/ui/Windows/SysColStatic.cpp
@@ -274,6 +288,7 @@ list(APPEND PWSAFE_SRC_LIST
             src/ui/Windows/ViewAttachmentDlg.cpp
             src/ui/Windows/VirtualKeyboard/VKBButton.cpp
             src/ui/Windows/VirtualKeyboard/VKeyBoardDlg.cpp
+            src/ui/Windows/winutils.cpp
             src/ui/Windows/WZAdvanced.cpp
             src/ui/Windows/WZFinish.cpp
             src/ui/Windows/WZPropertyPage.cpp

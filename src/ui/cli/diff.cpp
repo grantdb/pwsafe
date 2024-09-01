@@ -1,21 +1,26 @@
 /*
  * Created by Saurav Ghosh
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
  * http://www.opensource.org/licenses/artistic-license-2.0.php
  */
 
+#include "stdafx.h"
 #include "./diff.h"
 #include "./argutils.h"
 #include "./safeutils.h"
 
 #include "../../os/file.h"
+#include "../../core/core.h"
+#include "../../core/PWHistory.h"
 
-#include <iostream>
+#include "../../core/StringXStream.h"
 #include <algorithm>
 #include <iomanip>
+#include <functional>
+#include <cassert>
 
 using namespace std;
 
@@ -27,6 +32,7 @@ const CItem::FieldType diff_fields[] = {
     CItem::TITLE,
     CItem::USER,
     CItem::PASSWORD,
+    CItem::TWOFACTORKEY,
     CItem::EMAIL,
     CItem::NOTES,
     CItem::URL,
@@ -44,7 +50,11 @@ const CItem::FieldType diff_fields[] = {
     CItem::DCA,
     CItem::SHIFTDCA,
     CItem::KBSHORTCUT,
-    CItem::PROTECTED
+    CItem::PROTECTED,
+    CItem::TOTPCONFIG,
+    CItem::TOTPLENGTH,
+    CItem::TOTPTIMESTEP,
+    CItem::TOTPSTARTTIME
 };
 
 //////////////////////////////////////////////////////////
@@ -57,22 +67,98 @@ inline StringX modtime(const StringX &file) {
   return StringX{};
 }
 
-inline wstring safe_file_hdr(const wchar_t *tag, const PWScore &core)
+inline StringX safe_file_hdr(const wchar_t *tag, const PWScore &core)
 {
-  wstringstream os;
+  StringXStream os;
   os << tag << L' ' << core.GetCurFile() << L" " << modtime(core.GetCurFile());
   return os.str();
+}
+
+uint32_t dca2str(uint16 dca) {
+  const std::map<int16_t, uint32_t> dca_id_str = {
+    {static_cast<int16_t>(PWSprefs::DoubleClickAutoType),             IDSC_DCAAUTOTYPE},
+    {static_cast<int16_t>(PWSprefs::DoubleClickBrowse),               IDSC_DCABROWSE},
+    {static_cast<int16_t>(PWSprefs::DoubleClickBrowsePlus),           IDSC_DCABROWSEPLUS},
+    {static_cast<int16_t>(PWSprefs::DoubleClickCopyNotes),            IDSC_DCACOPYNOTES},
+    {static_cast<int16_t>(PWSprefs::DoubleClickCopyUsername),         IDSC_DCACOPYUSERNAME},
+    {static_cast<int16_t>(PWSprefs::DoubleClickCopyPassword),         IDSC_DCACOPYPASSWORD},
+    {static_cast<int16_t>(PWSprefs::DoubleClickCopyPasswordMinimize), IDSC_DCACOPYPASSWORDMIN},
+    {static_cast<int16_t>(PWSprefs::DoubleClickRun),                  IDSC_DCARUN},
+    {static_cast<int16_t>(PWSprefs::DoubleClickSendEmail),            IDSC_DCASENDEMAIL},
+    {static_cast<int16_t>(PWSprefs::DoubleClickViewEdit),             IDSC_DCAVIEWEDIT}
+  };
+
+  const auto loc = dca_id_str.find(dca);
+  return loc != dca_id_str.end() ? loc->second: IDSC_INVALID;
+}
+
+using line_t = StringX;
+using lines_vec = std::vector<line_t>;
+
+lines_vec stream2vec(StringXStream &wss) {
+    lines_vec vlines;
+    do {
+        StringX line;
+        std::getline(wss, line);
+        if ( !line.empty() ) vlines.push_back(line);
+    }
+    while( !wss.eof() );
+    return vlines;
 }
 
 inline wostream& print_field_value(wostream &os, wchar_t tag,
                                     const CItemData &item, CItemData::FieldType ft)
 {
-  return os << tag << L' ' << item.FieldName(ft) << L": " << item.GetFieldValue(ft);
+  StringX fieldValue;
+  switch (ft) {
+    case CItemData::DCA:
+    case CItemData::SHIFTDCA:
+    {
+      int16 dca = -1;
+      if (item.GetDCA(dca) != -1) {
+        LoadAString(fieldValue, dca2str(dca));
+      }
+      break;
+    }
+    case CItemData::PWHIST:
+    {
+      const StringX pwh_str = item.GetPWHistory();
+      if (!pwh_str.empty()) {
+        StringXStream value_stream;
+        PWHistList pwhl(pwh_str, PWSUtil::TMC_LOCALE);
+        value_stream << L"Save: " << (pwhl.isSaving() ? L"Yes" : L"No");
+        if ( !pwhl.empty() ) value_stream << endl;
+        for( const auto &pwh: pwhl) value_stream << pwh.changedate << L": " << pwh.password << endl;
+        fieldValue = value_stream.str();
+      }
+      break;
+    }
+    case CItemData::POLICY:
+    {
+        PWPolicy policy;
+        item.GetPWPolicy(policy);
+        fieldValue = policy.GetDisplayString();
+        break;
+    }
+    default:
+      fieldValue = item.GetFieldValue(ft);
+      break;
+  }
+  const StringX sep1{L' '}, sep2{L": "};
+  StringXStream tmpStream;
+  tmpStream << tag << L' ' << item.FieldName(ft) << L": " << fieldValue;
+  const auto offset = 1 /*tag*/ + sep1.size() + sep2.size() + item.FieldName(ft).size();
+  lines_vec lines{ stream2vec(tmpStream)};
+  if ( lines.size() > 1) {
+    std::for_each( lines.begin()+1, lines.end(), [offset](StringX &line) { line.insert(0, offset, L' '); });
+  }
+  for( const auto &line: lines ) os << line << endl;
+  return os;
 }
 
-inline wstring rmtime(wchar_t tag, const CItemData &i)
+inline StringX rmtime(wchar_t tag, const CItemData &i)
 {
-  wstringstream os;
+  StringXStream os;
   if (i.IsRecordModificationTimeSet())
     os << L' ' << tag << i.GetRMTimeExp();
   return os.str();
@@ -83,22 +169,22 @@ using unique_hdr_func_t = function<void(const st_CompareData &cd, wchar_t tag)>;
 void print_unique_items(wchar_t tag, const CompareData &cd, const PWScore &core,
                             unique_hdr_func_t hdr_fn)
 {
-  for_each(cd.cbegin(), cd.cend(), [tag, &core, &hdr_fn](const st_CompareData &d) {
+  for(const auto &d: cd) {
     hdr_fn(d, tag);
     const CItemData &item = core.Find(d.indatabase == CURRENT? d.uuid0: d.uuid1)->second;
-    for_each( begin(diff_fields), end(diff_fields), [&item, tag](CItemData::FieldType ft) {
+    for( auto ft : diff_fields ) {
       switch(ft) {
         case CItem::GROUP:
         case CItem::TITLE:
         case CItem::USER:
           break;
         default:
-          if ( !item.GetFieldValue(ft).empty() ) {
-            print_field_value(wcout, tag, item, ft) << endl;
+          if ( d.bsDiffs.test(ft) && !item.GetFieldValue(ft).empty() ) {
+            print_field_value(wcout, tag, item, ft);
           }
       }
-    });
-  });
+    }
+  }
 }
 
 using item_diff_func_t = function<void(const CItemData &item,
@@ -106,21 +192,39 @@ using item_diff_func_t = function<void(const CItemData &item,
                                        const CItemData::FieldBits &fields,
                                        CItemData::FieldType ft)>;
 
+inline bool have_empty_policies(const CItemData &item, const CItemData &otherItem) {
+    return item.GetPWPolicy().empty() && otherItem.GetPWPolicy().empty();
+}
+
 void print_conflicting_item(const CItemData &item, const CItemData &otherItem,
                             const CItemData::FieldBits &fields, item_diff_func_t diff_fn)
 {
-  for_each( begin(diff_fields), end(diff_fields),
-              [&fields, &item, &otherItem, &diff_fn](CItemData::FieldType ft) {
+  for( auto ft: diff_fields ) {
     switch(ft) {
       case CItem::GROUP:
       case CItem::TITLE:
       case CItem::USER:
         break;
       default:
-        diff_fn(item, otherItem, fields, ft);
+        if (fields.test(ft)) {
+            switch (ft) {
+                case CItemData::POLICY:
+                {
+                    // Policy comparison compares default policies for the safes if the
+                    // item's policy is empty. We just consider them to be same if empty.
+                    if ( have_empty_policies(item, otherItem) ) {
+                        continue;
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+            diff_fn(item, otherItem, fields, ft);
+        }
         break;
     }
-  });
+  }
 }
 
 using conflict_hdr_func_t = function<void(const st_CompareData &cd,
@@ -131,13 +235,14 @@ void print_conflicts(const CompareData &conflicts, const PWScore &core,
                             const PWScore &otherCore, conflict_hdr_func_t hdr_fn,
                             item_diff_func_t diff_fn)
 {
-  for_each( conflicts.cbegin(), conflicts.cend(),
-                    [&core, &otherCore, &hdr_fn, &diff_fn](const st_CompareData &cd) {
+  for( const auto &cd: conflicts ) {
     const CItemData &item = core.Find(cd.uuid0)->second;
     const CItemData &otherItem = otherCore.Find(cd.uuid1)->second;
+    if (cd.bsDiffs.count() == 1 && cd.bsDiffs.test(CItemData::POLICY) && have_empty_policies(item, otherItem))
+        continue;
     hdr_fn(cd, item, otherItem);
     print_conflicting_item(item, otherItem, cd.bsDiffs, diff_fn);
-  });
+  }
 }
 
 //////////////////////////////////////////////////////////////////
@@ -146,7 +251,8 @@ void print_conflicts(const CompareData &conflicts, const PWScore &core,
 void unified_print_unique_items(wchar_t tag, const CompareData &cd, const PWScore &core)
 {
   print_unique_items(tag, cd, core, [](const st_CompareData &cd, wchar_t tag) {
-    wcout << tag << st_GroupTitleUser{cd.group, cd.title, cd.user} << endl;
+    wcout << L"***************" << endl
+          << tag << st_GroupTitleUser{cd.group, cd.title, cd.user} << endl;
   });
 }
 
@@ -162,7 +268,8 @@ static void unified_diff(const PWScore &core, const PWScore &otherCore,
   auto hdr_fn = [](const st_CompareData &cd,
                    const CItemData &item,
                    const CItemData &otherItem) {
-    wcout << L"@@ " << st_GroupTitleUser{cd.group, cd.title, cd.user}
+    wcout << L"***************" << endl
+          << L"@@ " << st_GroupTitleUser{cd.group, cd.title, cd.user}
           << rmtime(L'-', item) << rmtime(L'+', otherItem) << L" @@" << endl;
   };
 
@@ -171,8 +278,8 @@ static void unified_diff(const PWScore &core, const PWScore &otherCore,
                       const CItemData::FieldBits &fields,
                       CItemData::FieldType ft ) {
     if (fields.test(ft)) {
-      print_field_value(wcout, L'-', item, ft) << endl;
-      print_field_value(wcout, L'+', otherItem, ft) << endl;
+      print_field_value(wcout, L'-', item, ft);
+      print_field_value(wcout, L'+', otherItem, ft);
     }
   };
 
@@ -217,7 +324,7 @@ void context_print_unique_items(wchar_t tag, const CompareData &cd, const PWScor
 
 static void context_diff(const PWScore &core, const PWScore &otherCore,
                          const CompareData &current, const CompareData &comparison,
-                         const CompareData &conflicts, const CompareData &identical)
+                         const CompareData &conflicts, const CompareData & /* identical */)
 {
   wcout << safe_file_hdr(L"***", core) << endl;
   wcout << safe_file_hdr(L"---", otherCore) << endl;
@@ -239,7 +346,7 @@ static void context_diff(const PWScore &core, const PWScore &otherCore,
                      CItemData::FieldType ft ) {
     const wchar_t tag = context_tag(ft, fields, item, otherItem);
     if (tag != L'-') {
-      print_field_value(wcout, tag, tag == L' '? item: otherItem, ft) << endl;
+      print_field_value(wcout, tag, tag == L' '? item: otherItem, ft);
     }
   };
 
@@ -253,54 +360,86 @@ static void context_diff(const PWScore &core, const PWScore &otherCore,
 // Side-by-side diff
 //////////
 
+template <class StringType>
+StringType resize(StringType s, typename StringType::size_type len) {
+  if (s.size() < len) s.resize(len, ' ');
+  return s;
+}
+
+lines_vec resize_lines(lines_vec lines, line_t::size_type cols ) {
+  for( auto &line: lines ) line = resize(line, cols);
+  return lines;
+}
+
 // TODO: convert to lambda when using C++14
 template <class left_line_t, class right_line_t>
 void sbs_print(const PWScore &core,
                const PWScore &otherCore,
                const CompareData &matches,
-               const CItemData::FieldBits comparedFields,
-               unsigned int cols)
+               const CItemData::FieldBits &comparedFields,
+               unsigned int cols, bool print_fields)
 {
-  for_each( matches.cbegin(), matches.cend(), [&](const st_CompareData &cd) {
+  for( const auto &cd: matches ) {
+    const CItemData &item = core.Find(cd.uuid0)->second;
+    const CItemData &otherItem = otherCore.Find(cd.uuid1)->second;
+    if (cd.bsDiffs.count() == 1 && cd.bsDiffs.test(CItemData::POLICY) && have_empty_policies(item, otherItem))
+        continue;
     const CItemData::FieldBits &df = cd.bsDiffs.any()? cd.bsDiffs: comparedFields;
     left_line_t left_line{core, cd.uuid0, cols};
     right_line_t right_line{otherCore, cd.uuid1, cols};
     wcout << left_line() << L'|' << right_line() << endl;
-    for_each(begin(diff_fields), end(diff_fields), [&](CItemData::FieldType ft) {
-      // print the fields if they were actually found to be different
-      if (df.test(ft)) {
-        wcout << left_line(ft) << L'|' << right_line(ft) << endl;
+    if ( print_fields ) {
+      for( auto ft: diff_fields ) {
+        // print the fields if they were actually found to be different
+        if (df.test(ft) && (ft != CItem::POLICY || !have_empty_policies(item, otherItem))) {
+          StringXStream wssl, wssr;
+          wssl << left_line(ft) << flush;
+          wssr << right_line(ft) << flush;
+          lines_vec left_lines{resize_lines(stream2vec(wssl), cols)},
+                  right_lines{resize_lines(stream2vec(wssr), cols)};
+          const long ndiff = static_cast<const long>(left_lines.size()) - static_cast<const long>(right_lines.size());
+          if (ndiff < 0)
+              left_lines.insert(left_lines.end(), -ndiff, StringX(cols, L' '));
+          else if (ndiff > 0)
+              right_lines.insert(right_lines.end(), ndiff, StringX(cols, L' '));
+          for (lines_vec::size_type idx = 0; idx < left_lines.size(); ++idx)
+              wcout << left_lines[idx] << L'|' << right_lines[idx] << endl;
+        }
       }
-    });
-  });
+    }
+    wcout << resize(wstring(cols/5, left_line.sep_char), cols) << L'|'
+          << resize(wstring(cols/5, right_line.sep_char), cols) << endl;
+  }
 };
 
 struct field_to_line
 {
+  const wchar_t sep_char = L'-';
   const CItemData &item;
   unsigned int columns;
   field_to_line(const PWScore &core, const pws_os::CUUID& uuid, unsigned int cols)
   : item{core.Find(uuid)->second}, columns{cols}
   {}
-  wstring operator()() const {
-    wostringstream os;
+  StringX operator()() const {
+    oStringXStream os;
     os << st_GroupTitleUser{item.GetGroup(), item.GetTitle(), item.GetUser()}
        << rmtime( L' ', item);
-    wstring hdr{os.str()};
+    StringX hdr{os.str()};
     hdr.resize(columns, L' ');
     return hdr;
   }
-  wstring operator()(CItemData::FieldType ft) const {
-    wostringstream os;
+  StringX operator()(CItemData::FieldType ft) const {
+    oStringXStream os;
     print_field_value(os, L' ', item, ft);
-    wstring line{os.str()};
-    line.resize(columns, L' ');
+    StringX line{os.str()};
+    if (line.find(L'\n') == wstring::npos ) line.resize(columns, L' ');
     return line;
   }
 };
 
 struct blank
 {
+  const wchar_t sep_char = L' ';
   wstring line;
   blank(const PWScore &, const pws_os::CUUID &, unsigned int cols)
   : line(static_cast<size_t>(cols), L' ')
@@ -308,7 +447,7 @@ struct blank
   // header
   wstring operator()() const { return line; }
   // fields
-  wstring operator()(CItemData::FieldType ft) const { return line; }
+  wstring operator()(CItemData::FieldType ) const { return line; }
 };
 
 
@@ -321,7 +460,7 @@ static void sidebyside_diff(const PWScore &core, const PWScore &otherCore,
     return; // print nothing if safes are identical
 
   // print a header line with safe filenames and modtimes
-  wstring hdr_left{safe_file_hdr(L"", core)}, hdr_right{safe_file_hdr(L"", otherCore)};
+  StringX hdr_left{safe_file_hdr(L"", core)}, hdr_right{safe_file_hdr(L"", otherCore)};
   hdr_left.resize(cols, L' ');
   hdr_right.resize(cols, L' ');
   wcout << hdr_left << L'|' << hdr_right << endl;
@@ -333,22 +472,14 @@ static void sidebyside_diff(const PWScore &core, const PWScore &otherCore,
   wcout << setw(cols) << setfill(L' ') << left;
 
   // print the orig (left or main) safe in left column
-  sbs_print<field_to_line, blank>(core, otherCore, current, comparedFields, cols);
-
-  // print a separator line
-  if ( !current.empty() )
-    wcout << setfill(L'-') << setw(2*cols+1) << L'-' << endl;
+  sbs_print<field_to_line, blank>(core, otherCore, current, comparedFields, cols, false);
 
   // print the conflicting items, one field at a time in one line. Orig safe item's files go to
   // left column, the comparison safe's items to the right.
-  sbs_print<field_to_line, field_to_line>(core, otherCore, conflicts, comparedFields, cols);
-
-  // print a separator line
-  if ( !conflicts.empty() )
-    wcout << setfill(L'-') << setw(2*cols+1) << L'-' << endl;
+  sbs_print<field_to_line, field_to_line>(core, otherCore, conflicts, comparedFields, cols, true);
 
   // print the comparison safe in right column
-  sbs_print<blank, field_to_line>(core, otherCore, comparison, comparedFields, cols);
+  sbs_print<blank, field_to_line>(core, otherCore, comparison, comparedFields, cols, false);
 }
 
 ///////////////////////////////////
@@ -358,22 +489,19 @@ int Diff(PWScore &core, const UserArgs &ua)
 {
   CompareData current, comparison, conflicts, identical;
   PWScore otherCore;
-  constexpr bool treatWhitespacesAsEmpty = false;
   const StringX otherSafe{std2stringx(ua.opArg)};
 
   CItemData::FieldBits safeFields{ua.fields};
-  safeFields.reset(CItem::POLICY);
-  for_each( begin(diff_fields), end(diff_fields),
-                [&ua, &safeFields](CItemData::FieldType ft) {
-    if (ua.fields.test(ft) && CItemData::IsTextField(ft)) {
+  for( auto ft: diff_fields ) {
+    if (ua.fields.test(ft) && CItemData::IsTextField(static_cast<unsigned char>(ft))) {
       safeFields.set(ft);
     }
-  });
-  safeFields.reset(CItem::POLICY);
+  }
   safeFields.reset(CItem::RMTIME);
 
-  int status = OpenCore(otherCore, otherSafe);
+  int status = OpenCore(otherCore, otherSafe, ua.passphrase[1]);
   if ( status == PWScore::SUCCESS ) {
+    constexpr bool treatWhitespacesAsEmpty = false;
     core.Compare( &otherCore,
                   safeFields,
                          ua.subset.valid(),

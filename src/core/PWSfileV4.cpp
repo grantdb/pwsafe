@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2013-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -13,18 +13,17 @@
 #include "PWScore.h"
 #include "PWSFilters.h"
 #include "PWSdirs.h"
-#include "PWSprefs.h"
+#include "PWSLog.h"
 #include "core.h"
-#include "pbkdf2.h"
-#include "KeyWrap.h"
+#include "crypto/pbkdf2.h"
+#include "crypto/KeyWrap.h"
 #include "PWStime.h"
-#include "TwoFish.h"
+#include "crypto/TwoFish.h"
 
 #include "ItemAtt.h" // for WriteContentFields()
 
 #include "os/debug.h"
 #include "os/file.h"
-#include "os/logit.h"
 #include "os/utf8conv.h"
 
 #include "XML/XMLDefs.h"  // Required if testing "USE_XML_LIBRARY"
@@ -250,7 +249,7 @@ size_t PWSfileV4::WriteCBC(unsigned char type, const unsigned char *data,
 
   m_hmac.Update(&type, 1);
   m_hmac.Update(buf, sizeof(buf));
-  m_hmac.Update(data, (unsigned long)length);
+  m_hmac.Update(data, static_cast<unsigned long>(length));
 
   return PWSfile::WriteCBC(type, data, length);
 }
@@ -306,10 +305,10 @@ size_t PWSfileV4::WriteContentFields(unsigned char *content, size_t len)
   trashMemory(AK, sizeof(AK));
 
   // write actual content using EK
-  _writecbc(m_fd, content, len, &fish, IV);
+  _writecbcRest(m_fd, content, len, &fish, IV); // length already written
 
   // update content's HMAC
-  hmac.Update(content, (unsigned long)len);
+  hmac.Update(content, static_cast<unsigned long>(len));
 
   // write content's HMAC
   unsigned char digest[SHA256::HASHLEN];
@@ -343,7 +342,7 @@ size_t PWSfileV4::ReadCBC(unsigned char &type, unsigned char* &data,
 
     m_hmac.Update(&type, 1);
     m_hmac.Update(buf, sizeof(buf));
-    m_hmac.Update(data, (unsigned long)length);
+    m_hmac.Update(data, static_cast<unsigned long>(length));
   }
 
   return numRead;
@@ -410,7 +409,7 @@ void PWSfileV4::StretchKey(const unsigned char *salt, unsigned long saltLen,
 
   HMAC<SHA256, SHA256::HASHLEN, SHA256::BLOCKSIZE> hmac;
   ConvertPasskey(passkey, pstr, passLen);
-  pbkdf2(pstr, (unsigned long)passLen, salt, saltLen, N, &hmac, Ptag, &PtagLen);
+  pbkdf2(pstr, static_cast<unsigned long>(passLen), salt, saltLen, N, &hmac, Ptag, &PtagLen);
 
 #ifdef UNICODE
   trashMemory(pstr, passLen);
@@ -421,6 +420,7 @@ void PWSfileV4::StretchKey(const unsigned char *salt, unsigned long saltLen,
 const short VersionNum = 0x0400;
 
 struct PWSfileV4::CKeyBlocks::KeyBlockFinder {
+  KeyBlockFinder(const KeyBlockFinder&) = default;
   KeyBlockFinder(const StringX &passkey) : passkey(passkey) {}
 
   bool operator()(const KeyBlock &kb) {
@@ -440,7 +440,7 @@ struct PWSfileV4::CKeyBlocks::KeyBlockFinder {
     return retval;
   }
 private:
-  KeyBlockFinder& operator=(const KeyBlockFinder&); // Do not implement
+  KeyBlockFinder& operator=(const KeyBlockFinder&) = delete; // Do not implement
   const StringX &passkey;
 };
 
@@ -622,6 +622,13 @@ int PWSfileV4::WriteHeader()
     m_hdr.m_whenlastsaved = pwt;
   }
 
+  // Write out last master password change time, if set
+  if (m_hdr.m_whenpwdlastchanged != 0) {
+    PWStime pwt(m_hdr.m_whenpwdlastchanged);
+    numWritten = WriteCBC(HDR_LASTPWDUPDATETIME, pwt, pwt.GetLength());
+    if (numWritten <= 0) { m_status = FAILURE; goto end; }
+  }
+
   // Write out who saved it!
   {
     const SysInfo *si = SysInfo::GetInstance();
@@ -664,7 +671,7 @@ int PWSfileV4::WriteHeader()
 
     size_t buflen = (num * sizeof(uuid_array_t)) + 1;
     auto *buf = new unsigned char[buflen];
-    buf[0] = (unsigned char)num;
+    buf[0] = static_cast<unsigned char>(num);
     unsigned char *buf_ptr = buf + 1;
 
     auto iter = m_hdr.m_RUEList.begin();
@@ -709,14 +716,14 @@ int PWSfileV4::WriteHeader()
     memset(buf, 0, totlen); // in case we truncate some names, don't leak info.
 
     // fill buffer
-    buf[0] = (unsigned char)numPols;
+    buf[0] = static_cast<unsigned char>(numPols);
     unsigned char *buf_ptr = buf + 1;
     for (iter = m_MapPSWDPLC.begin(); iter != m_MapPSWDPLC.end(); iter++) {
       size_t polNameLen = pws_os::wcstombs(nullptr, 0, iter->first.c_str(), iter->first.length());
       if (polNameLen > 255) // too bad if too long...
         polNameLen = 255;
-      *buf_ptr++ = (unsigned char)polNameLen;
-      pws_os::wcstombs((char *)buf_ptr, polNameLen, iter->first.c_str(), iter->first.length());
+      *buf_ptr++ = static_cast<unsigned char>(polNameLen);
+      pws_os::wcstombs(reinterpret_cast<char *>(buf_ptr), polNameLen, iter->first.c_str(), iter->first.length());
       buf_ptr += polNameLen;
 
       const PWPolicy &pwpol = iter->second;
@@ -734,8 +741,8 @@ int PWSfileV4::WriteHeader()
                                           pwpol.symbols.c_str(), pwpol.symbols.length());
       if (symSetLen > 255) // too bad if too long...
         symSetLen = 255;
-      *buf_ptr++ = (unsigned char)symSetLen;
-      pws_os::wcstombs((char *)buf_ptr, symSetLen,
+      *buf_ptr++ = static_cast<unsigned char>(symSetLen);
+      pws_os::wcstombs(reinterpret_cast<char *>(buf_ptr), symSetLen,
                        pwpol.symbols.c_str(), pwpol.symbols.length());
       buf_ptr += symSetLen;
       }
@@ -835,10 +842,10 @@ bool PWSfileV4::VerifyKeyBlocks()
   unsigned char ReadEndKB[SHA256::HASHLEN];
   unsigned char CalcEndKB[SHA256::HASHLEN];
 
-  int nRead = (int)fread(hnonce, sizeof(hnonce), 1, m_fd);
+  size_t nRead = fread(hnonce, sizeof(hnonce), 1, m_fd);
   if (nRead != 1)
     return false;
-  nRead = (int)fread(ReadEndKB, sizeof(ReadEndKB), 1, m_fd);
+  nRead = fread(ReadEndKB, sizeof(ReadEndKB), 1, m_fd);
   if (nRead != 1)
     return false;
 
@@ -1055,6 +1062,16 @@ int PWSfileV4::ReadHeader()
       }
       break;
 
+    case HDR_LASTPWDUPDATETIME: /* when was master password last changed */
+      ASSERT(utf8Len == PWStime::TIME_LEN); // V4 header only needs to deal with PWStime 40 bit representation
+      if (utf8Len == PWStime::TIME_LEN) { // fail silently in Release build if not 
+        PWStime pwt(utf8);
+        m_hdr.m_whenpwdlastchanged = pwt;
+      } else {
+        m_hdr.m_whenlastsaved = 0;
+      }
+      
+      break;
     case HDR_LASTUPDATEUSERHOST: /* and by whom */
       // DEPRECATED, should never appear in a V4 format file header
       ASSERT(0);
@@ -1092,16 +1109,16 @@ int PWSfileV4::ReadHeader()
       m_hdr.m_DB_Description = text;
       break;
 
-#if !defined(USE_XML_LIBRARY) || (!defined(_WIN32) && USE_XML_LIBRARY == MSXML)
-      // Don't support importing XML from non-Windows platforms
-      // using Microsoft XML libraries
-      // Will be treated as an 'unknown header field' by the 'default' clause below
-#else
     case HDR_FILTERS:
       if (utf8 != nullptr) utf8[utf8Len] = '\0';
+      if (utf8Len == 0) break;
       utf8status = m_utf8conv.FromUTF8(utf8, utf8Len, text);
       if (utf8Len > 0) {
         stringT strErrors;
+#if !defined(USE_XML_LIBRARY) || (!defined(_WIN32) && USE_XML_LIBRARY == MSXML)
+        // Using PUGI XML we do not need XDS File
+        stringT XSDFilename = _T("");
+#else
         stringT XSDFilename = PWSdirs::GetXMLDir() + _T("pwsafe_filter.xsd");
         if (!pws_os::FileExists(XSDFilename)) {
           // No filter schema => user won't be able to access stored filters
@@ -1120,9 +1137,10 @@ int PWSfileV4::ReadHeader()
           m_UHFL.push_back(unkhfe);
           break;
         }
+#endif
         int rc = m_MapDBFilters.ImportFilterXMLFile(FPOOL_DATABASE, text.c_str(), _T(""),
-                                                  XSDFilename.c_str(),
-                                                  strErrors, m_pAsker);
+                                                    XSDFilename.c_str(),
+                                                    strErrors, m_pAsker);
         if (rc != PWScore::SUCCESS) {
           // Can't parse it - treat as an unknown field,
           // Notify user that filter won't be available
@@ -1136,7 +1154,6 @@ int PWSfileV4::ReadHeader()
         }
       }
       break;
-#endif
 
     case HDR_RUE:
       {

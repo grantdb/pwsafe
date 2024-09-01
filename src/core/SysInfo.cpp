@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -35,19 +35,16 @@ SysInfo::SysInfo()
   m_ProcessID = pws_os::getprocessid();
 }
 
-bool SysInfo::IsUnderU3()
-{
-  return !pws_os::getenv("U3_ENV_VERSION", false).empty();
-}
 
 bool SysInfo::IsUnderPw2go()
 {
   return !pws_os::getenv("PWS2GO", false).empty();
 }
 
-bool SysInfo::IsLinux()
+// The wxWidgets UI is used for Linux and macOS
+bool SysInfo::IsWXUI()
 {
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
   return true;
 #else
   return false;

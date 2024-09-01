@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -11,9 +11,10 @@
 #include "stdafx.h"
 #include "ControlExtns.h"
 #include "InfoDisplay.h"      // for Listbox Tooltips
+#include "winutils.h"         // for ResizeBitmap()
 
 #include "core/ItemField.h"   // for CSecEditExtn
-#include "core/BlowFish.h"    // ditto
+#include "core/crypto/BlowFish.h"    // ditto
 #include "core/PWSrand.h"     // ditto
 #include "core/PWCharPool.h"  // for CSymbolEdit
 #include "resource2.h"        // for CRichEditExtnX context menu
@@ -55,8 +56,9 @@ TIMEINT_LB_SHOWING The length of time the tool tip window remains visible
 // CStaticExtn
 
 CStaticExtn::CStaticExtn()
-  : m_bUserColour(false), m_bUserBkColour(false), m_bMouseInWindow(false), 
-  m_iFlashing(0), m_bHighlight(false)
+  : m_iFlashing(0), 
+  m_bUserColour(false), m_bMouseInWindow(false), m_bHighlight(false),
+  m_bUserBkColour(false)
 {
 }
 
@@ -157,8 +159,8 @@ HBRUSH CStaticExtn::CtlColor(CDC* pDC, UINT /*nCtlColor*/)
 // CEditExtnX
 
 CEditExtnX::CEditExtnX(COLORREF focusColor)
-  : m_bIsFocused(FALSE), m_lastposition(-1),
-    m_crefInFocus(focusColor)
+  : m_bIsFocused(FALSE), m_crefInFocus(focusColor),
+  m_lastposition(-1)
 {
   m_brInFocus.CreateSolidBrush(focusColor);
   m_brNoFocus.CreateSolidBrush(crefNoFocus);
@@ -168,8 +170,8 @@ CEditExtnX::CEditExtnX(COLORREF focusColor)
 
 CEditExtnX::CEditExtnX(std::vector<st_context_menu> vmenu_items,
                        COLORREF focusColor)
-  : m_bIsFocused(FALSE), m_lastposition(-1),
-    m_crefInFocus(focusColor)
+  : m_bIsFocused(FALSE), m_crefInFocus(focusColor),
+  m_lastposition(-1)
 {
   m_brInFocus.CreateSolidBrush(focusColor);
   m_brNoFocus.CreateSolidBrush(crefNoFocus);
@@ -637,9 +639,9 @@ void CRichEditExtnX::EnableMenuItem(const int message_number, const bool bEnable
 // CListBoxExtn
 
 CListBoxExtn::CListBoxExtn()
-  : m_bIsFocused(FALSE), m_pLBToolTips(NULL), m_bUseToolTips(false),
-  m_bMouseInWindow(false), m_nHoverLBTimerID(0), m_nShowLBTimerID(0),
-  m_HoverLBnItem(-1), m_pCombo(NULL)
+  : m_bIsFocused(FALSE), m_pCombo(nullptr), m_pLBToolTips(nullptr), 
+  m_nHoverLBTimerID(0), m_nShowLBTimerID(0), m_HoverLBnItem(-1),
+  m_bUseToolTips(false), m_bMouseInWindow(false)
 {
   m_brInFocus.CreateSolidBrush(crefInFocus);
   m_brNoFocus.CreateSolidBrush(crefNoFocus);
@@ -726,8 +728,7 @@ bool CListBoxExtn::ShowToolTip(int nItem, const bool bVisible)
 
   CPoint pt;
   ::GetCursorPos(&pt);
-
-  pt.y += ::GetSystemMetrics(SM_CYCURSOR) / 2; // half-height of cursor
+  pt.y += WinUtil::GetSystemMetrics(SM_CYCURSOR, m_hWnd) / 2; // half-height of cursor
 
   m_pLBToolTips->SetWindowPos(&wndTopMost, pt.x, pt.y, 0, 0,
                               SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
@@ -826,8 +827,10 @@ LRESULT CListBoxExtn::OnMouseLeave(WPARAM, LPARAM)
 // CComboBoxExtn
 
 CComboBoxExtn::CComboBoxExtn()
-  : m_bUseToolTips(false), m_nPenStyle(PS_SOLID), m_crColor(RGB(64, 64, 64)),
-  m_nBottomMargin(2), m_nSepWidth(1), m_nHorizontalMargin(2)
+  : m_bUseToolTips(false), 
+  m_nHorizontalMargin(2), m_nBottomMargin(2),
+  m_nSepWidth(1), m_nPenStyle(PS_SOLID), 
+  m_crColor(RGB(64, 64, 64))
 {
 }
 
@@ -1153,9 +1156,9 @@ void CSymbolEdit::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)
     return;
   }
 
-  wint_t wChar = reinterpret_cast<wint_t &>(nChar);
+  wint_t wChar = static_cast<wint_t>(nChar);
   // Do not limit user to 'our' definition of symbols
-  // i.e. allow such things as currency symbols - £, € & ¥ etc.
+  // i.e. allow such things as currency symbols - Â£, â‚¬ & Â¥ etc.
   // Note: EasyVision and MakePronounceable symbols will still be
   // restricted to our lists defined in CPasswordCharPool as will the
   // default symbol set.
@@ -1166,6 +1169,10 @@ void CSymbolEdit::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)
   if (!std::isalnum(wChar, locl)) {
     CString cs_text;
     GetWindowText(cs_text);
+    // BR1557: Selected text will be replaced, no need to search it for duplicates
+    int startSel, endSel;
+    GetSel(startSel, endSel);
+    cs_text = cs_text.Left(startSel) + cs_text.Right(cs_text.GetLength() - endSel);
     // Must not have duplicates
     if (cs_text.Find(wChar) == -1)
       CEdit::OnChar(nChar, 0, nFlags);
@@ -1216,8 +1223,9 @@ LRESULT CSymbolEdit::OnPaste(WPARAM , LPARAM )
 // CButtonExtn
 
 CButtonExtn::CButtonExtn()
-  : m_bUseTextColour(false), m_bUseBkgColour(false),
-  m_caption(L""), m_type(BS_AUTOCHECKBOX)
+  : m_caption(L""), 
+  m_bUseTextColour(false), m_bUseBkgColour(false),
+  m_type(BS_AUTOCHECKBOX)
 {
 }
 
@@ -1348,19 +1356,27 @@ END_MESSAGE_MAP()
 
 void CButtonBitmapExtn::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
-  CDC dc;
-  dc.Attach(lpDrawItemStruct->hDC);
-
-  CBitmap bmp;
+  CBitmap bmp, scaledBmp;
   bmp.LoadBitmap(m_IDB);
-
   BITMAP bitMapInfo;
   bmp.GetBitmap(&bitMapInfo);
 
+  // Scale for DPI stuff
+  // from https://docs.microsoft.com/en-us/windows/win32/hidpi/high-dpi-desktop-application-development-on-windows
+  int dpi = WinUtil::GetDPI(m_hWnd);
+  int dpiScaledWidth = MulDiv(bitMapInfo.bmWidth, dpi, WinUtil::defDPI);
+  int dpiScaledHeight = MulDiv(bitMapInfo.bmHeight, dpi, WinUtil::defDPI);
+
+  WinUtil::ResizeBitmap(bmp, scaledBmp, dpiScaledWidth, dpiScaledHeight);
+  bmp.DeleteObject();
+  scaledBmp.GetBitmap(&bitMapInfo);
+
+  CDC dc;
+  dc.Attach(lpDrawItemStruct->hDC);
   CDC memDC;
   memDC.CreateCompatibleDC(&dc);
 
-  memDC.SelectObject(&bmp);
+  memDC.SelectObject(&scaledBmp);
   int bmw = bitMapInfo.bmWidth;
   int bmh = bitMapInfo.bmHeight;
 
@@ -1370,39 +1386,5 @@ void CButtonBitmapExtn::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 
 void FixBitmapBackground(CBitmap &bm)
 {
-  // Change bitmap's {192,192,192} pixels
-  // to current flavor of the month default background
-
-  // Get how many pixels in the bitmap
-  const COLORREF crCOLOR_3DFACE = GetSysColor(COLOR_3DFACE);
-  BITMAP bmInfo;
-  int rc = bm.GetBitmap(&bmInfo);
-
-  if (rc == 0) {
-    ASSERT(0);
-    return;
-  }
-  const UINT numPixels(bmInfo.bmHeight * bmInfo.bmWidth);
-
-  // get a pointer to the pixels
-  DIBSECTION ds;
-  VERIFY(bm.GetObject(sizeof(DIBSECTION), &ds) == sizeof(DIBSECTION));
-
-  RGBTRIPLE *pixels = reinterpret_cast<RGBTRIPLE*>(ds.dsBm.bmBits);
-  if (pixels == NULL) {
-    ASSERT(0);
-    return;
-  }
-
-  const RGBTRIPLE newbkgrndColourRGB = {GetBValue(crCOLOR_3DFACE),
-                                        GetGValue(crCOLOR_3DFACE),
-                                        GetRValue(crCOLOR_3DFACE)};
-
-  for (UINT i = 0; i < numPixels; ++i) {
-    if (pixels[i].rgbtBlue  == 192 &&
-        pixels[i].rgbtGreen == 192 &&
-        pixels[i].rgbtRed   == 192) {
-      pixels[i] = newbkgrndColourRGB;
-    }
-  }
+  WinUtil::FixBitmapBackground(bm);
 }

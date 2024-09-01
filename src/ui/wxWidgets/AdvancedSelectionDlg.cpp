@@ -1,34 +1,30 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
  * http://www.opensource.org/licenses/artistic-license-2.0.php
  */
 
-/** \file about.cpp
+/** \file AdvancedSelectionDlg.cpp
 *
 */
+
 // For compilers that support precompilation, includes "wx/wx.h".
 #include <wx/wxprec.h>
-
-#ifdef __BORLANDC__
-#pragma hdrstop
-#endif
 
 #ifndef WX_PRECOMP
 #include <wx/wx.h>
 #endif
 
-#include <wx/valgen.h>
-#include <wx/statline.h>
-
-#include "AdvancedSelectionDlg.h"
-#include "SelectionCriteria.h"
-
 #ifdef __WXMSW__
 #include <wx/msw/msvcrt.h>
 #endif
+
+#include <wx/valgen.h>
+
+#include "AdvancedSelectionDlg.h"
+#include "SelectionCriteria.h"
 
 void EnableSizerElements(wxSizer* sizer, wxWindow* ignore, bool enable);
 
@@ -53,7 +49,7 @@ AdvancedSelectionPanel::AdvancedSelectionPanel(wxWindow* parentWnd,
                                                   m_autoValidate(autoValidate)
 {
   UNREFERENCED_PARAMETER(parentWnd);
-  parentWnd->SetExtraStyle(wxWS_EX_VALIDATE_RECURSIVELY);
+  parentWnd->SetExtraStyle(parentWnd->GetExtraStyle() | wxWS_EX_VALIDATE_RECURSIVELY);
 }
 
 void AdvancedSelectionPanel::CreateControls(wxWindow* parentWnd)
@@ -231,7 +227,7 @@ bool AdvancedSelectionPanel::TransferDataFromWindow()
   return false;
 }
 
-void AdvancedSelectionPanel::OnSelectSome( wxCommandEvent& /* evt */ )
+void AdvancedSelectionPanel::OnSelectSome(wxCommandEvent& WXUNUSED(evt))
 {
   wxListBox* lbAvailable = wxDynamicCast(FindWindow(ID_LB_AVAILABLE_FIELDS), wxListBox);
   wxListBox* lbSelected  = wxDynamicCast(FindWindow(ID_LB_SELECTED_FIELDS), wxListBox);
@@ -251,7 +247,7 @@ void AdvancedSelectionPanel::OnSelectSome( wxCommandEvent& /* evt */ )
   }
 }
 
-void AdvancedSelectionPanel::OnSelectAll( wxCommandEvent& /* evt */ )
+void AdvancedSelectionPanel::OnSelectAll(wxCommandEvent& WXUNUSED(evt))
 {
   wxListBox* lbAvailable = wxDynamicCast(FindWindow(ID_LB_AVAILABLE_FIELDS), wxListBox);
   wxListBox* lbSelected  = wxDynamicCast(FindWindow(ID_LB_SELECTED_FIELDS), wxListBox);
@@ -266,7 +262,7 @@ void AdvancedSelectionPanel::OnSelectAll( wxCommandEvent& /* evt */ )
   }
 }
 
-void AdvancedSelectionPanel::OnRemoveSome( wxCommandEvent& /* evt */ )
+void AdvancedSelectionPanel::OnRemoveSome(wxCommandEvent& WXUNUSED(evt))
 {
   wxListBox* lbAvailable = wxDynamicCast(FindWindow(ID_LB_AVAILABLE_FIELDS), wxListBox);
   wxListBox* lbSelected  = wxDynamicCast(FindWindow(ID_LB_SELECTED_FIELDS), wxListBox);
@@ -288,7 +284,7 @@ void AdvancedSelectionPanel::OnRemoveSome( wxCommandEvent& /* evt */ )
   }
 }
 
-void AdvancedSelectionPanel::OnRemoveAll( wxCommandEvent& /* evt */ )
+void AdvancedSelectionPanel::OnRemoveAll(wxCommandEvent& WXUNUSED(evt))
 {
   wxListBox* lbAvailable = wxDynamicCast(FindWindow(ID_LB_AVAILABLE_FIELDS), wxListBox);
   wxListBox* lbSelected  = wxDynamicCast(FindWindow(ID_LB_SELECTED_FIELDS), wxListBox);
@@ -297,9 +293,9 @@ void AdvancedSelectionPanel::OnRemoveAll( wxCommandEvent& /* evt */ )
   wxASSERT(lbSelected);
 
   for(size_t itemsLeft = lbSelected->GetCount(), idx = 0; idx < itemsLeft; ) {
-      size_t which = reinterpret_cast<size_t>(lbSelected->GetClientData(reinterpret_cast<unsigned int &>(idx)));
+      size_t which = reinterpret_cast<size_t>(lbSelected->GetClientData(static_cast<unsigned int>(idx)));
       if (!IsMandatoryField(SelectionCriteria::GetSelectableField(which))) {
-        lbSelected->Delete(reinterpret_cast<unsigned int &>(idx));
+        lbSelected->Delete(static_cast<unsigned int>(idx));
         lbAvailable->Append(SelectionCriteria::GetSelectableFieldName(SelectionCriteria::GetSelectableField(which)), reinterpret_cast<void *>(which));
         --itemsLeft;
       }
@@ -308,9 +304,8 @@ void AdvancedSelectionPanel::OnRemoveAll( wxCommandEvent& /* evt */ )
   }
 }
 
-/*
- * Recursively enables/disables all sizer elements.  The <ignore> window
- * is not disabled
+/**
+ * Recursively enables/disables all sizer elements except the 'ignore' window.
  */
 void EnableSizerElements(wxSizer* sizer, wxWindow* ignore, bool enable)
 {
@@ -319,10 +314,12 @@ void EnableSizerElements(wxSizer* sizer, wxWindow* ignore, bool enable)
   wxSizerItemList& items = sizer->GetChildren();
   for (wxSizerItemList::iterator itr = items.begin(); itr != items.end(); ++itr) {
     wxSizerItem* item = *itr;
-    if (item->IsWindow() && item->GetWindow() != ignore)
+    if (item->IsWindow() && item->GetWindow() != ignore) {
       item->GetWindow()->Enable(enable);
-    else if (item->IsSizer())
+    }
+    else if (item->IsSizer()) {
       EnableSizerElements(item->GetSizer(), ignore, enable);
+    }
   }
 }
 

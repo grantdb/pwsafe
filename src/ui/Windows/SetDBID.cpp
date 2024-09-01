@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -69,9 +69,10 @@ LRESULT CNPEdit::OnPaste(WPARAM, LPARAM)
 IMPLEMENT_DYNAMIC(CSetDBID, CPWDialog)
 
 CSetDBID::CSetDBID(CWnd *pParent, int iDBIndex)
-	: CPWDialog(IDD_SETDBID, pParent), m_pParent((DboxMain *)pParent),
-  m_iInitialDBIndex(iDBIndex), m_iDBIndex(iDBIndex), m_iLockedTextColour(0),
-  m_iUnLockedTextColour(0), m_bInitDone(false)
+	: CPWDialog(IDD_SETDBID, pParent), 
+  m_iDBIndex(iDBIndex), m_iInitialDBIndex(iDBIndex), m_iLockedTextColour(0),
+  m_iUnLockedTextColour(0), m_bInitDone(false),
+  m_pParent((DboxMain*)pParent)
 {
   // Locked
   m_clrLockedTextOptions[0] = RGB(255, 255,   0); // Yellow - default

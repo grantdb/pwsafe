@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -12,6 +12,7 @@
 #include "PasswordSafe.h"
 #include "ThisMfcApp.h"
 #include "DboxMain.h"
+#include "winutils.h"
 
 #include "WZPropertySheet.h"
 #include "WZPropertyPage.h"
@@ -20,8 +21,6 @@
 #include "WZFinish.h"
 
 IMPLEMENT_DYNAMIC(CWZPropertySheet, CPropertySheet)
-
-extern const wchar_t *EYE_CATCHER;
 
 CWZPropertySheet::CWZPropertySheet(UINT nID, CWnd* pParent, WZAdvanced::AdvType iadv_type,
                                    st_SaveAdvValues *pst_SADV)
@@ -95,12 +94,7 @@ void CWZPropertySheet::PreSubclassWindow()
 
 LRESULT CWZPropertySheet::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-  if (app.GetMainDlg()->m_eye_catcher != NULL &&
-      wcscmp(app.GetMainDlg()->m_eye_catcher, EYE_CATCHER) == 0) {
-    app.GetMainDlg()->ResetIdleLockCounter(message);
-  } else
-    pws_os::Trace(L"CWZPropertySheet::WindowProc - couldn't find DboxMain ancestor\n");
-
+  app.GetMainDlg()->ResetIdleLockCounter(message);
   return CPropertySheet::WindowProc(message, wParam, lParam);
 }
 
@@ -118,6 +112,15 @@ INT_PTR CWZPropertySheet::DoModal()
     if (bAccEn)app.EnableAccelerator();
 
   return rc;
+}
+
+BOOL CWZPropertySheet::OnInitDialog()
+{
+  BOOL bResult = CPropertySheet::OnInitDialog();
+  CScreenCaptureStateControl::SetLastDisplayAffinityError(
+    WinUtil::SetWindowExcludeFromScreenCapture(m_hWnd, app.IsExcludeFromScreenCapture())
+  );
+  return bResult;
 }
 
 BOOL CWZPropertySheet::PreTranslateMessage(MSG *pMsg)

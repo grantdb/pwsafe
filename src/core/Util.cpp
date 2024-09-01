@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -8,14 +8,15 @@
 /// \file Util.cpp
 //-----------------------------------------------------------------------------
 
-#include "sha1.h"
-#include "BlowFish.h"
+#include "crypto/sha1.h"
+#include "crypto/BlowFish.h"
 #include "PWSrand.h"
 #include "PwsPlatform.h"
 #include "core.h"
 #include "StringXStream.h"
 #include "PWPolicy.h"
-#include "./UTF8Conv.h"
+#include "UTF8Conv.h"
+#include "SysInfo.h"
 
 #include "Util.h"
 
@@ -35,7 +36,7 @@
 #include <sstream>
 #include <iomanip>
 
-#include <errno.h>
+#include <cerrno>
 
 using namespace std;
 
@@ -52,29 +53,54 @@ static void xormem(unsigned char *mem1, const unsigned char *mem2, int length)
 // (2) The wrong way to scrub DRAM memory
 // see http://www.cs.auckland.ac.nz/~pgut001/pubs/secure_del.html
 // and http://www.cypherpunks.to/~peter/usenix01.pdf
-
-#ifdef _WIN32
-#pragma optimize("",off)
-#endif
-void trashMemory(void *buffer, size_t length)
+namespace
 {
-  ASSERT(buffer != nullptr);
-  // {kjp} no point in looping around doing nothing is there?
-  if (length > 0) {
-    std::memset(buffer, 0x55, length);
-    std::memset(buffer, 0xAA, length);
-    std::memset(buffer,    0, length);
+// Try OpenSSL's approach of forcing the call to memset through
+// a volatile function pointer.
+// https://github.com/openssl/openssl/blob/master/crypto/mem_clr.c
+
+typedef void* (*memset_t)(void*, int, size_t);
+
+volatile memset_t memset_vol = memset;
+
+void secure_memset(void* buffer, int value, size_t length)
+{
+    memset_vol(buffer, value, length);
 #ifdef __GNUC__
     // break compiler optimization of this function for gcc
     // see trick used in google's boring ssl:
     // https://boringssl.googlesource.com/boringssl/+/ad1907fe73334d6c696c8539646c21b11178f20f%5E!/#F0
     __asm__ __volatile__("" : : "r"(buffer) : "memory");
 #endif
-  }
 }
+
+void secure_zero(void* buffer, size_t length)
+{
 #ifdef _WIN32
-#pragma optimize("",on)
+    SecureZeroMemory(buffer, length);
+#else
+    memset_vol(buffer, 0, length);
+#ifdef __GNUC__
+    // break compiler optimization of this function for gcc
+    // see trick used in google's boring ssl:
+    // https://boringssl.googlesource.com/boringssl/+/ad1907fe73334d6c696c8539646c21b11178f20f%5E!/#F0
+    __asm__ __volatile__("" : : "r"(buffer) : "memory");
 #endif
+#endif
+}
+}
+
+void trashMemory(void *buffer, size_t length)
+{
+  // {kjp} no point in looping around doing nothing is there?
+  if (buffer == nullptr || length <= 0)
+      return;
+
+  secure_memset(buffer, 0x55, length);
+  secure_memset(buffer, 0xAA, length);
+  secure_zero(buffer, length);
+}
+
 void trashMemory(LPTSTR buffer, size_t length)
 {
   trashMemory(reinterpret_cast<unsigned char *>(buffer), length * sizeof(buffer[0]));
@@ -107,7 +133,7 @@ void ConvertPasskey(const StringX &text,
   char *dst = new char[dstlen];
 
   size_t res = pws_os::wcstombs(dst, dstlen, txtstr, txtlen, isUTF8);
-  ASSERT(res != 0);
+  ASSERT(res != 0); UNREFERENCED_PARAMETER(res);
   txt = reinterpret_cast<unsigned char *>(dst);
   txtlen = dstlen - 1;
   txt[txtlen] = '\0'; // not strictly needed, since txtlen returned, but helps debug
@@ -129,7 +155,7 @@ void GenRandhash(const StringX &a_passkey,
   */
   SHA1 keyHash;
   keyHash.Update(a_randstuff, StuffSize);
-  keyHash.Update(pstr, reinterpret_cast<int &>(pkeyLen));
+  keyHash.Update(pstr, static_cast<unsigned int>(pkeyLen));
 
   trashMemory(pstr, pkeyLen);
   delete[] pstr;
@@ -157,37 +183,67 @@ void GenRandhash(const StringX &a_passkey,
   keyHash.Final(a_randhash);
 }
 
-size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length, unsigned char type,
-                 Fish *Algorithm, unsigned char *cbcbuffer)
+
+size_t _writecbc(FILE* fp, const unsigned char* buffer, size_t length, unsigned char type,
+  Fish* Algorithm, unsigned char* cbcbuffer)
 {
-  const unsigned int BS = Algorithm->GetBlockSize();
   size_t numWritten = 0;
 
+
+
+  // First encrypt and write the length of the buffer and type
+  numWritten = _writecbc1st(fp, &buffer, &length, type, Algorithm, cbcbuffer);
+  // now write the actual data
+  numWritten += _writecbcRest(fp, buffer, length, Algorithm, cbcbuffer);
+
+  return numWritten;
+}
+
+
+size_t _writecbc1st(FILE* fp, const unsigned char** buffer, size_t *length, unsigned char type,
+  Fish* Algorithm, unsigned char* cbcbuffer, bool isAboveThreshold)
+{
+  /**
+   * Write the length, type and perhaps a few bytes of data.
+   *
+   * aboveThreshold means the length value doesn't fit into 4 bytes (passed explicitly
+   * for testing with sub-gigabyte test data)
+   * In this case we just store the length as 8 bytes and the type, not bothering with the
+   * extra few bytes in the length block, since this is an optimization for small amounts of data,
+   * irrelevant for large lengths.
+   */
+  size_t numWritten = 0;
+  const unsigned int BS = Algorithm->GetBlockSize();
   // some trickery to avoid new/delete
   unsigned char block1[16];
 
-  unsigned char *curblock = nullptr;
+  unsigned char* curblock = nullptr;
   ASSERT(BS <= sizeof(block1)); // if needed we can be more sophisticated here...
-
-  // First encrypt and write the length of the buffer
   curblock = block1;
   // Fill unused bytes of length with random data, to make
   // a dictionary attack harder
   PWSrand::GetInstance()->GetRandomData(curblock, BS);
-  // block length overwrites 4 bytes of the above randomness.
-  putInt32(curblock, static_cast<int32>(length));
+
+  if (!isAboveThreshold) {
+    // block length overwrites 4 bytes of the above randomness.
+    putInt32(curblock, static_cast<int32>(*length));
+  } else {
+    ASSERT(BS >= 16);
+    memcpy(curblock, length, sizeof(size_t));
+  }
 
   // following new for format 2.0 - lengthblock bytes 4-7 were unused before.
-  curblock[sizeof(int32)] = type;
 
-  if (BS == 16) {
+  curblock[isAboveThreshold ? sizeof(size_t) : sizeof(int32)] = type;
+
+  if (BS == 16 && !isAboveThreshold) {
     // In this case, we've too many (11) wasted bytes in the length block
     // So we store actual data there:
     // (11 = BlockSize - 4 (length) - 1 (type)
-    const size_t len1 = (length > 11) ? 11 : length;
-    memcpy(curblock + 5, buffer, len1);
-    length -= len1;
-    buffer += len1;
+    const size_t len1 = (*length > 11) ? 11 : *length;
+    memcpy(curblock + 5, *buffer, len1);
+    *length -= len1;
+    *buffer += len1;
   }
 
   xormem(curblock, cbcbuffer, BS); // do the CBC thing
@@ -199,14 +255,12 @@ size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length, unsigned 
     trashMemory(curblock, BS);
     throw(EIO);
   }
-
-  numWritten += _writecbc(fp, buffer, length, Algorithm, cbcbuffer);
-
   trashMemory(curblock, BS);
   return numWritten;
 }
 
-size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length,
+
+size_t _writecbcRest(FILE *fp, const unsigned char *buffer, size_t length,
                  Fish *Algorithm, unsigned char *cbcbuffer)
 {
   // Doesn't write out length, just CBC's the data, padding with randomness
@@ -254,6 +308,32 @@ size_t _writecbc(FILE *fp, const unsigned char *buffer, size_t length,
   }
   trashMemory(curblock, BS);
   return numWritten;
+}
+
+
+size_t readcbc1st(FILE *fp, size_t &record_size, Fish *Algorithm, unsigned char *cbcbuffer, bool isAboveThreshold)
+{
+  const unsigned int BS = Algorithm->GetBlockSize();
+  unsigned char* ctblock = new unsigned char[2 * BS];
+  memset(ctblock, 0, 2 * BS);
+  unsigned char* ptblock = ctblock + BS; // too lazy to allocate twice...
+
+  if (fread(ctblock, 1, BS, fp) != BS) {
+    delete[] ctblock;
+    record_size = 0;
+    return 0;
+  }
+
+  Algorithm->Decrypt(ctblock, ptblock);
+  xormem(ptblock, cbcbuffer, BS);
+  memcpy(cbcbuffer, ctblock, BS);
+
+  if (isAboveThreshold)
+    memcpy(&record_size, ptblock, sizeof(size_t));
+  else
+    record_size = getInt32(ptblock);
+  delete[] ctblock;
+  return BS;
 }
 
 /*
@@ -412,45 +492,68 @@ size_t PWSUtil::strLength(const LPCTSTR str)
   return _tcslen(str);
 }
 
-const TCHAR *PWSUtil::UNKNOWN_XML_TIME_STR = _T("1970-01-01 00:00:00");
+#ifndef _WIN32
+bool StringX_asctime_r(const struct tm* st, StringX& sx)
+{
+  CUTF8Conv conv;
+  char buf[30];
+  bool is_error = asctime_r(st, buf) == NULL;
+  if (!is_error)
+    is_error = !conv.FromUTF8(reinterpret_cast<const unsigned char*>(buf), strlen(buf), sx);
+  if (is_error)
+    sx.clear();
+  return is_error;
+}
+#endif
+
+const TCHAR *PWSUtil::UNKNOWN_XML_TIME_STR = _T("1970-01-01T00:00:00");
 const TCHAR *PWSUtil::UNKNOWN_ASC_TIME_STR = _T("Unknown");
 
-StringX PWSUtil::ConvertToDateTimeString(const time_t &t, TMC result_format)
+StringX PWSUtil::ConvertToDateTimeString(const time_t &t, TMC result_format, bool convert_epoch, bool utc_time)
 {
   StringX ret;
-  if (t != 0) {
-    TCHAR datetime_str[80];
+  if (t != 0 || convert_epoch) {
     struct tm *st;
     struct tm st_s;
-    errno_t err;
-    err = localtime_s(&st_s, &t);  // secure version
-    if (err != 0) // invalid time
+    bool is_error;
+    if (utc_time) {
+#ifdef _WIN32
+      is_error = gmtime_s(&st_s, &t) != 0;
+#else
+      st = gmtime_r(&t, &st_s);
+      is_error = st == NULL;
+#endif
+    }
+    else
+      is_error = localtime_s(&st_s, &t) != 0;
+    if (is_error) // invalid time
       return ConvertToDateTimeString(0, result_format);
     st = &st_s; // hide difference between versions
+    TCHAR datetime_str[80];
     switch (result_format) {
     case TMC_EXPORT_IMPORT:
-      _tcsftime(datetime_str, sizeof(datetime_str) / sizeof(datetime_str[0]),
-                _T("%Y/%m/%d %H:%M:%S"), st);
+      is_error = !_tcsftime(datetime_str, sizeof(datetime_str) / sizeof(datetime_str[0]), _T("%Y/%m/%d %H:%M:%S"), st);
       break;
     case TMC_XML:
-      _tcsftime(datetime_str, sizeof(datetime_str) / sizeof(datetime_str[0]),
-                _T("%Y-%m-%dT%H:%M:%S"), st);
+      is_error = !_tcsftime(datetime_str, sizeof(datetime_str) / sizeof(datetime_str[0]), _T("%Y-%m-%dT%H:%M:%S"), st);
       break;
     case TMC_LOCALE:
-      setlocale(LC_TIME, "");
-      _tcsftime(datetime_str, sizeof(datetime_str) / sizeof(datetime_str[0]),
-                _T("%c"), st);
+      is_error = !_tcsftime(datetime_str, sizeof(datetime_str) / sizeof(datetime_str[0]), _T("%c"), st);
       break;
     case TMC_LOCALE_DATE_ONLY:
-      setlocale(LC_TIME, "");
-      _tcsftime(datetime_str, sizeof(datetime_str) / sizeof(datetime_str[0]),
-                _T("%x"), st);
+      is_error = !_tcsftime(datetime_str, sizeof(datetime_str) / sizeof(datetime_str[0]), _T("%x"), st);
       break;
     default:
-      if (_tasctime_s(datetime_str, 32, st) != 0)
-        return ConvertToDateTimeString(0, result_format);
+#ifdef _WIN32
+      is_error = _tasctime_s(datetime_str, 32, st) != 0;
+#else
+      is_error = StringX_asctime_r(st, ret);
+#endif
     }
-    ret = datetime_str;
+    if (is_error)
+      return ConvertToDateTimeString(0, result_format);
+    if (ret.empty())
+      ret = datetime_str;
   } else { // t == 0
     switch (result_format) {
     case TMC_ASC_UNKNOWN:
@@ -526,7 +629,7 @@ stringT PWSUtil::Base64Encode(const BYTE *strIn, size_t len)
 {
   stringT cs_Out;
   static const TCHAR base64ABC[] =
-    _S("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
+    _T("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 
   for (size_t i = 0; i < len; i += 3) {
     long l = ( static_cast<long>(strIn[i]) << 16 ) |
@@ -542,8 +645,10 @@ stringT PWSUtil::Base64Encode(const BYTE *strIn, size_t len)
   switch (len % 3) {
     case 1:
       cs_Out += TCHAR('=');
+      //[[fallthrough]];
     case 2:
       cs_Out += TCHAR('=');
+      //[[fallthrough]];
     default:
       break;
   }
@@ -567,7 +672,7 @@ void PWSUtil::Base64Decode(const StringX &inString, BYTE * &outData, size_t &out
     for (i1 = 0; i1 < sizeof(szCS) - 1; i1++) {
       for (i3 = i2; i3 < i2 + 4; i3++) {
         if (i3 < in_length &&  inString[i3] == szCS[i1])
-          iDigits[i3 - i2] = reinterpret_cast<int &>(i1) - 1;
+          iDigits[i3 - i2] = static_cast<int>(i1) - 1;
       }
     }
 
@@ -704,10 +809,11 @@ bool PWSUtil::WriteXMLField(ostream &os, const char *fname,
 }
 
 string PWSUtil::GetXMLTime(int indent, const char *name,
-                           time_t t, CUTF8Conv &utf8conv)
+                           time_t t, CUTF8Conv &utf8conv,
+                           bool convert_epoch, bool utc_time)
 {
   int i;
-  const StringX tmp = PWSUtil::ConvertToDateTimeString(t, TMC_XML);
+  const StringX tmp = PWSUtil::ConvertToDateTimeString(t, TMC_XML, convert_epoch, utc_time);
   ostringstream oss;
   const unsigned char *utf8 = nullptr;
   size_t utf8Len = 0;
@@ -721,49 +827,6 @@ string PWSUtil::GetXMLTime(int indent, const char *name,
   oss.write(reinterpret_cast<const char *>(utf8), utf8Len);
   oss << "</" << name << ">" << endl;
   return oss.str();
-}
-
-/**
- * Get TCHAR buffer size by format string with parameters
- * @param[in] fmt - format string
- * @param[in] args - arguments for format string
- * @return buffer size including nullptr-terminating character
-*/
-unsigned int GetStringBufSize(const TCHAR *fmt, va_list args)
-{
-  TCHAR *buffer=nullptr;
-
-  unsigned int len = 0;
-
-#ifdef _WIN32
-  len = _vsctprintf(fmt, args) + 1;
-#else
-  va_list ar;
-  va_copy(ar, args);
-  // Linux doesn't do this correctly :-(
-  unsigned int guess = 16;
-  int nBytes = -1;
-  while (true) {
-    len = guess;
-    buffer = new TCHAR[len];
-    nBytes = _vstprintf_s(buffer, len, fmt, ar);
-    va_end(ar);//after using args we should reset list
-    va_copy(ar, args);
-    if (nBytes++ > 0) {
-      len = nBytes;
-      break;
-    } else { // too small, resize & try again
-      delete[] buffer;
-      buffer = nullptr;
-      guess *= 2;
-    }
-  }
-  va_end(ar);
-#endif
-  if (buffer)
-    delete[] buffer;
-
-  return len;
 }
 
 StringX PWSUtil::DeDupString(StringX &in_string)
@@ -909,4 +972,51 @@ bool PWSUtil::loadFile(const StringX &filename, StringXStream &stream) {
   fclose(fs);
 
   return !bError;
+}
+
+bool PWSUtil::GetLockerData(const stringT& locker, stringT& plkUser, stringT& plkHost, int& plkPid)
+{
+  // Provides characters from the beginning of str up to given delimiter
+  // and removes them finally from str.
+  const auto getStringToken = [](stringT &str, const stringT &delimiter) -> stringT {
+    stringT token(_T(""));
+    size_t pos = str.find(delimiter);
+    if (pos != std::string::npos) {
+      token = str.substr(0, pos);
+      str.erase(0, pos + delimiter.length());
+    }
+    return token;
+  };
+
+  auto lockData = locker;
+
+  plkUser = getStringToken(lockData, _T("@")); // input -> "user@machine:nnnnnnnn"
+  plkHost = getStringToken(lockData, _T(":")); // input -> "machine:nnnnnnnn"
+  plkPid  = -1;
+
+  try {
+    plkPid = std::stoi(lockData);              // input -> "nnnnnnnn"
+  }
+  catch (const std::invalid_argument& ex) {
+    pws_os::Trace(L"PWSUtil::GetLockerData - Invalid argument passed to std::stoi: %ls", ex.what());
+  }
+  catch (const std::out_of_range& ex) {
+    pws_os::Trace(L"PWSUtil::GetLockerData - Out of Range error at std::stoi: %ls", ex.what());
+  }
+
+  if (plkUser.empty() || plkHost.empty() || plkPid < 0) {
+    return false;
+  }
+  else {
+    return true;
+  }
+}
+
+bool PWSUtil::HasValidLockerData(const stringT& locker)
+{
+  stringT plkUser(_T(""));
+  stringT plkHost(_T(""));
+  int plkPid = -1;
+
+  return PWSUtil::GetLockerData(locker, plkUser, plkHost, plkPid);
 }

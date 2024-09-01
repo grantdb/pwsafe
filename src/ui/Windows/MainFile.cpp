@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -28,29 +28,25 @@
 #include "AddEdit_DateTimes.h"
 #include "PasskeyEntry.h"
 #include "PWSFaultHandler.h"
-
+#include "winutils.h"
 #include "WZPropertySheet.h"
 
 #include "core/PWSprefs.h"
-#include "core/Util.h"
 #include "core/PWSdirs.h"
+#include "core/PWSLog.h"
 #include "core/Report.h"
 #include "core/ItemData.h"
 #include "core/core.h"
 #include "core/VerifyFormat.h"
-#include "core/SysInfo.h"
 #include "core/XML/XMLDefs.h"  // Required if testing "USE_XML_LIBRARY"
-#include "core/ExpiredList.h"
 
 #include "os/file.h"
 #include "os/dir.h"
-#include "os/logit.h"
 
 #include "resource.h"
 #include "resource2.h"  // Menu, Toolbar & Accelerator resources
 #include "resource3.h"  // String resources
 
-#include <sys/types.h>
 #include <bitset>
 #include <vector>
 
@@ -62,9 +58,6 @@ using pws_os::CUUID;
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
-
-extern HRGN GetWorkAreaRegion();
-extern const TCHAR *GROUPTITLEUSERINCHEVRONS;
 
 static void DisplayFileWriteError(INT_PTR rc, const StringX &cs_newfile)
 {
@@ -160,7 +153,7 @@ BOOL DboxMain::OpenOnInit()
       UpdateSystemTray(UNLOCKED);
       break;
     case PWScore::CANT_OPEN_FILE:
-      if (m_core.GetCurFile().empty()) {
+      if (!m_core.IsDbOpen()) {
         // Empty filename. Assume they are starting Password Safe
         // for the first time and don't confuse them.
         // fall through to New()
@@ -231,7 +224,7 @@ BOOL DboxMain::OpenOnInit()
     rc2 = PWScore::SUCCESS;
 
     CGeneralMsgBox gmb;
-    cs_title.LoadString(IDS_RPTVALIDATE);
+    cs_title.LoadString(IDSC_RPTVALIDATE);
     cs_msg.LoadString(IDS_VALIDATE_ISSUES);
     gmb.SetTitle(cs_title);
     gmb.SetMsg(cs_msg);
@@ -255,21 +248,26 @@ BOOL DboxMain::OpenOnInit()
     SetDCAText();
   }
 
-  PostOpenProcessing();
+ 
 
   // Now get window sizes
   PWSprefs::GetInstance()->GetPrefRect(rect.top, rect.bottom, rect.left, rect.right);
 
-  HRGN hrgnWork = GetWorkAreaRegion();
-  // also check that window will be visible
-  if ((rect.top == -1 && rect.bottom == -1 && rect.left == -1 && rect.right == -1) ||
-    !RectInRegion(hrgnWork, rect)) {
+  HRGN hrgnWork = WinUtil::GetWorkAreaRegion();
+  
+  // Check if windows was maximized first, otherwise !RectInRegion() below always wins.
+  if (rect.top == 0 && rect.bottom == 0 && rect.left == 0 && rect.right == 0) {
+      ShowWindow(SW_SHOWMAXIMIZED);
+  } else if ((rect.top == -1 && rect.bottom == -1 && rect.left == -1 && rect.right == -1) ||
+      !RectInRegion(hrgnWork, rect)) { // also check that window will be visible
     GetWindowRect(&rect);
     SendMessage(WM_SIZE, SIZE_RESTORED, MAKEWPARAM(rect.Width(), rect.Height()));
   } else {
     PlaceWindow(this, &rect, SW_HIDE);
   }
   ::DeleteObject(hrgnWork);
+
+  PostOpenProcessing(); // Need to call this after window's positioned since UpdateForceAllowCaptureHandling() displays window
 
   bool bFileIsReadOnly;
   pws_os::FileExists(m_core.GetCurFile().c_str(), bFileIsReadOnly);
@@ -291,16 +289,25 @@ void DboxMain::OnNew()
   New();
 }
 
+static INT_PTR AskSaveDatabase(const StringX &curFile)
+{
+  CGeneralMsgBox gmb;
+  CString cs_temp;
+  cs_temp.Format(IDS_SAVEDATABASE, curFile.c_str());
+  std::vector<std::tuple<int, int>> tuples = {
+    std::make_tuple(IDNO, IDS_DISCARD),
+    std::make_tuple(IDCANCEL, IDS_CANCEL),
+    std::make_tuple(IDYES, IDS_SAVE)
+  };
+  return gmb.AfxMessageBox(cs_temp, AfxGetAppName(), tuples, 2, MB_ICONQUESTION);
+}
+
 int DboxMain::New()
 {
   INT_PTR rc, rc2;
 
   if (!m_core.IsReadOnly() && !m_bUserDeclinedSave && m_core.HasDBChanged()) {
-    CGeneralMsgBox gmb;
-    CString cs_temp;
-    cs_temp.Format(IDS_SAVEDATABASE, static_cast<LPCWSTR>(m_core.GetCurFile().c_str()));
-    rc = gmb.MessageBox(cs_temp, AfxGetAppName(),
-                             MB_YESNOCANCEL | MB_ICONQUESTION);
+    rc = AskSaveDatabase(m_core.GetCurFile());
     switch (rc) {
       case IDCANCEL:
         return PWScore::USER_CANCEL;
@@ -364,6 +371,7 @@ int DboxMain::New()
 
   UpdateMenuAndToolBar(true);
   UpdateStatusBar();
+  SetFindToolBar(PWSprefs::GetInstance()->GetPref(PWSprefs::FindToolBarActive));
 
   // Set timer for user-defined idle lockout, if selected (DB preference)
   KillTimer(TIMER_LOCKDBONIDLETIMEOUT);
@@ -387,7 +395,7 @@ int DboxMain::NewFile(StringX &newfilename)
   CString cf(MAKEINTRESOURCE(IDS_DEFDBNAME)); // reasonable default for first time user
   std::wstring newFileName = PWSUtil::GetNewFileName(LPCWSTR(cf), DEFAULT_SUFFIX);
   std::wstring dir;
-  if (m_core.GetCurFile().empty())
+  if (!m_core.IsDbOpen())
     dir = PWSdirs::GetSafeDir();
   else {
     std::wstring cdrive, cdir, dontCare;
@@ -414,13 +422,6 @@ int DboxMain::NewFile(StringX &newfilename)
 
     rc = fd.DoModal();
 
-    if (m_inExit) {
-      // If U3ExitNow called while in CPWFileDialog,
-      // PostQuitMessage makes us return here instead
-      // of exiting the app. Try resignalling
-      PostQuitMessage(0);
-      return PWScore::USER_CANCEL;
-    }
     if (rc == IDOK) {
       newfilename = LPCWSTR(fd.GetPathName());
       break;
@@ -556,7 +557,7 @@ int DboxMain::Close(const bool bTrySave)
   m_titlebar = L"Password Safe";
   SetWindowText(LPCWSTR(m_titlebar));
   m_lastclipboardaction = L"";
-  m_ilastaction = 0;
+  m_ilastaction.Clear();
   UpdateStatusBar();
 
   m_StatusBar.SetFileStatus(false, false);
@@ -574,6 +575,14 @@ int DboxMain::Close(const bool bTrySave)
 
   // Update Minidump user streams
   app.SetMinidumpUserStreams(m_bOpen, !IsDBReadOnly());
+
+  // No database is open or locked, revert pwsafe DB preferences to defaults.
+  prefs->SetDatabasePrefsToDefaults(false);
+  prefs->SetDatabasePrefsToDefaults(true);
+
+  // Since this main pwsafe window is already active, revert to default for
+  // ExcludeFromScreenCapture. New dialogs/windows will use the DB default.
+  UpdateForceAllowCaptureHandling();
 
   return PWScore::SUCCESS;
 }
@@ -633,7 +642,7 @@ int DboxMain::Open(const UINT uiTitle)
   StringX sx_Filename;
   CString cs_text(MAKEINTRESOURCE(uiTitle));
   std::wstring DBpath, cdrive, cdir, dontCare;
-  if (m_core.GetCurFile().empty()) {
+  if (!m_core.IsDbOpen()) {
     // Can't use same directory as currently open DB as there isn't one.
     // Attempt to get path from last opened database from MRU
     // If valid and accessible, use it, if not valid or not accessible use
@@ -692,14 +701,6 @@ int DboxMain::Open(const UINT uiTitle)
       fd.m_ofn.lpstrInitialDir = DBpath.c_str();
 
     INT_PTR rc2 = fd.DoModal();
-
-    if (m_inExit) {
-      // If U3ExitNow called while in CPWFileDialog,
-      // PostQuitMessage makes us return here instead
-      // of exiting the app. Try resignalling
-      PostQuitMessage(0);
-      return PWScore::USER_CANCEL;
-    }
 
     const bool last_ro = m_core.IsReadOnly(); // restore if user cancels
     m_core.SetReadOnly(m_bDBInitiallyRO || fd.GetReadOnlyPref() == TRUE);
@@ -877,7 +878,7 @@ int DboxMain::Open(const StringX &sx_Filename, const bool bReadOnly,  const bool
   if (rc == PWScore::OK_WITH_VALIDATION_ERRORS) {
     rc = PWScore::SUCCESS;
 
-    cs_title.LoadString(IDS_RPTVALIDATE);
+    cs_title.LoadString(IDSC_RPTVALIDATE);
     cs_msg.LoadString(IDS_VALIDATE_ISSUES);
     gmb.SetTitle(cs_title);
     gmb.SetMsg(cs_msg);
@@ -905,7 +906,7 @@ exit:
 void DboxMain::PostOpenProcessing()
 {
   PWS_LOGIT;
-
+  
   // Force prior format versions to be read-only
   if (m_core.GetReadFileVersion() < PWSfile::VCURRENT) {
     m_core.SetReadOnly(true);
@@ -941,7 +942,9 @@ void DboxMain::PostOpenProcessing()
   UpdateSystemTray(UNLOCKED);
   UpdateMenuAndToolBar(true); // sets m_bOpen too...
   UpdateToolBarROStatus(m_core.IsReadOnly());
+  UpdateToolBarDoUndo(); // BR1466
   UpdateStatusBar();
+  SetFindToolBar(PWSprefs::GetInstance()->GetPref(PWSprefs::FindToolBarActive));
 
   CheckExpireList(true);
   TellUserAboutExpiredPasswords();
@@ -972,6 +975,8 @@ void DboxMain::PostOpenProcessing()
   m_iListHBarPos = m_iTreeHBarPos = 0;
   m_ctlItemList.Scroll(CSize(SB_HORZ, 0));
   m_ctlItemTree.SetScrollPos(SB_HORZ, 0);
+
+  UpdateForceAllowCaptureHandling();
 }
 
 int DboxMain::CheckEmergencyBackupFiles(StringX sx_Filename, StringX &passkey)
@@ -1112,7 +1117,7 @@ int DboxMain::Save(const SaveType savetype)
   PWS_LOGIT_ARGS("savetype=%d", savetype);
 
   int rc;
-  CString cs_msg, cs_temp;
+  CString cs_msg, cs_msg0;
   CGeneralMsgBox gmb;
   std::wstring NewName;
   std::wstring bu_fname; // used to undo backup if save failed
@@ -1148,13 +1153,14 @@ int DboxMain::Save(const SaveType savetype)
         if (dwResult == 0 || dwResult > (MAX_PATH + 1)) {
           CGeneralMsgBox gmbx;
           CString cs_msgx, cs_titlex(MAKEINTRESOURCE(IDS_EXPANDPATH));
-          cs_msg.Format(IDS_CANT_EXPANDPATH, static_cast<LPCWSTR>(userBackupDir.c_str()));
+          cs_msgx.Format(IDS_CANT_EXPANDPATH, static_cast<LPCWSTR>(userBackupDir.c_str()));
           gmbx.MessageBox(cs_msgx, cs_titlex, MB_OK | MB_ICONEXCLAMATION);
 
           gmb.AfxMessageBox(IDS_NOIBACKUP, MB_OK);
           return PWScore::USER_CANCEL;
         } else {
           userBackupDir = wsExpandedPath;
+          cs_msg0.Format(IDS_NOIBACKUP, userBackupDir.c_str()); // prepare error message, just in case...
         }
 
         if (!m_core.BackupCurFile(maxNumIncBackups, backupSuffix,
@@ -1162,8 +1168,7 @@ int DboxMain::Save(const SaveType savetype)
           switch (savetype) {
             case ST_NORMALEXIT:
             {
-              cs_temp.LoadString(IDS_NOIBACKUP);
-              cs_msg.Format(IDS_NOIBACKUP2, static_cast<LPCWSTR>(cs_temp));
+              cs_msg.Format(IDS_NOIBACKUP2, static_cast<LPCWSTR>(cs_msg0));
               gmb.SetTitle(IDS_FILEWRITEERROR);
               gmb.SetMsg(cs_msg);
               gmb.SetStandardIcon(MB_ICONEXCLAMATION);
@@ -1178,8 +1183,7 @@ int DboxMain::Save(const SaveType savetype)
 
             case ST_SAVEIMMEDIATELY:
             {
-              cs_temp.LoadString(IDS_NOIBACKUP);
-              cs_msg.Format(IDS_NOIBACKUP3, static_cast<LPCWSTR>(cs_temp));
+              cs_msg.Format(IDS_NOIBACKUP3, static_cast<LPCWSTR>(cs_msg0));
               gmb.SetTitle(IDS_FILEWRITEERROR);
               gmb.SetMsg(cs_msg);
               gmb.SetStandardIcon(MB_ICONEXCLAMATION);
@@ -1193,13 +1197,15 @@ int DboxMain::Save(const SaveType savetype)
             case ST_INVALID:
               // No particular end of PWS exit i.e. user clicked Save or
               // saving a changed database before opening another
-              gmb.AfxMessageBox(IDS_NOIBACKUP, MB_OK);
+              gmb.AfxMessageBox(cs_msg0, MB_OK);
               return PWScore::USER_CANCEL;
 
-            default:
-              break;
+            case ST_ENDSESSIONEXIT:
+            case ST_FAILSAFESAVE:
+            case ST_WTSLOGOFFEXIT:
+            // User isn't prompted in any of these, so we just fail silently. Not much else we can do...
+              return PWScore::USER_CANCEL;
           }
-          gmb.AfxMessageBox(IDS_NOIBACKUP, MB_OK);
           return SaveAs();
         } // BackupCurFile failed
       } // BackupBeforeEverySave
@@ -1332,10 +1338,8 @@ int DboxMain::SaveIfChanged()
   if (m_core.HasDBChanged()) {
     CGeneralMsgBox gmb;
     INT_PTR rc, rc2;
-    CString cs_temp;
-    cs_temp.Format(IDS_SAVEDATABASE, static_cast<LPCWSTR>(m_core.GetCurFile().c_str()));
-    rc = gmb.MessageBox(cs_temp, AfxGetAppName(),
-                            MB_YESNOCANCEL | MB_ICONQUESTION);
+
+    rc = AskSaveDatabase(m_core.GetCurFile());
     switch (rc) {
       case IDCANCEL:
         return PWScore::USER_CANCEL;
@@ -1414,7 +1418,7 @@ int DboxMain::SaveAs()
                 current_version == PWSfile::V40 ? V4_SUFFIX : V3_SUFFIX);
 
   std::wstring dir;
-  if (m_core.GetCurFile().empty())
+  if (!m_core.IsDbOpen())
     dir = PWSdirs::GetSafeDir();
   else {
     std::wstring cdrive, cdir, dontCare;
@@ -1430,7 +1434,7 @@ int DboxMain::SaveAs()
                         OFN_LONGNAMES | OFN_OVERWRITEPROMPT,
                         CString(MAKEINTRESOURCE(current_version == PWSfile::V40 ? IDS_FDF_V4_ALL : IDS_FDF_V3_ALL)),
                      this);
-    if (m_core.GetCurFile().empty())
+    if (!m_core.IsDbOpen())
       cs_text.LoadString(IDS_NEWNAME1);
     else
       cs_text.LoadString(IDS_NEWNAME2);
@@ -1442,13 +1446,6 @@ int DboxMain::SaveAs()
 
     rc = fd.DoModal();
 
-    if (m_inExit) {
-      // If U3ExitNow called while in CPWFileDialog,
-      // PostQuitMessage makes us return here instead
-      // of exiting the app. Try resignalling
-      PostQuitMessage(0);
-      return PWScore::USER_CANCEL;
-    }
     if (rc == IDOK) {
       newfile = fd.GetPathName();
       break;
@@ -1606,7 +1603,7 @@ void DboxMain::OnExportVx(UINT nID)
   cs_text.LoadString(IDS_NAMEEXPORTFILE);
 
   std::wstring dir;
-  if (m_core.GetCurFile().empty())
+  if (!m_core.IsDbOpen())
     dir = PWSdirs::GetSafeDir();
   else {
     std::wstring cdrive, cdir, dontCare;
@@ -1630,13 +1627,6 @@ void DboxMain::OnExportVx(UINT nID)
 
     rc = fd.DoModal();
 
-    if (m_inExit) {
-      // If U3ExitNow called while in CPWFileDialog,
-      // PostQuitMessage makes us return here instead
-      // of exiting the app. Try resignalling
-      PostQuitMessage(0);
-      return;
-    }
     if (rc == IDOK) {
       newfile = fd.GetPathName();
       break;
@@ -1703,10 +1693,9 @@ int DboxMain::DoExportDB(const StringX &sx_Filename, const UINT nID,
   CString cs_temp;
   std::vector<StringX> vEmptyGroups;
   std::vector<pws_os::CUUID> vuuidAddedBases;
-
   std::wstring str_text;
-  LoadAString(str_text, IDS_RPTEXPORTDB);
-  prpt->StartReport(str_text.c_str(), m_core.GetCurFile().c_str());
+
+  prpt->StartReport(IDSC_RPTEXPORTDB, m_core.GetCurFile().c_str());
   LoadAString(str_text, IDS_EXDB);
   cs_temp.Format(IDS_EXPORTFILE, static_cast<LPCWSTR>(str_text.c_str()),
                  static_cast<LPCWSTR>(sx_Filename.c_str()));
@@ -1778,7 +1767,7 @@ int DboxMain::DoExportDB(const StringX &sx_Filename, const UINT nID,
     for (size_t i = 0; i < vuuidAddedBases.size(); i++) {
       ItemListIter iter = Find(vuuidAddedBases[i]);
       StringX sx_exported;
-      Format(sx_exported, GROUPTITLEUSERINCHEVRONS,
+      Format(sx_exported, PWScore::GROUPTITLEUSERINCHEVRONS,
         iter->second.GetGroup().c_str(), iter->second.GetTitle().c_str(), iter->second.GetUser().c_str());
       prpt->WriteLine(sx_exported.c_str(), true);
     }
@@ -1873,10 +1862,9 @@ int DboxMain::DoExportText(const StringX &sx_Filename, const UINT nID,
   const std::wstring subgroup_name = bAdvanced ? pst_ADV->subgroup_name : L"";
   const int subgroup_object = bAdvanced ? pst_ADV->subgroup_object : CItemData::GROUP;
   const int subgroup_function = bAdvanced ? pst_ADV->subgroup_function : 0;
-
   std::wstring str_text;
-  LoadAString(str_text, IDS_RPTEXPORTTEXT);
-  prpt->StartReport(str_text.c_str(), m_core.GetCurFile().c_str());
+
+  prpt->StartReport(IDSC_RPTEXPORTTEXT, m_core.GetCurFile().c_str());
   LoadAString(str_text, IDS_TEXT);
   cs_temp.Format(IDS_EXPORTFILE, static_cast<LPCWSTR>(str_text.c_str()),
                  static_cast<LPCWSTR>(sx_Filename.c_str()));
@@ -2014,10 +2002,9 @@ int DboxMain::DoExportXML(const StringX &sx_Filename, const UINT nID,
   const int subgroup_object = bAdvanced ? pst_ADV->subgroup_object : CItemData::GROUP;
   const int subgroup_function = bAdvanced ? pst_ADV->subgroup_function : 0;
   std::wstring exportgroup(L"");
-
   std::wstring str_text;
-  LoadAString(str_text, IDS_RPTEXPORTXML);
-  prpt->StartReport(str_text.c_str(), m_core.GetCurFile().c_str());
+
+  prpt->StartReport(IDSC_RPTEXPORTXML, m_core.GetCurFile().c_str());
   LoadAString(str_text, IDS_XML);
   cs_temp.Format(IDS_EXPORTFILE, static_cast<LPCWSTR>(str_text.c_str()),
                  static_cast<LPCWSTR>(sx_Filename.c_str()));
@@ -2319,7 +2306,7 @@ void DboxMain::OnImportText()
   CString cs_text;
 
   std::wstring dir;
-  if (m_core.GetCurFile().empty())
+  if (!m_core.IsDbOpen())
     dir = PWSdirs::GetSafeDir();
   else {
     std::wstring cdrive, cdir, dontCare;
@@ -2342,14 +2329,6 @@ void DboxMain::OnImportText()
 
   INT_PTR rc = fd.DoModal();
 
-  if (m_inExit) {
-    // If U3ExitNow called while in CPWFileDialog,
-    // PostQuitMessage makes us return here instead
-    // of exiting the app. Try resignalling
-    PostQuitMessage(0);
-    return;
-  }
-
   if (rc == IDOK) {
     bool bWasEmpty = m_core.GetNumEntries() == 0;
     std::wstring strError;
@@ -2362,8 +2341,8 @@ void DboxMain::OnImportText()
     // Create report as we go
     CReport rpt;
     std::wstring str_text;
-    LoadAString(str_text, IDS_RPTIMPORTTEXT);
-    rpt.StartReport(str_text.c_str(), m_core.GetCurFile().c_str());
+
+    rpt.StartReport(IDSC_RPTIMPORTTEXT, m_core.GetCurFile().c_str());
     LoadAString(str_text, IDS_TEXT);
     cs_temp.Format(IDS_IMPORTFILE, static_cast<LPCWSTR>(str_text.c_str()),
                    static_cast<LPCWSTR>(TxtFileName.c_str()));
@@ -2481,7 +2460,7 @@ void DboxMain::OnImportKeePassV1CSV()
   CString cs_title, cs_msg;
   cs_title.LoadString(IDS_PICKKEEPASSFILE);
   std::wstring dir;
-  if (m_core.GetCurFile().empty())
+  if (!m_core.IsDbOpen())
     dir = PWSdirs::GetSafeDir();
   else {
     std::wstring cdrive, cdir, dontCare;
@@ -2503,14 +2482,6 @@ void DboxMain::OnImportKeePassV1CSV()
 
   INT_PTR rc = fd.DoModal();
 
-  if (m_inExit) {
-    // If U3ExitNow called while in CPWFileDialog,
-    // PostQuitMessage makes us return here instead
-    // of exiting the app. Try resignalling
-    PostQuitMessage(0);
-    return;
-  }
-
   if (rc == IDOK) {
     CGeneralMsgBox gmb;
     bool bWasEmpty = m_core.GetNumEntries() == 0;
@@ -2521,8 +2492,8 @@ void DboxMain::OnImportKeePassV1CSV()
     // Create report as we go
     CReport rpt;
     std::wstring str_text;
-    LoadAString(str_text, IDS_RPTIMPORTKPV1CSV);
-    rpt.StartReport(str_text.c_str(), m_core.GetCurFile().c_str());
+
+    rpt.StartReport(IDSC_RPTIMPORTKPV1CSV, m_core.GetCurFile().c_str());
     LoadAString(str_text, IDS_TEXT);
     cs_msg.Format(IDS_IMPORTFILE, static_cast<LPCWSTR>(str_text.c_str()),
                   static_cast<LPCWSTR>(KPsFileName.c_str()));
@@ -2596,7 +2567,7 @@ void DboxMain::OnImportKeePassV1TXT()
   CString cs_title, cs_msg;
   cs_title.LoadString(IDS_PICKKEEPASSFILE);
   std::wstring dir;
-  if (m_core.GetCurFile().empty())
+  if (!m_core.IsDbOpen())
     dir = PWSdirs::GetSafeDir();
   else {
     std::wstring cdrive, cdir, dontCare;
@@ -2618,14 +2589,6 @@ void DboxMain::OnImportKeePassV1TXT()
 
   INT_PTR rc = fd.DoModal();
 
-  if (m_inExit) {
-    // If U3ExitNow called while in CPWFileDialog,
-    // PostQuitMessage makes us return here instead
-    // of exiting the app. Try resignalling
-    PostQuitMessage(0);
-    return;
-  }
-
   if (rc == IDOK) {
     CGeneralMsgBox gmb;
     bool bWasEmpty = m_core.GetNumEntries() == 0;
@@ -2636,8 +2599,8 @@ void DboxMain::OnImportKeePassV1TXT()
     // Create report as we go
     CReport rpt;
     std::wstring str_text;
-    LoadAString(str_text, IDS_RPTIMPORTKPV1TXT);
-    rpt.StartReport(str_text.c_str(), m_core.GetCurFile().c_str());
+
+    rpt.StartReport(IDSC_RPTIMPORTKPV1TXT, m_core.GetCurFile().c_str());
     LoadAString(str_text, IDS_TEXT);
     cs_msg.Format(IDS_IMPORTFILE, static_cast<LPCWSTR>(str_text.c_str()),
                   static_cast<LPCWSTR>(KPsFileName.c_str()));
@@ -2740,7 +2703,7 @@ void DboxMain::OnImportXML()
 
   std::wstring ImportedPrefix(dlg.m_groupName);
   std::wstring dir;
-  if (m_core.GetCurFile().empty())
+  if (!m_core.IsDbOpen())
     dir = PWSdirs::GetSafeDir();
   else {
     std::wstring cdrive, cdir, dontCare;
@@ -2762,14 +2725,6 @@ void DboxMain::OnImportXML()
 
   INT_PTR rc = fd.DoModal();
 
-  if (m_inExit) {
-    // If U3ExitNow called while in CPWFileDialog,
-    // PostQuitMessage makes us return here instead
-    // of exiting the app. Try resignalling
-    PostQuitMessage(0);
-    return;
-  }
-
   if (rc == IDOK) {
     bool bWasEmpty = m_core.GetNumEntries() == 0;
     std::wstring strXMLErrors, strSkippedList, strPWHErrorList, strRenameList;
@@ -2784,8 +2739,8 @@ void DboxMain::OnImportXML()
     // Create report as we go
     CReport rpt;
     std::wstring str_text;
-    LoadAString(str_text, IDS_RPTIMPORTXML);
-    rpt.StartReport(str_text.c_str(), m_core.GetCurFile().c_str());
+
+    rpt.StartReport(IDSC_RPTIMPORTXML, m_core.GetCurFile().c_str());
     LoadAString(str_text, IDS_XML);
     cs_temp.Format(IDS_IMPORTFILE, static_cast<LPCWSTR>(str_text.c_str()),
                    static_cast<LPCWSTR>(XMLFilename));
@@ -2825,7 +2780,7 @@ void DboxMain::OnImportXML()
         }
 
         if (!strXMLErrors.empty() ||
-            numRenamed > 0 || numPWHErrors > 0) {
+            numRenamed > 0 || numPWHErrors > 0 || numSkipped > 0) {
           if (!strXMLErrors.empty())
             csErrors = strXMLErrors + L"\n";
 
@@ -3001,7 +2956,7 @@ bool DboxMain::ChangeMode(bool promptUser)
     // Taken from GetAndCheckPassword.
     // We don't want all the other processing that GetAndCheckPassword does
     CPasskeyEntry PasskeyEntryDlg(this, m_core.GetCurFile().c_str(),
-      GCP_CHANGEMODE, true, false, false, true);
+      GCP_CHANGEMODE, true, false, false, true, false);
 
     INT_PTR rc = PasskeyEntryDlg.DoModal();
     if (rc != IDOK)
@@ -3115,7 +3070,7 @@ void DboxMain::OnChangeMode()
 
 void DboxMain::OnCompare()
 {
-  if (m_core.GetCurFile().empty() || m_core.GetNumEntries() == 0) {
+  if (!m_core.IsDbOpen() || m_core.GetNumEntries() == 0) {
     CGeneralMsgBox gmb;
     gmb.AfxMessageBox(IDS_NOCOMPAREFILE, MB_OK | MB_ICONWARNING);
     return;
@@ -3163,7 +3118,7 @@ void DboxMain::OnMerge()
 void DboxMain::OnSynchronize()
 {
   // disable in read-only mode or empty
-  if (m_core.IsReadOnly() || m_core.GetCurFile().empty() || m_core.GetNumEntries() == 0)
+  if (m_core.IsReadOnly() || !m_core.IsDbOpen() || m_core.GetNumEntries() == 0)
     return;
 
   CWZPropertySheet wizard(ID_MENUITEM_SYNCHRONIZE,
@@ -3212,8 +3167,8 @@ std::wstring DboxMain::DoMerge(PWScore *pothercore,
 
   // Create report as we go
   std::wstring str_text;
-  LoadAString(str_text, IDS_RPTMERGE);
-  prpt->StartReport(str_text.c_str(), m_core.GetCurFile().c_str());
+
+  prpt->StartReport(IDSC_RPTMERGE, m_core.GetCurFile().c_str());
   cs_temp.Format(IDS_MERGINGDATABASE, static_cast<LPCWSTR>(pothercore->GetCurFile().c_str()));
   prpt->WriteLine((LPCWSTR)cs_temp);
   prpt->WriteLine();
@@ -3270,9 +3225,8 @@ bool DboxMain::DoCompare(PWScore *pothercore,
   m_list_Identical.clear();
 
   // Create report as we go
-  std::wstring str_text;
-  LoadAString(str_text, IDS_RPTCOMPARE);
-  prpt->StartReport(str_text.c_str(), static_cast<LPCWSTR>(m_core.GetCurFile().c_str()));
+
+  prpt->StartReport(IDSC_RPTCOMPARE, static_cast<LPCWSTR>(m_core.GetCurFile().c_str()));
   cs_temp.Format(IDS_COMPARINGDATABASE, static_cast<LPCWSTR>(pothercore->GetCurFile().c_str()));
   prpt->WriteLine((LPCWSTR)cs_temp);
   prpt->WriteLine();
@@ -3357,7 +3311,7 @@ bool DboxMain::DoCompare(PWScore *pothercore,
     return false;
   }
 
-  cs_buffer.Format(IDS_COMPARESTATISTICS,
+  cs_buffer.Format(IDSC_COMPARESTATISTICS,
                    static_cast<LPCWSTR>(m_core.GetCurFile().c_str()),
                    static_cast<LPCWSTR>(pothercore->GetCurFile().c_str()));
 
@@ -3483,9 +3437,7 @@ void DboxMain::DoSynchronize(PWScore *pothercore,
   }
 
   // Create report as we go
-  std::wstring str_text;
-  LoadAString(str_text, IDS_RPTSYNCH);
-  prpt->StartReport(str_text.c_str(), m_core.GetCurFile().c_str());
+  prpt->StartReport(IDSC_RPTSYNCH, m_core.GetCurFile().c_str());
   str_temp.Format(IDS_SYNCHINGDATABASE, static_cast<LPCWSTR>(pothercore->GetCurFile().c_str()));
   prpt->WriteLine((LPCWSTR)str_temp);
   prpt->WriteLine();
@@ -3620,6 +3572,11 @@ LRESULT DboxMain::OnDroppedFile(WPARAM /* wParam */, LPARAM /* lParam */)
   return 0;
 }
 
+LRESULT DboxMain::OnInvokeUiThread(WPARAM wParam, LPARAM /* lParam */)
+{
+  return OnHandleInvokeMessage(wParam);
+}
+
 LRESULT DboxMain::ViewCompareResult(PWScore *pcore, const CUUID &entryUUID)
 {
   ItemListIter pos = pcore->Find(entryUUID);
@@ -3659,6 +3616,7 @@ LRESULT DboxMain::CopyCompareResult(PWScore *pfromcore, PWScore *ptocore,
 {
   // This is always from Comparison DB to Current DB
   bool bWasEmpty = ptocore->GetNumEntries() == 0;
+  CUUID baseUUID = CUUID::NullUUID();
 
   // Copy *pfromcore entry -> *ptocore entry
   ItemListIter fromPos = pfromcore->Find(fromUUID);
@@ -3677,6 +3635,24 @@ LRESULT DboxMain::CopyCompareResult(PWScore *pfromcore, PWScore *ptocore,
   }
 
   MultiCommands *pmulticmds = MultiCommands::Create(&m_core);
+
+  // Are we copying a dependent entry? If so, need to handle the base first
+  if (ci_temp.IsDependent()) {
+    baseUUID = ci_temp.GetBaseUUID();
+    if (ptocore->Find(baseUUID) == ptocore->GetEntryEndIter()) {
+      // do we have an entry with the same group/title/user in the target core?
+      const CItemData &ci_base(pfromcore->Find(baseUUID)->second);
+      auto to_baseIter = ptocore->Find(ci_base.GetGroup(), ci_base.GetTitle(), ci_base.GetUser());
+      if (to_baseIter != ptocore->GetEntryEndIter()) {
+        baseUUID = to_baseIter->second.GetUUID();
+      } else {
+        // no matching base entry, we'll have to add it ourselves
+        pmulticmds->Add(AddEntryCommand::Create(ptocore, ci_base));
+      }
+    } else {
+      // easy case, base is already in target core.
+    }
+  }
 
   // Check policy names
   // Don't really need the map and vector as only copying 1 entry
@@ -3716,7 +3692,7 @@ LRESULT DboxMain::CopyCompareResult(PWScore *pfromcore, PWScore *ptocore,
       ci_temp.SetKBShortcut(0);
     }
     ci_temp.SetStatus(CItemData::ES_ADDED);
-    pmulticmds->Add(AddEntryCommand::Create(ptocore, ci_temp));
+    pmulticmds->Add(AddEntryCommand::Create(ptocore, ci_temp, baseUUID));
   }
 
   // Do it
@@ -4006,23 +3982,6 @@ void DboxMain::OnOK()
   }
 }
 
-void RelativizePath(std::wstring &curfile)
-{
-  // If  IsUnderPw2go() && exec's drive == curfile's drive, remove
-  // from latter's path. This supports DoK usage
-  if (SysInfo::IsUnderPw2go()) {
-    const std::wstring execDir = pws_os::getexecdir();
-    std::wstring execDrive, dontCare;
-    pws_os::splitpath(execDir, execDrive, dontCare, dontCare, dontCare);
-    std::wstring fileDrive, fileDir, fileFile, fileExt;
-    pws_os::splitpath(curfile, fileDrive, fileDir, fileFile, fileExt);
-    ToUpper(fileDrive); ToUpper(execDrive);
-    if (fileDrive == execDrive) {
-      curfile = pws_os::makepath(L"", fileDir, fileFile, fileExt);
-    }
-  }
-}
-
 void DboxMain::SavePreferencesOnExit()
 {
   PWS_LOGIT;
@@ -4054,8 +4013,10 @@ void DboxMain::SavePreferencesOnExit()
     _itow_s(m_nColumnWidthByIndex[iIndex], widths, 8, 10);
     cs_columns += wc_buffer;
     cs_columnswidths += widths;
-    cs_columns += L",";
-    cs_columnswidths += L",";
+    if (iOrder != (m_nColumns - 1)) { // don't put comma after last values
+      cs_columns += L",";
+      cs_columnswidths += L",";
+    }
   }
 
   prefs->SetPref(PWSprefs::SortedColumn, m_iTypeSortColumn);
@@ -4076,9 +4037,9 @@ void DboxMain::SavePreferencesOnExit()
     // Naughty Windows saves information in the registry for every Open and Save!
     RegistryAnonymity();
   } else
-    if (!m_core.GetCurFile().empty()) {
+    if (m_core.IsDbOpen()) {
       std::wstring curFile = m_core.GetCurFile().c_str();
-      RelativizePath(curFile);
+      WinUtil::RelativizePath(curFile);
       prefs->SetPref(PWSprefs::CurrentFile, curFile.c_str());
     }
   // Now save the Find Toolbar display status
@@ -4193,10 +4154,8 @@ int DboxMain::SaveDatabaseOnExit(const SaveType saveType)
   return PWScore::SUCCESS;
 }
 
-void DboxMain::CleanUpAndExit(const bool bNormalExit)
+void DboxMain::CleanUpAndExit()
 {
-  PWS_LOGIT_ARGS("bNormalExit=%s", bNormalExit ? L"true" : L"false");
-
   // Clear clipboard on Exit?  Yes if:
   // a. the app is minimized and the systemtray is enabled
   // b. the user has set the "ClearClipboardOnExit" pref
@@ -4207,30 +4166,25 @@ void DboxMain::CleanUpAndExit(const bool bNormalExit)
     ClearClipboardData();
   }
 
+  m_core.SafeUnlockCurFile();
+
   // Reset core and clear ALL associated data
   m_core.ReInit();
 
   // Clear application data
   ClearAppData();
 
-  // Cleanup here - doesn't work in ~DboxMain or ~CCoolMenuManager
-  m_menuManager.Cleanup();
-
   // Clear out filters
   m_MapAllFilters.clear();
 
-  if (m_pTrayIcon != NULL) {
+  if (m_pTrayIcon != nullptr) {
     m_pTrayIcon->DestroyWindow();
     delete m_pTrayIcon;
+    m_pTrayIcon = nullptr;
   }
 
-  // If we are called normally, then exit gracefully. If not, force the issue
-  // after the caller has processed the current message by posting another message
-  // for later (PostQuitMessage).
-  if (bNormalExit)
-    CDialog::OnOK();
-  else
-    PostQuitMessage(0);
+  DestroyWindow();
+  PostQuitMessage(0);
 }
 
 void DboxMain::OnCancel()
@@ -4334,23 +4288,23 @@ void DboxMain::ReportAdvancedOptions(CReport *pRpt, const bool bAdvanced, const 
   UINT uimsgftn(0);
   switch (type) {
     case WZAdvanced::COMPARE:
-      uimsgftn = IDS_RPTCOMPARE;
+      uimsgftn = IDSC_RPTCOMPARE;
       break;
     case WZAdvanced::MERGE:
-      uimsgftn = IDS_RPTMERGE;
+      uimsgftn = IDSC_RPTMERGE;
       break;
     case WZAdvanced::SYNCH:
-      uimsgftn = IDS_RPTSYNCH;
+      uimsgftn = IDSC_RPTSYNCH;
       break;
     case WZAdvanced::EXPORT_TEXT:
     case WZAdvanced::EXPORT_ENTRYTEXT:
     case WZAdvanced::EXPORT_GROUPTEXT:
-      uimsgftn = IDS_RPTEXPORTTEXT;
+      uimsgftn = IDSC_RPTEXPORTTEXT;
       break;
     case WZAdvanced::EXPORT_XML:
     case WZAdvanced::EXPORT_ENTRYXML:
     case WZAdvanced::EXPORT_GROUPXML:
-      uimsgftn = IDS_RPTEXPORTXML;
+      uimsgftn = IDSC_RPTEXPORTXML;
       break;
     default:
       ASSERT(0);
@@ -4421,12 +4375,12 @@ void DboxMain::ReportAdvancedOptions(CReport *pRpt, const bool bAdvanced, const 
 
     cs_buffer = L"\t";
     // Non-time fields
-    int ifields[] = {CItemData::PASSWORD, CItemData::NOTES, CItemData::URL,
+    int ifields[] = {CItemData::PASSWORD, CItemData::TWOFACTORKEY, CItemData::NOTES, CItemData::URL,
                      CItemData::AUTOTYPE, CItemData::PWHIST, CItemData::POLICY,
                      CItemData::RUNCMD, CItemData::DCA, CItemData::SHIFTDCA, CItemData::EMAIL,
                      CItemData::PROTECTED, CItemData::SYMBOLS, CItemData::POLICYNAME,
                      CItemData::KBSHORTCUT, CItemData::ATTREF};
-    UINT uimsgids[] = {IDS_COMPPASSWORD, IDS_COMPNOTES, IDS_COMPURL,
+    UINT uimsgids[] = {IDS_COMPPASSWORD, IDS_COMPTWOFACTORKEY, IDS_COMPNOTES, IDS_COMPURL,
                        IDS_COMPAUTOTYPE, IDS_COMPPWHISTORY, IDS_COMPPWPOLICY,
                        IDS_COMPRUNCOMMAND, IDS_COMPDCA, IDS_COMPSHIFTDCA, IDS_COMPEMAIL,
                        IDS_COMPPROTECTED, IDS_COMPSYMBOLS, IDS_COMPPOLICYNAME,

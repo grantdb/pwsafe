@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -28,6 +28,11 @@ struct pw_entry {
   StringX title;
   StringX username;
   StringX password;
+  StringX twofactorkey;
+  StringX totpconfig;
+  StringX totpstarttime;
+  StringX totptimestep;
+  StringX totplength;
   StringX url;
   StringX autotype;
   StringX ctime;
@@ -68,6 +73,8 @@ class XMLFileHandlers
   friend class MFileXMLProcessor;
 #elif USE_XML_LIBRARY == XERCES
   friend class XFileXMLProcessor;
+#else
+  friend class PFileXMLProcessor;
 #endif
 
 public:

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -9,7 +9,6 @@
 //
 
 #include "stdafx.h"
-#include "passwordsafe.h"
 
 #include "DboxMain.h"
 
@@ -19,7 +18,6 @@
 #include "Fonts.h"
 
 #include "core/core.h"
-#include "core/PwsPlatform.h"
 #include "core/ItemData.h"
 #include "core/PWSprefs.h"
 #include "core/PWCharPool.h"
@@ -68,9 +66,9 @@ CAddEdit_PasswordPolicy::CAddEdit_PasswordPolicy(CWnd *pParent,
   SetVariablesFromPolicy();
 
   // Save current status
-  for (int i = 0; i < N_HEX_LENGTHS; i++) {
+  for (auto i = 0; i < N_HEX_LENGTHS; i++) {
     m_save_visible[i] = true;
-    BOOL bEnable(FALSE);
+    auto bEnable(FALSE);
     switch (i) {
       case 0:  // IDC_MINLOWERLENGTH
         bEnable = m_pwuselowercase;
@@ -116,7 +114,7 @@ void CAddEdit_PasswordPolicy::DoDataExchange(CDataExchange* pDX)
   DDX_Check(pDX, IDC_USEHEXDIGITS, m_pwusehexdigits);
   DDX_Check(pDX, IDC_PRONOUNCEABLE, m_pwmakepronounceable);
 
-  DDX_Control(pDX, IDC_OWNSYMBOLS, (CEdit&)m_symbols);
+  DDX_Control(pDX, IDC_OWNSYMBOLS, static_cast<CEdit&>(m_symbols));
   
   DDX_Control(pDX, IDC_POLICYLIST, m_cbxPolicyNames);
   //}}AFX_DATA_MAP
@@ -168,10 +166,10 @@ BOOL CAddEdit_PasswordPolicy::PreTranslateMessage(MSG *pMsg)
 // Following is also in PasswordPolicDlg.cpp. Move to common mixin?
 static void setupBuddy(CWnd *p, int spinid, int id, int &length, PWSprefs::IntPrefs iPref)
 {
-  const int minValue = PWSprefs::GetInstance()->GetPrefMinVal(iPref);
-  const int maxValue = PWSprefs::GetInstance()->GetPrefMaxVal(iPref);
+  const auto minValue = PWSprefs::GetInstance()->GetPrefMinVal(iPref);
+  const auto maxValue = PWSprefs::GetInstance()->GetPrefMaxVal(iPref);
 
-  CSpinButtonCtrl *pspin = (CSpinButtonCtrl *)p->GetDlgItem(spinid);
+  auto pspin = static_cast<CSpinButtonCtrl*>(p->GetDlgItem(spinid));
   pspin->SetBuddy(p->GetDlgItem(id));
   pspin->SetRange32(minValue, maxValue);
   pspin->SetBase(10);
@@ -183,8 +181,8 @@ BOOL CAddEdit_PasswordPolicy::OnInitDialog()
   CAddEdit_PropertyPage::OnInitDialog();
 
   // Get Add/Edit font
-  Fonts *pFonts = Fonts::GetInstance();
-  CFont *pFont = pFonts->GetAddEditFont();
+  auto *pFonts = Fonts::GetInstance();
+  auto *pFont = pFonts->GetAddEditFont();
 
   // Change font size of the user supplied symbol fields
   m_symbols.SetFont(pFont);
@@ -202,12 +200,12 @@ BOOL CAddEdit_PasswordPolicy::OnInitDialog()
   m_cbxPolicyNames.AddString(cs_text);
 
   // Add the rest (if any)
-  for (std::vector<std::wstring>::iterator iter = vNames.begin();
+  for (auto iter = vNames.begin();
        iter != vNames.end(); ++iter) {
     m_cbxPolicyNames.AddString(iter->c_str());
   }
 
-  int index(0);
+  auto index(0);
   if (M_ipolicy() == NAMED_POLICY && !M_policyname().IsEmpty() && !vNames.empty()) {
     index = m_cbxPolicyNames.FindStringExact(-1, M_policyname());
     if (index == CB_ERR)
@@ -232,7 +230,7 @@ BOOL CAddEdit_PasswordPolicy::OnInitDialog()
   if (M_ipolicy() == NAMED_POLICY) {
     if (index != 0) {
       PWPolicy st_pp;
-      GetMainDlg()->GetPolicyFromName(StringX((LPCWSTR)M_policyname()), st_pp);
+      GetMainDlg()->GetPolicyFromName(StringX(static_cast<LPCWSTR>(M_policyname())), st_pp);
       M_pwp() = st_pp;
       M_symbols() = st_pp.symbols;
     } else {
@@ -296,7 +294,7 @@ bool CAddEdit_PasswordPolicy::ValidatePolicy(CWnd *&pFocus)
     return true;
 
   CGeneralMsgBox gmb;
-  pFocus = NULL; // caller should set focus to this if non-null
+  pFocus = nullptr; // caller should set focus to this if non-null
   // Check that options, as set, are valid.
 
   // Hex is tricky: if user selected it, then other checkboxes are
@@ -349,12 +347,12 @@ BOOL CAddEdit_PasswordPolicy::OnKillActive()
   if (UpdateData(TRUE) == FALSE)
     return FALSE;
 
-  CWnd *pFocus(NULL);
+  CWnd *pFocus(nullptr);
 
   if (ValidatePolicy(pFocus)) {
     SetPolicyFromVariables();
   } else {
-    if (pFocus != NULL)
+    if (pFocus != nullptr)
       pFocus->SetFocus();
     return FALSE;
   }
@@ -398,7 +396,7 @@ BOOL CAddEdit_PasswordPolicy::OnApply()
     return FALSE; //CAddEdit_PropertyPage::OnApply();
 
   UpdateData(TRUE);
-  CWnd *pFocus(NULL);
+  CWnd *pFocus(nullptr);
 
   if (M_ipolicy() == DEFAULT_POLICY) {
     return CAddEdit_PropertyPage::OnApply();
@@ -409,10 +407,10 @@ BOOL CAddEdit_PasswordPolicy::OnApply()
     return CAddEdit_PropertyPage::OnApply();
   } else {
     // Are we the current page? If not activate this page
-    if (m_ae_psh->GetActivePage() != (CAddEdit_PropertyPage *)this)
+    if (m_ae_psh->GetActivePage() != static_cast<CAddEdit_PropertyPage*>(this))
       m_ae_psh->SetActivePage(this);
 
-    if (pFocus != NULL)
+    if (pFocus != nullptr)
       pFocus->SetFocus();
     return FALSE;
   }
@@ -434,7 +432,7 @@ void CAddEdit_PasswordPolicy::do_hex(const bool bHex)
 
     // Disable lengths
     for (i = 0; i < N_HEX_LENGTHS; i++) {
-      UINT id = nonHexLengths[i];
+      auto id = nonHexLengths[i];
       m_save_enabled[i][1] = GetDlgItem(id)->IsWindowEnabled();
       GetDlgItem(id)->EnableWindow(FALSE);
       GetDlgItem(nonHexLengthSpins[i])->EnableWindow(FALSE);
@@ -453,15 +451,15 @@ void CAddEdit_PasswordPolicy::do_hex(const bool bHex)
 
     // Restore lengths
     for (i = 0; i < N_HEX_LENGTHS; i++) {
-      UINT id = nonHexLengths[i];
+      auto id = nonHexLengths[i];
       GetDlgItem(id)->EnableWindow(m_save_enabled[i][1]);
       GetDlgItem(nonHexLengthSpins[i])->EnableWindow(m_save_enabled[i][1]);
       GetDlgItem(LenTxts[i * 2])->EnableWindow(m_save_enabled[i][1]);
       GetDlgItem(LenTxts[i * 2 + 1])->EnableWindow(m_save_enabled[i][1]);
     }
 
-    BOOL bEnable = (IsDlgButtonChecked(IDC_USESYMBOLS) == BST_CHECKED &&
-                   m_pweasyvision == FALSE && m_pwmakepronounceable == FALSE) ? TRUE : FALSE;
+    auto bEnable = (IsDlgButtonChecked(IDC_USESYMBOLS) == BST_CHECKED &&
+                     m_pweasyvision == FALSE && m_pwmakepronounceable == FALSE) ? TRUE : FALSE;
     GetDlgItem(IDC_RESET_SYMBOLS)->EnableWindow(bEnable);
     GetDlgItem(IDC_OWNSYMBOLS)->EnableWindow(bEnable == TRUE);
   }
@@ -515,8 +513,8 @@ void CAddEdit_PasswordPolicy::do_useX(UseX x)
 
   m_ae_psh->SetChanged(true);
 
-  BOOL bEnable = (IsDlgButtonChecked(controls[x].cb) == BST_CHECKED &&
-                  m_pwmakepronounceable == FALSE) ? TRUE : FALSE;
+  auto bEnable = (IsDlgButtonChecked(controls[x].cb) == BST_CHECKED &&
+                   m_pwmakepronounceable == FALSE) ? TRUE : FALSE;
 
   GetDlgItem(controls[x].edit)->EnableWindow(bEnable);
   GetDlgItem(controls[x].spin)->EnableWindow(bEnable);
@@ -566,7 +564,7 @@ void CAddEdit_PasswordPolicy::OnEasyVision()
   m_ae_psh->SetChanged(true);
 
   if (m_pweasyvision && m_pwmakepronounceable) {
-    ((CButton*)GetDlgItem(IDC_EASYVISION))->SetCheck(FALSE);
+    static_cast<CButton*>(GetDlgItem(IDC_EASYVISION))->SetCheck(FALSE);
     gmb.AfxMessageBox(IDS_PROVISMUTUALLYEXCL);
     m_pweasyvision = FALSE;
   }
@@ -582,7 +580,7 @@ void CAddEdit_PasswordPolicy::OnMakePronounceable()
   m_ae_psh->SetChanged(true);
 
   if (m_pweasyvision && m_pwmakepronounceable) {
-    ((CButton*)GetDlgItem(IDC_PRONOUNCEABLE))->SetCheck(FALSE);
+    static_cast<CButton*>(GetDlgItem(IDC_PRONOUNCEABLE))->SetCheck(FALSE);
     gmb.AfxMessageBox(IDS_PROVISMUTUALLYEXCL);
     m_pwmakepronounceable = FALSE;
   }
@@ -598,12 +596,12 @@ void CAddEdit_PasswordPolicy::OnOwnSymbolsChanged()
 
   UpdateData(TRUE);
 
-  bool bIsSymbolsChanged = false;
+  auto bIsSymbolsChanged = false;
 
   CString cs_symbols;
   m_symbols.GetWindowText(cs_symbols);
 
-  std::wstring oldstr = (LPCWSTR)M_symbols();
+  std::wstring oldstr = static_cast<LPCWSTR>(M_symbols());
   std::wstring newstr = cs_symbols;
 
   // First check lengths the same
@@ -630,7 +628,7 @@ void CAddEdit_PasswordPolicy::OnSelectNamedPolicy()
   m_cbxPolicyNames.EnableWindow(TRUE);
   m_policy_radibtn = 0;
 
-  int index = m_cbxPolicyNames.GetCurSel();
+  auto index = m_cbxPolicyNames.GetCurSel();
   M_ipolicy() = index == 0 ? DEFAULT_POLICY : NAMED_POLICY;
   if (index != 0 && index != CB_ERR) {
     CString cs_text;
@@ -670,26 +668,25 @@ void CAddEdit_PasswordPolicy::OnSetSpecificPWPolicy()
 
 void CAddEdit_PasswordPolicy::SetPolicyControls()
 {
-  BOOL bEnableSpecificPolicy(FALSE);
-  bool bEnableLengths(false);
-  int iShowLengths(SW_SHOW);
+  auto bEnableSpecificPolicy(FALSE);
+  auto bEnableLengths(false);
+  auto iShowLengths(SW_SHOW);
 
   if (M_uicaller() == IDS_ADDENTRY || 
      (M_uicaller() == IDS_EDITENTRY && M_protected() == 0)) {
     bEnableSpecificPolicy = (M_ipolicy() == SPECIFIC_POLICY) ? TRUE : FALSE;
     bEnableLengths = ((bEnableSpecificPolicy == TRUE) &&
-                      (m_pweasyvision == FALSE && m_pwmakepronounceable == FALSE &&
+                      (m_pwmakepronounceable == FALSE &&
                        m_pwusehexdigits == FALSE));
-    iShowLengths = (m_pweasyvision == TRUE || m_pwmakepronounceable == TRUE) ? 
-                       SW_HIDE : SW_SHOW;
+    iShowLengths = m_pwmakepronounceable == TRUE ? SW_HIDE : SW_SHOW;
   }
 
   GetDlgItem(IDC_DEFPWLENGTH)->EnableWindow(bEnableSpecificPolicy);
   GetDlgItem(IDC_PWLENSPIN)->EnableWindow(bEnableSpecificPolicy);
 
   // Deal with lengths
-  for (int i = 0; i < N_HEX_LENGTHS; i++) {
-    BOOL bEnable(FALSE);
+  for (auto i = 0; i < N_HEX_LENGTHS; i++) {
+    auto bEnable(FALSE);
     switch (i) {
       case 0:  // IDC_MINLOWERLENGTH
         bEnable = bEnableLengths ? m_pwuselowercase : FALSE;
@@ -749,46 +746,51 @@ void CAddEdit_PasswordPolicy::SetPolicyFromVariables()
       break;
     case NAMED_POLICY:
       break;
-    case SPECIFIC_POLICY:
+    case SPECIFIC_POLICY: {
       M_pwp().Empty();
       // Since in Hex, the checkboxes for non-hex characters can still be
       // checked but the checkbox is disabled, we have to check both
       if (m_pwuselowercase == TRUE &&
-          (GetDlgItem(IDC_USELOWERCASE)->IsWindowEnabled() == TRUE))
+        (GetDlgItem(IDC_USELOWERCASE)->IsWindowEnabled() == TRUE))
         M_pwp().flags |= PWPolicy::UseLowercase;
       if (m_pwuseuppercase == TRUE &&
-          (GetDlgItem(IDC_USEUPPERCASE)->IsWindowEnabled() == TRUE))
+        (GetDlgItem(IDC_USEUPPERCASE)->IsWindowEnabled() == TRUE))
         M_pwp().flags |= PWPolicy::UseUppercase;
       if (m_pwusedigits == TRUE &&
-          (GetDlgItem(IDC_USEDIGITS)->IsWindowEnabled() == TRUE))
+        (GetDlgItem(IDC_USEDIGITS)->IsWindowEnabled() == TRUE))
         M_pwp().flags |= PWPolicy::UseDigits;
       if (m_pwusesymbols == TRUE &&
-          (GetDlgItem(IDC_USESYMBOLS)->IsWindowEnabled() == TRUE))
+        (GetDlgItem(IDC_USESYMBOLS)->IsWindowEnabled() == TRUE))
         M_pwp().flags |= PWPolicy::UseSymbols;
       if (m_pwusehexdigits == TRUE &&
-          (GetDlgItem(IDC_USEHEXDIGITS)->IsWindowEnabled() == TRUE))
+        (GetDlgItem(IDC_USEHEXDIGITS)->IsWindowEnabled() == TRUE))
         M_pwp().flags |= PWPolicy::UseHexDigits;
       if (m_pweasyvision == TRUE &&
-          (GetDlgItem(IDC_EASYVISION)->IsWindowEnabled() == TRUE))
+        (GetDlgItem(IDC_EASYVISION)->IsWindowEnabled() == TRUE))
         M_pwp().flags |= PWPolicy::UseEasyVision;
       if (m_pwmakepronounceable == TRUE &&
-          (GetDlgItem(IDC_PRONOUNCEABLE)->IsWindowEnabled() == TRUE))
+        (GetDlgItem(IDC_PRONOUNCEABLE)->IsWindowEnabled() == TRUE))
         M_pwp().flags |= PWPolicy::MakePronounceable;
 
-      M_pwp().length = (int)m_pwdefaultlength;
-      M_pwp().digitminlength = (int)m_pwdigitminlength;
-      M_pwp().lowerminlength = (int)m_pwlowerminlength;
-      M_pwp().symbolminlength = (int)m_pwsymbolminlength;
-      M_pwp().upperminlength = (int)m_pwupperminlength;
+      M_pwp().length = static_cast<int>(m_pwdefaultlength);
+      M_pwp().digitminlength = static_cast<int>(m_pwdigitminlength);
+      M_pwp().lowerminlength = static_cast<int>(m_pwlowerminlength);
+      M_pwp().symbolminlength = static_cast<int>(m_pwsymbolminlength);
+      M_pwp().upperminlength = static_cast<int>(m_pwupperminlength);
 
       CString cs_symbols;
       m_symbols.GetWindowText(cs_symbols);
       if (m_pwusesymbols == TRUE && !cs_symbols.IsEmpty()) {
         M_iownsymbols() = OWN_SYMBOLS;
         M_symbols() = CSecString(cs_symbols);
-      } else {
+      }
+      else {
         M_iownsymbols() = DEFAULT_SYMBOLS;
       }
+    }
+      break;
+    default:
+      ASSERT(0);
       break;
   }
 }
@@ -860,7 +862,7 @@ void CAddEdit_PasswordPolicy::OnNamesComboChanged()
 
   if (index != 0) {
     PWPolicy st_pp;
-    GetMainDlg()->GetPolicyFromName(StringX((LPCWSTR)cs_policyname), st_pp);
+    GetMainDlg()->GetPolicyFromName(StringX(static_cast<LPCWSTR>(cs_policyname)), st_pp);
     M_pwp() = st_pp;
     M_symbols() = st_pp.symbols;
 

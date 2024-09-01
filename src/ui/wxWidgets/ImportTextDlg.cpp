@@ -1,10 +1,14 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
  * http://www.opensource.org/licenses/artistic-license-2.0.php
  */
+
+/** \file ImportTextDlg.cpp
+* 
+*/
 
 #include <wx/wxprec.h>
 
@@ -12,7 +16,9 @@
 #include <wx/wx.h>
 #endif
 
-#include "ImportTextDlg.h"
+#ifdef __WXMSW__
+#include <wx/msw/msvcrt.h>
+#endif
 
 /*
 #include <wx/sizer.h>
@@ -25,35 +31,34 @@
 #include <wx/grid.h>
 #include <wx/wx.h>
 */
+#include <wx/display.h>
+#include <wx/filepicker.h>
+#include <wx/gbsizer.h>
 #include <wx/spinctrl.h>
 #include <wx/statline.h>
-#include <wx/display.h>
-#include <wx/wfstream.h>
 #include <wx/txtstrm.h>
-#include <wx/gbsizer.h>
-#include "../../core/StringX.h"
-#include "./wxutils.h"
-#include "../../core/PwsPlatform.h"
+#include <wx/wfstream.h>
 #include <wx/valgen.h>
-#include <wx/filepicker.h>
-#include "../../os/file.h"
-#include "./OpenFilePickerValidator.h"
 
-#ifdef __WXMSW__
-#include <wx/msw/msvcrt.h>
-#endif
+#include "core/StringX.h"
+#include "os/file.h"
 
-IMPLEMENT_CLASS( CImportTextDlg, wxDialog )
+#include "ImportTextDlg.h"
+#include "OpenFilePickerValidator.h"
+#include "wxUtilities.h"
 
-BEGIN_EVENT_TABLE( CImportTextDlg, wxDialog )
+IMPLEMENT_CLASS( ImportTextDlg, wxDialog )
+
+BEGIN_EVENT_TABLE( ImportTextDlg, wxDialog )
 END_EVENT_TABLE()
 
-CImportTextDlg::CImportTextDlg(wxWindow* parent) :  wxDialog(parent,
+ImportTextDlg::ImportTextDlg(wxWindow *parent, const wxString& filename) :  wxDialog(parent,
                                                             wxID_ANY,
                                                             _("Import Text Settings"),
                                                             wxDefaultPosition,
                                                             wxDefaultSize,
                                                             wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER),
+                                                    filepath(filename),
                                                     delimiterComma(false),
                                                     delimiterSpace(false),
                                                     delimiterTab(true), //this is the pwsafe's default for export
@@ -63,17 +68,20 @@ CImportTextDlg::CImportTextDlg(wxWindow* parent) :  wxDialog(parent,
                                                     importUnderGroup(false),
                                                     importPasswordsOnly(false)
 {
+  wxASSERT(!parent || parent->IsTopLevel());
+
   //since the controls aren't direct children of the dialog but instead are
   //parented by wxCollipsiblePane, we need to validate recursively
-  SetExtraStyle(wxWS_EX_VALIDATE_RECURSIVELY);
+  SetExtraStyle(GetExtraStyle() | wxWS_EX_VALIDATE_RECURSIVELY);
   CreateControls();
 }
 
-CImportTextDlg::~CImportTextDlg()
+ImportTextDlg* ImportTextDlg::Create(wxWindow *parent, const wxString& filename)
 {
+  return new ImportTextDlg(parent, filename);
 }
-
-wxCollapsiblePane* CImportTextDlg::CreateImportOptionsPane(wxBoxSizer* dlgSizer)
+                                                                  
+wxCollapsiblePane* ImportTextDlg::CreateImportOptionsPane(wxBoxSizer* dlgSizer)
 {
   const wxSizerFlags Left = wxSizerFlags().Proportion(0).Border(wxLEFT, SideMargin);
 
@@ -99,12 +107,12 @@ wxCollapsiblePane* CImportTextDlg::CreateImportOptionsPane(wxBoxSizer* dlgSizer)
   return pane;
 }
 
-wxBoxSizer* CImportTextDlg::CreateVerticalButtonSizer(long flags)
+wxBoxSizer* ImportTextDlg::CreateVerticalButtonSizer(long flags)
 {
   wxBoxSizer* box = new wxBoxSizer(wxVERTICAL);
   box->AddSpacer(TopMargin);
 
-  long buttons[] = {wxID_OK, wxID_CANCEL, wxID_HELP};
+  wxWindowID buttons[] = {wxID_OK, wxID_CANCEL, wxID_HELP};
   for (size_t idx = 0; idx < NumberOf(buttons); ++idx) {
     if ((flags & buttons[idx]) == buttons[idx]){
       box->Add(new wxButton(this, buttons[idx]));
@@ -117,26 +125,26 @@ wxBoxSizer* CImportTextDlg::CreateVerticalButtonSizer(long flags)
   return box;
 }
 
-wxCheckBox* CImportTextDlg::CheckBox(wxWindow* parent, const wxString& label, bool* validatorTarget)
+wxCheckBox* ImportTextDlg::CheckBox(wxWindow* parent, const wxString& label, bool* validatorTarget)
 {
   return new wxCheckBox(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, 0,
                           wxGenericValidator(validatorTarget));
 }
 
-wxRadioButton* CImportTextDlg::RadioButton(wxWindow* parent, const wxString& label, bool* validatorTarget,
+wxRadioButton* ImportTextDlg::RadioButton(wxWindow* parent, const wxString& label, bool* validatorTarget,
                                           int flags /*= 0*/)
 {
   return new wxRadioButton(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, flags,
                             wxGenericValidator(validatorTarget));
 }
 
-wxTextCtrl* CImportTextDlg::TextCtrl(wxWindow* parent, wxString* validatorTarget)
+wxTextCtrl* ImportTextDlg::TextCtrl(wxWindow* parent, wxString* validatorTarget)
 {
   return new wxTextCtrl(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0,
                                   wxTextValidator(wxFILTER_NONE, validatorTarget));
 }
 
-wxCollapsiblePane* CImportTextDlg::CreateParsingOptionsPane(wxBoxSizer* dlgSizer)
+wxCollapsiblePane* ImportTextDlg::CreateParsingOptionsPane(wxBoxSizer* dlgSizer)
 {
   const wxSizerFlags Left = wxSizerFlags().Proportion(0).Border(wxLEFT, SideMargin);
 
@@ -167,7 +175,7 @@ wxCollapsiblePane* CImportTextDlg::CreateParsingOptionsPane(wxBoxSizer* dlgSizer
   return pane;
 }
 
-void CImportTextDlg::CreateControls()
+void ImportTextDlg::CreateControls()
 {
   const wxSizerFlags Left = wxSizerFlags().Proportion(0).Border(wxLEFT, SideMargin).Expand();
 
@@ -176,13 +184,13 @@ void CImportTextDlg::CreateControls()
   wxBoxSizer* dlgSizer = new wxBoxSizer(wxVERTICAL);
   dlgSizer->AddSpacer(TopMargin);  //add a margin at the top
 
-  wxString strPrompt(_("Select a text file to import:"));
+  wxString strPrompt(_("Import text file:"));
   wxString  wildCards(_("Text files (*.txt)|*.txt|CSV files (*.csv)|*.csv|All files (*.*; *)|*.*; *"));
 
   dlgSizer->Add(new wxStaticText(this, wxID_ANY, strPrompt), Left);
   dlgSizer->AddSpacer(RowSeparation);
-  COpenFilePickerValidator validator(filepath);
-  dlgSizer->Add(new wxFilePickerCtrl(this, wxID_ANY, wxEmptyString,
+  OpenFilePickerValidator validator(filepath);
+  dlgSizer->Add(new wxFilePickerCtrl(this, wxID_ANY, filepath,
                                           strPrompt, wildCards,
                                           wxDefaultPosition, wxDefaultSize,
                                           wxFLP_DEFAULT_STYLE | wxFLP_USE_TEXTCTRL,
@@ -206,7 +214,7 @@ void CImportTextDlg::CreateControls()
   SetSizerAndFit(mainSizer);
 }
 
-TCHAR CImportTextDlg::FieldSeparator() const
+TCHAR ImportTextDlg::FieldSeparator() const
 {
   if (delimiterComma)
     return wxT(',');

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -7,8 +7,6 @@
 */
 
 #include "XMLDefs.h"    // Required if testing "USE_XML_LIBRARY"
-
-#ifdef USE_XML_LIBRARY
 
 #include "XMLFileValidation.h"
 #include "XMLFileHandlers.h"
@@ -26,8 +24,6 @@
 #include "os/UUID.h"
 
 #include <algorithm>
-
-extern const TCHAR *GROUPTITLEUSERINCHEVRONS;
 
 using namespace std;
 using pws_os::CUUID;
@@ -107,6 +103,11 @@ bool XMLFileHandlers::ProcessStartElement(const int icurrent_element)
       m_cur_entry->title = _T("");
       m_cur_entry->username = _T("");
       m_cur_entry->password = _T("");
+      m_cur_entry->twofactorkey = _T("");
+      m_cur_entry->totpconfig = _T("");
+      m_cur_entry->totpstarttime = _T("");
+      m_cur_entry->totptimestep = _T("");
+      m_cur_entry->totplength = _T("");
       m_cur_entry->url = _T("");
       m_cur_entry->autotype = _T("");
       m_cur_entry->ctime = _T("");
@@ -285,6 +286,9 @@ void XMLFileHandlers::ProcessEndElement(const int icurrent_element)
     case XLE_PREF_COPYPASSWORDWHENBROWSETOURL:
       bpref = PWSprefs::CopyPasswordWhenBrowseToURL;
       break;
+    case XLE_PREF_EXCLUDEFROMSCREENCAPTURE:
+      bpref = PWSprefs::ExcludeFromScreenCapture;
+      break;
     // Integer DB preferences
     case XLE_PREF_PWDEFAULTLENGTH:
       if (m_bPolicyBeingProcessed)
@@ -418,6 +422,21 @@ void XMLFileHandlers::ProcessEndElement(const int icurrent_element)
         }
       }
       break;
+    case XLE_TWOFACTORKEY:
+      m_cur_entry->twofactorkey = m_sxElemContent;
+      break;
+    case XLE_TOTPCONFIG:
+      m_cur_entry->totpconfig = m_sxElemContent;
+      break;
+    case XLE_TOTPSTARTTIME:
+      m_cur_entry->totpstarttime = m_sxElemContent;
+      break;
+    case XLE_TOTPTIMESTEP:
+      m_cur_entry->totptimestep = m_sxElemContent;
+      break;
+    case XLE_TOTPLENGTH:
+      m_cur_entry->totplength = m_sxElemContent;
+      break;
     case XLE_CTIMEX:
       m_cur_entry->ctime = m_sxElemContent;
       break;
@@ -481,7 +500,7 @@ void XMLFileHandlers::ProcessEndElement(const int icurrent_element)
       break;
     case XLE_HISTORY_ENTRY:
       ASSERT(m_cur_pwhistory_entry != nullptr);
-      Format(buffer, _T("\xff%s\xff%04x\xff%s"),
+      Format(buffer, _T("\xff%ls\xff%04x\xff%ls"),
              m_cur_pwhistory_entry->changed.c_str(),
              m_cur_pwhistory_entry->oldpassword.length(),
              m_cur_pwhistory_entry->oldpassword.c_str());
@@ -648,7 +667,7 @@ void XMLFileHandlers::AddXMLEntries()
         cs_p = CItemData::EngFieldName(CItemData::PASSWORD);
       }
 
-      Format(cs_tp, _T("%s%s%s"), cs_t.c_str(), num == 2 ? _T(" & ") : _T(""), cs_p.c_str());
+      Format(cs_tp, _T("%ls%ls%ls"), cs_t.c_str(), num == 2 ? _T(" & ") : _T(""), cs_p.c_str());
       stringT::iterator new_end = std::remove(cs_tp.begin(), cs_tp.end(), TCHAR('\t'));
       cs_tp.erase(new_end, cs_tp.end());
 
@@ -761,6 +780,23 @@ void XMLFileHandlers::AddXMLEntries()
 
     if (!cur_entry->password.empty())
       ci_temp.SetPassword(cur_entry->password);
+
+    if (!cur_entry->twofactorkey.empty()) {
+
+      ci_temp.SetTwoFactorKey(cur_entry->twofactorkey);
+
+      if (!cur_entry->totpconfig.empty())
+        ci_temp.SetTotpConfig(cur_entry->totpconfig);
+
+      if (!cur_entry->totpstarttime.empty())
+        ci_temp.SetTotpStartTime(cur_entry->totpstarttime);
+
+      if (!cur_entry->totptimestep.empty())
+        ci_temp.SetTotpTimeStep(cur_entry->totptimestep);
+
+      if (!cur_entry->totplength.empty())
+        ci_temp.SetTotpLength(cur_entry->totplength);
+    }
 
     EmptyIfOnlyWhiteSpace(cur_entry->url);
     if (!cur_entry->url.empty())
@@ -914,7 +950,7 @@ void XMLFileHandlers::AddXMLEntries()
 
     StringX sxImportedEntry;
     // Use new group if the entries have been imported under a new level.
-    Format(sxImportedEntry, GROUPTITLEUSERINCHEVRONS,
+    Format(sxImportedEntry, PWScore::GROUPTITLEUSERINCHEVRONS,
                         sxnewgroup.c_str(), cur_entry->title.c_str(),
                         cur_entry->username.c_str());
     m_prpt->WriteLine(sxImportedEntry.c_str());
@@ -940,7 +976,7 @@ void XMLFileHandlers::AddXMLEntries()
 
         // Tell the user via the report
         StringX sxExistingEntry;
-        Format(sxExistingEntry, GROUPTITLEUSERINCHEVRONS,
+        Format(sxExistingEntry, PWScore::GROUPTITLEUSERINCHEVRONS,
                            iter->second.GetGroup().c_str(), iter->second.GetTitle().c_str(),
                            iter->second.GetUser().c_str());
 
@@ -1037,5 +1073,3 @@ void XMLFileHandlers::AddDBPreferences()
   // Copy over preferences from XML input to this DB (only if DB was empty before import)
   PWSprefs::GetInstance()->UpdateFromCopyPrefs(PWSprefs::ptDatabase);
 }
-
-#endif /* USE_XML_LIBRARY */

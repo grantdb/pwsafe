@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -46,9 +46,78 @@ TEST_F(CommandsTest, AddItem)
 
   core.Undo();
   EXPECT_FALSE(core.HasDBChanged());
-  EXPECT_EQ(0, core.GetNumEntries());
+  EXPECT_EQ(0U, core.GetNumEntries());
 
   // Get core to delete any existing commands
+  core.ClearCommands();
+}
+
+TEST_F(CommandsTest, DeleteEntry)
+{
+  PWScore core;
+  CItemData ci;
+  ci.CreateUUID();
+  ci.SetTitle(L"blue rabbit");
+  ci.SetPassword(L"notagain");
+  auto addcmd = AddEntryCommand::Create(&core, ci);
+  core.Execute(addcmd);
+
+  auto delcmd = DeleteEntryCommand::Create(&core, ci);
+  core.Execute(delcmd);
+  EXPECT_EQ(0U, core.GetNumEntries());
+  core.Undo();
+  EXPECT_EQ(1U, core.GetNumEntries());
+    // Get core to delete any existing commands
+  core.ClearCommands();
+}
+
+TEST_F(CommandsTest,DeleteEntryWithAttachment)
+{
+  PWScore core;
+  CItemAtt ai;
+  pws_os::CUUID attUuid;
+  time_t cTime = 1665220859;
+  unsigned char content[122] = { 0xff, 0x00, 0xb4, 0x65, 0xfc, 0x91, 0xfb, 0xbf,
+                                0xe0, 0x8f, 0xea, 0x6b, 0xf9, 0x9f, 0xde, 0x1f,
+                                0x62, 0xd6, 0xbf, 0xe8, 0x2f, 0xfb, 0x2c, 0xff,
+                                0x00, 0xe0, 0xf3, 0xe1, 0xff, 0x00, 0xff, 0x00,
+                                0x1d, 0xa5, 0x5b, 0x2d, 0x67, 0xbe, 0xaf, 0xfb,
+                                0x2c, 0xff, 0x00, 0xe0, 0xf3, 0xc0, 0x1f, 0xfc,
+                                0x76, 0x8a, 0x29, 0x7f, 0x68, 0x4b, 0xf9, 0x23,
+                                0xf7, 0x7f, 0xc1, 0x1f, 0xd4, 0xd7, 0xf3, 0x3f,
+                                0xbc, 0x5f, 0xb1, 0x6b, 0x1f, 0xf4, 0x17, 0xfd,
+                                0x96, 0x7f, 0xf0, 0x79, 0xe0, 0x0f, 0xfe, 0x3b,
+                                0x47, 0xd8, 0xb5, 0x8f, 0xfa, 0x0b, 0xfe, 0xcb,
+                                0x3f, 0xf8, 0x3c, 0xf0, 0x07, 0xff, 0x00, 0x1d,
+                                0xa2, 0x8a, 0x3f, 0xb4, 0x25, 0xfc, 0x91, 0xfb,
+                                0xbf, 0xe0, 0x8b, 0xea, 0x6b, 0xf9, 0x9f, 0xde,
+                                0xb0, 0xf1, 0xa7, 0xef, 0xa6, 0xdb, 0xf3, 0x3f,
+                                0xff, 0xd9 };
+  ai.SetUUID(attUuid);
+  ai.SetTitle(L"magnum chocolate");
+  ai.SetCTime(cTime);
+  ai.SetContent(content, sizeof(content));
+
+  CItemData ci;
+  ci.CreateUUID();
+  ci.SetTitle(L"red osprey");
+  ci.SetPassword(L"sundown jelly");
+  ci.SetAttUUID(attUuid);
+
+
+  auto addcmd = AddEntryCommand::Create(&core, ci, pws_os::CUUID::NullUUID(), &ai);
+  core.Execute(addcmd);
+  EXPECT_EQ(1U, core.GetNumEntries());
+  EXPECT_EQ(1U, core.GetNumAtts());
+
+  auto delcmd = DeleteEntryCommand::Create(&core, ci);
+  core.Execute(delcmd);
+  EXPECT_EQ(0U, core.GetNumEntries());
+  EXPECT_EQ(0U, core.GetNumAtts());
+  core.Undo();
+  EXPECT_EQ(1U, core.GetNumEntries());
+  EXPECT_EQ(1U, core.GetNumAtts());
+    // Get core to delete any existing commands
   core.ClearCommands();
 }
 
@@ -76,7 +145,7 @@ TEST_F(CommandsTest, CreateShortcutEntry)
   pmulticmds->Add(AddEntryCommand::Create(&core, bi));
   pmulticmds->Add(AddEntryCommand::Create(&core, si, base_uuid));
   core.Execute(pmulticmds);
-  EXPECT_EQ(2, core.GetNumEntries());
+  EXPECT_EQ(2U, core.GetNumEntries());
   EXPECT_TRUE(core.HasDBChanged());
 
   // Check that the base entry is correctly marked
@@ -85,11 +154,11 @@ TEST_F(CommandsTest, CreateShortcutEntry)
   EXPECT_TRUE(core.GetEntry(iter).IsShortcutBase());
 
   core.Undo();
-  EXPECT_EQ(0, core.GetNumEntries());
+  EXPECT_EQ(0U, core.GetNumEntries());
   EXPECT_FALSE(core.HasDBChanged());
 
   core.Redo();
-  EXPECT_EQ(2, core.GetNumEntries());
+  EXPECT_EQ(2U, core.GetNumEntries());
   EXPECT_TRUE(core.HasDBChanged());
 
   // Delete base, expect both to be gone
@@ -98,11 +167,11 @@ TEST_F(CommandsTest, CreateShortcutEntry)
   DeleteEntryCommand *pcmd1 = DeleteEntryCommand::Create(&core, bi2);
 
   core.Execute(pcmd1);
-  EXPECT_EQ(0, core.GetNumEntries());
+  EXPECT_EQ(0U, core.GetNumEntries());
   EXPECT_TRUE(core.HasDBChanged());
 
   core.Undo();
-  EXPECT_EQ(2, core.GetNumEntries());
+  EXPECT_EQ(2U, core.GetNumEntries());
   EXPECT_TRUE(core.HasDBChanged());
 
   // Now just delete the shortcut, check that
@@ -111,7 +180,7 @@ TEST_F(CommandsTest, CreateShortcutEntry)
   DeleteEntryCommand *pcmd2 = DeleteEntryCommand::Create(&core, si2);
 
   core.Execute(pcmd2);
-  ASSERT_EQ(1, core.GetNumEntries());
+  ASSERT_EQ(1U, core.GetNumEntries());
   EXPECT_TRUE(core.GetEntry(core.Find(base_uuid)).IsNormal());
   EXPECT_TRUE(core.HasDBChanged());
 
@@ -150,12 +219,12 @@ TEST_F(CommandsTest, EditEntry)
   iter = core.Find(it.GetUUID());
   EXPECT_EQ(core.GetEntry(iter).GetTitle(), it.GetTitle());
   core.Undo();
-  EXPECT_EQ(core.GetNumEntries(), 0);
+  EXPECT_EQ(0U, core.GetNumEntries());
   EXPECT_FALSE(core.HasDBChanged());
 
   core.Redo();
   EXPECT_TRUE(core.HasDBChanged());
-  EXPECT_EQ(core.GetNumEntries(), 1);
+  EXPECT_EQ(1U, core.GetNumEntries());
 
   // Get core to delete any existing commands
   core.ClearCommands();
@@ -219,7 +288,7 @@ TEST_F(CommandsTest, CountGroups)
   core.Execute(pcmd);
 
   core.GetAllGroups(vGroups);
-  EXPECT_EQ(1, vGroups.size());
+  EXPECT_EQ(1U, vGroups.size());
 
   iter = core.Find(di.GetUUID());
   di = core.GetEntry(iter);
@@ -228,7 +297,7 @@ TEST_F(CommandsTest, CountGroups)
   core.Execute(pcmd);
 
   core.GetAllGroups(vGroups);
-  EXPECT_EQ(2, vGroups.size());
+  EXPECT_EQ(2U, vGroups.size());
 
   std::vector<StringX> eg;
   eg.push_back(L"e1");
@@ -236,7 +305,7 @@ TEST_F(CommandsTest, CountGroups)
   core.Execute(pcmd);
 
   core.GetAllGroups(vGroups);
-  EXPECT_EQ(3, vGroups.size());
+  EXPECT_EQ(3U, vGroups.size());
 
   // Get core to delete any existing commands
   core.ClearCommands();
@@ -245,8 +314,6 @@ TEST_F(CommandsTest, CountGroups)
 TEST_F(CommandsTest, UpdatePassword)
 {
   PWScore core;
-  size_t pwh_max, num_err;
-  PWHistList pwhl;
 
   const stringT fname(L"UpdPWTest.psafe3");
   const StringX passphrase(L"WhyAmIDoingThis?");
@@ -292,14 +359,15 @@ TEST_F(CommandsTest, UpdatePassword)
   EXPECT_EQ(it3.GetPassword(), sxNewPassword);
   ASSERT_FALSE(it3.IsExpired());
 
-  EXPECT_TRUE(CreatePWHistoryList(it3.GetPWHistory(), pwh_max, num_err,
-                                  pwhl, PWSUtil::TMC_ASC_UNKNOWN));
-
-  EXPECT_EQ(0, num_err);
-  EXPECT_EQ(3, pwh_max);
-  EXPECT_EQ(1, pwhl.size());
-  EXPECT_EQ(sxOldPassword, pwhl[0].password);
-  EXPECT_EQ(tPMtime, pwhl[0].changetttdate);
+  {
+    PWHistList pwhl(it3.GetPWHistory(), PWSUtil::TMC_ASC_UNKNOWN);
+    EXPECT_TRUE(pwhl.isSaving());
+    EXPECT_EQ(0U, pwhl.getErr());
+    EXPECT_EQ(3U, pwhl.getMax());
+    EXPECT_EQ(1U, pwhl.size());
+    EXPECT_EQ(sxOldPassword, pwhl[0].password);
+    EXPECT_EQ(tPMtime, pwhl[0].changetttdate);
+  }
 
   core.Undo();
   EXPECT_FALSE(core.HasDBChanged());
@@ -308,12 +376,13 @@ TEST_F(CommandsTest, UpdatePassword)
   CItemData it4(core.GetEntry(iter));
   EXPECT_EQ(it4.GetPassword(), sxOldPassword);
 
-  EXPECT_TRUE(CreatePWHistoryList(it4.GetPWHistory(), pwh_max, num_err,
-                                  pwhl, PWSUtil::TMC_ASC_UNKNOWN));
-
-  EXPECT_EQ(0, num_err);
-  EXPECT_EQ(3, pwh_max);
-  EXPECT_EQ(0, pwhl.size());
+  {
+    PWHistList pwhl(it4.GetPWHistory(), PWSUtil::TMC_ASC_UNKNOWN);
+    EXPECT_TRUE(pwhl.isSaving());
+    EXPECT_EQ(0U, pwhl.getErr());
+    EXPECT_EQ(3U, pwhl.getMax());
+    EXPECT_EQ(0U, pwhl.size());
+  }
 
   core.Redo();
   EXPECT_TRUE(core.HasDBChanged());
@@ -325,13 +394,15 @@ TEST_F(CommandsTest, UpdatePassword)
   // New password change time is that of when Redo is performed & not original time
   it5.GetPMTime(tPMtime);
 
-  EXPECT_TRUE(CreatePWHistoryList(it5.GetPWHistory(), pwh_max, num_err,
-                                  pwhl, PWSUtil::TMC_ASC_UNKNOWN));
-  EXPECT_EQ(0, num_err);
-  EXPECT_EQ(3, pwh_max);
-  EXPECT_EQ(1, pwhl.size());
-  EXPECT_EQ(sxOldPassword, pwhl[0].password);
-  EXPECT_EQ(tPMtime, pwhl[0].changetttdate);
+  {
+    PWHistList pwhl(it5.GetPWHistory(), PWSUtil::TMC_ASC_UNKNOWN);
+    EXPECT_TRUE(pwhl.isSaving());
+    EXPECT_EQ(0U, pwhl.getErr());
+    EXPECT_EQ(3U, pwhl.getMax());
+    EXPECT_EQ(1U, pwhl.size());
+    EXPECT_EQ(sxOldPassword, pwhl[0].password);
+    EXPECT_EQ(tPMtime, pwhl[0].changetttdate);
+  }
 
   // Get core to delete any existing commands
   core.ClearCommands();

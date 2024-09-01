@@ -32,3 +32,21 @@ dist:
 # Local variables:
 # mode: makefile
 # End:
+ifndef VER_SPECIAL
+VER_SPECIAL = macOS
+endif
+
+src/ui/wxWidgets/version.h: version.wx Misc/mkversion.pl src/ui/wxWidgets/version.in
+ifdef VER_REV
+	@Misc/mkversion.pl MAJOR=$(VER_MAJOR) MINOR=$(VER_MINOR) REV=$(VER_REV) SPECIAL=$(VER_SPECIAL) src/ui/wxWidgets/version.in $@
+else
+	@Misc/mkversion.pl MAJOR=$(VER_MAJOR) MINOR=$(VER_MINOR) SPECIAL=$(VER_SPECIAL) src/ui/wxWidgets/version.in $@
+endif
+
+Xcode/pwsafe.plist: version.wx Xcode/pwsafe-template.plist
+	@cp Xcode/pwsafe-template.plist $@
+ifdef VER_REV
+	@/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $(VER_MAJOR).$(VER_MINOR).$(VER_REV)" $@
+else
+	@/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $(VER_MAJOR).$(VER_MINOR)" $@
+endif

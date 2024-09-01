@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -16,12 +16,9 @@
 #include "PasskeyChangeDlg.h"
 #include "Fonts.h"
 
-#include "core/PwsPlatform.h"
 #include "core/PWScore.h"    // for error statuses from CheckPasskey()
-#include "core/PWCharPool.h" // for CheckPassword()
+#include "core/PWCharPool.h" // for CheckMasterPassword()
 #include "core/pwsprefs.h"
-
-#include "os/dir.h"
 
 #include "VirtualKeyboard/VKeyBoardDlg.h"
 
@@ -39,8 +36,9 @@ static char THIS_FILE[] = __FILE__;
 //-----------------------------------------------------------------------------
 CPasskeyChangeDlg::CPasskeyChangeDlg(CWnd* pParent)
   : CPKBaseDlg(CPasskeyChangeDlg::IDD, pParent),
-    m_LastFocus(IDC_PASSKEY), m_Yubi1pressed(false), m_Yubi2pressed(false),
-    m_oldpasskeyConfirmed(false), m_btnShowCombination(FALSE)
+  m_btnShowMasterPassword(FALSE),
+  m_LastFocus(IDC_PASSKEY), m_Yubi1pressed(false), m_Yubi2pressed(false),
+  m_oldpasskeyConfirmed(false)
 {
   m_newpasskey = L"";
   m_confirmnew = L"";
@@ -67,7 +65,7 @@ void CPasskeyChangeDlg::DoDataExchange(CDataExchange* pDX)
   DDX_Control(pDX, IDC_NEWPASSKEY, *m_pctlNewPasskey);
   DDX_Control(pDX, IDC_PASSKEY, *m_pctlPasskey);
 
-  DDX_Check(pDX, IDC_SHOWCOMBINATION, m_btnShowCombination);
+  DDX_Check(pDX, IDC_SHOWMASTERPASSWORD, m_btnShowMasterPassword);
 }
 
 BEGIN_MESSAGE_MAP(CPasskeyChangeDlg, CPKBaseDlg)
@@ -78,7 +76,7 @@ BEGIN_MESSAGE_MAP(CPasskeyChangeDlg, CPKBaseDlg)
   ON_BN_CLICKED(ID_HELP, OnHelp)
   ON_BN_CLICKED(IDC_YUBIKEY2_BTN, OnYubikey2Btn)
   ON_BN_CLICKED(IDC_YUBIKEY_BTN, OnYubikeyBtn)
-  ON_BN_CLICKED(IDC_SHOWCOMBINATION, OnShowCombination)
+  ON_BN_CLICKED(IDC_SHOWMASTERPASSWORD, OnShowMasterPassword)
 
   ON_EN_SETFOCUS(IDC_PASSKEY, OnPasskeySetfocus)
   ON_EN_SETFOCUS(IDC_NEWPASSKEY, OnNewPasskeySetfocus)
@@ -136,6 +134,10 @@ void CPasskeyChangeDlg::OnOK()
 
   UpdateData(TRUE);
   if (!m_oldpasskey.IsEmpty()) {
+    // We're here iff we went from a Yubi-protected passphrase to a regular passphrase
+    // In this case, we'll clear out the Yubi SK we keep in the header, which is no longer protected by the Yubikey hardware.
+    app.GetCore()->SetYubiSK(nullptr);
+
     m_passkey = m_oldpasskey; // old passkey is from Yubikey
   }
 
@@ -145,7 +147,7 @@ void CPasskeyChangeDlg::OnOK()
     gmb.AfxMessageBox(IDS_WRONGOLDPHRASE);
   else if (rc == PWScore::CANT_OPEN_FILE)
     gmb.AfxMessageBox(IDS_CANTVERIFY);
-  else if (m_btnShowCombination == FALSE && m_confirmnew != m_newpasskey)
+  else if (m_btnShowMasterPassword == FALSE && m_confirmnew != m_newpasskey)
     gmb.AfxMessageBox(IDS_NEWOLDDONOTMATCH);
   else if (m_newpasskey.IsEmpty())
     gmb.AfxMessageBox(IDS_CANNOTBEBLANK);
@@ -156,13 +158,17 @@ void CPasskeyChangeDlg::OnOK()
   // passphrases, then just define the preprocessor macro
   // PWS_FORCE_STRONG_PASSPHRASE in the build properties/Makefile
   // (also used in CPasskeySetup)
-  else if (!CPasswordCharPool::CheckPassword(m_newpasskey, errmess)) {
+  else if (!CPasswordCharPool::CheckMasterPassword(m_newpasskey, errmess)) {
     cs_msg.Format(IDS_WEAKPASSPHRASE, static_cast<LPCWSTR>(errmess.c_str()));
 
 #ifndef PWS_FORCE_STRONG_PASSPHRASE
     cs_text.LoadString(IDS_USEITANYWAY);
     cs_msg += cs_text;
-    rc = (int)gmb.AfxMessageBox(cs_msg, NULL, MB_YESNO | MB_ICONSTOP);
+    std::vector<std::tuple<int, int>> tuples = {
+      std::make_tuple(IDCANCEL, IDS_CANCEL),
+      std::make_tuple(IDYES, IDS_USEANYWAY)
+    };
+    rc = (int)gmb.AfxMessageBox(cs_msg, nullptr, tuples, 0, MB_ICONSTOP);
     if (rc == IDYES)
       CPKBaseDlg::OnOK();
 #else
@@ -200,14 +206,14 @@ void CPasskeyChangeDlg::OnConfirmNewSetfocus()
   m_LastFocus = IDC_CONFIRMNEW;
 }
 
-void CPasskeyChangeDlg::OnShowCombination()
+void CPasskeyChangeDlg::OnShowMasterPassword()
 {
   UpdateData(TRUE);
 
-  m_pctlPasskey->SetSecure(m_btnShowCombination == TRUE ? FALSE : TRUE);
-  m_pctlNewPasskey->SetSecure(m_btnShowCombination == TRUE ? FALSE : TRUE);
+  m_pctlPasskey->SetSecure(m_btnShowMasterPassword == TRUE ? FALSE : TRUE);
+  m_pctlNewPasskey->SetSecure(m_btnShowMasterPassword == TRUE ? FALSE : TRUE);
 
-  if (m_btnShowCombination == TRUE) {
+  if (m_btnShowMasterPassword == TRUE) {
     m_pctlPasskey->SetPasswordChar(0);
     m_pctlPasskey->SetWindowText(m_passkey);
 
@@ -324,7 +330,7 @@ void CPasskeyChangeDlg::OnYubikey2Btn()
 {
   UpdateData(TRUE);
 
-  if (m_btnShowCombination == FALSE && m_confirmnew != m_newpasskey) {
+  if (m_btnShowMasterPassword == FALSE && m_confirmnew != m_newpasskey) {
     CGeneralMsgBox gmb;
     gmb.AfxMessageBox(IDS_NEWOLDDONOTMATCH);
   } else {
@@ -332,6 +338,7 @@ void CPasskeyChangeDlg::OnYubikey2Btn()
     m_oldpasskey = m_passkey; // might need for confirmation
     m_passkey = m_newpasskey;
     yubiRequestHMACSha1(m_newpasskey);
+    GetDlgItem(IDOK)->EnableWindow(FALSE); // BR1465 - don't allow closing w/o yk press
   }
 }
 
@@ -364,7 +371,9 @@ void CPasskeyChangeDlg::ProcessPhrase()
       CPKBaseDlg::OnOK(); // skip our OnOK(), irrelevant
       m_newpasskey = save_passkey;
     } else {
-      m_yubi_status.SetWindowText(_T("Please confirm old passphrase"));
+      CString msg;
+      msg.LoadString(IDS_CONFIRMOLDPHRASE);
+      m_yubi_status.SetWindowText(msg);
     }
   } else {
     ASSERT(0);

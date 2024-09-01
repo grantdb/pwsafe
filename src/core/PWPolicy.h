@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -67,11 +67,14 @@ struct PWPolicy {
       lowerminlength(that.lowerminlength),
       symbolminlength(that.symbolminlength),
       upperminlength(that.upperminlength),
-      symbols(that.symbols), usecount(that.usecount) {}
+	  symbols(that.symbols), usecount(that.usecount) {
+	  that.Validate();
+  }
 
   PWPolicy &operator=(const PWPolicy &that)
   {
     if (this != &that) {
+      that.Validate();
       flags  = that.flags;
       length = that.length;
       digitminlength  = that.digitminlength;
@@ -107,6 +110,10 @@ struct PWPolicy {
 
   typedef void (*RowPutter)(int row, const stringT &name, const stringT &value, void *table);
   void Policy2Table(RowPutter rp, void *table);
+
+  // Test that a policy is internally consistent
+  // Debug build should assert if not
+  void Validate() const;
 };
 
 //-----------------------------------------------------------------

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -18,8 +18,7 @@
 #include "Fonts.h"
 #include "YubiCfgDlg.h"
 
-#include "core/PWCharPool.h" // for CheckPassword()
-#include "core/PwsPlatform.h"
+#include "core/PWCharPool.h" // for CheckMasterPassword()
 #include "core/pwsprefs.h"
 #include "core/PWScore.h"
 #include "core/util.h"
@@ -43,7 +42,8 @@ static char THIS_FILE[] = __FILE__;
 //-----------------------------------------------------------------------------
 CPasskeySetup::CPasskeySetup(CWnd *pParent, PWScore &core)
   : CPKBaseDlg(CPasskeySetup::IDD, pParent),
-    m_LastFocus(IDC_PASSKEY), m_core(core), m_btnShowCombination(FALSE)
+  m_btnShowMasterPassword(FALSE),
+  m_LastFocus(IDC_PASSKEY), m_core(core)
 {
   m_verify = L"";
   m_pctlVerify = new CSecEditExtn;
@@ -63,7 +63,7 @@ void CPasskeySetup::DoDataExchange(CDataExchange* pDX)
 
   DDX_Control(pDX, IDC_VERIFY, *m_pctlVerify);
 
-  DDX_Check(pDX, IDC_SHOWCOMBINATION, m_btnShowCombination);
+  DDX_Check(pDX, IDC_SHOWMASTERPASSWORD, m_btnShowMasterPassword);
 }
 
 BEGIN_MESSAGE_MAP(CPasskeySetup, CPKBaseDlg)
@@ -72,7 +72,7 @@ BEGIN_MESSAGE_MAP(CPasskeySetup, CPKBaseDlg)
   ON_STN_CLICKED(IDC_VKB, OnVirtualKeyboard)
   ON_BN_CLICKED(ID_HELP, OnHelp)
   ON_BN_CLICKED(IDC_YUBIKEY_BTN, OnYubikeyBtn)
-  ON_BN_CLICKED(IDC_SHOWCOMBINATION, OnShowCombination)
+  ON_BN_CLICKED(IDC_SHOWMASTERPASSWORD, OnShowMasterPassword)
 
   ON_EN_SETFOCUS(IDC_PASSKEY, OnPasskeySetfocus)
   ON_EN_SETFOCUS(IDC_VERIFY, OnVerifykeySetfocus)
@@ -108,7 +108,7 @@ void CPasskeySetup::OnOK()
   UpdateData(TRUE);
 
   CGeneralMsgBox gmb;
-  if (m_btnShowCombination == FALSE && m_passkey != m_verify) {
+  if (m_btnShowMasterPassword == FALSE && m_passkey != m_verify) {
     gmb.AfxMessageBox(IDS_ENTRIESDONOTMATCH);
     ((CEdit*)GetDlgItem(IDC_VERIFY))->SetFocus();
     return;
@@ -127,13 +127,18 @@ void CPasskeySetup::OnOK()
   // (also used in CPasskeyChangeDlg)
 #ifndef _DEBUG // for debug, we want no checks at all, to save time
   StringX errmess;
-  if (!CPasswordCharPool::CheckPassword(m_passkey, errmess)) {
+  if (!CPasswordCharPool::CheckMasterPassword(m_passkey, errmess)) {
     CString cs_msg, cs_text;
     cs_msg.Format(IDS_WEAKPASSPHRASE, static_cast<LPCWSTR>(errmess.c_str()));
 #ifndef PWS_FORCE_STRONG_PASSPHRASE
     cs_text.LoadString(IDS_USEITANYWAY);
     cs_msg += cs_text;
-    INT_PTR rc = gmb.AfxMessageBox(cs_msg, NULL, MB_YESNO | MB_ICONSTOP);
+    std::vector<std::tuple<int, int>> tuples = {
+      std::make_tuple(IDCANCEL, IDS_CANCEL),
+      std::make_tuple(IDYES, IDS_USEANYWAY)
+    };
+    INT_PTR rc = gmb.AfxMessageBox(cs_msg, nullptr, tuples, 0, MB_ICONSTOP);
+
     if (rc == IDNO)
       return;
 #else
@@ -240,13 +245,13 @@ LRESULT CPasskeySetup::OnInsertBuffer(WPARAM, LPARAM)
   return 0L;
 }
 
-void CPasskeySetup::OnShowCombination()
+void CPasskeySetup::OnShowMasterPassword()
 {
   UpdateData(TRUE);
 
-  m_pctlPasskey->SetSecure(m_btnShowCombination == TRUE ? FALSE : TRUE);
+  m_pctlPasskey->SetSecure(m_btnShowMasterPassword == TRUE ? FALSE : TRUE);
 
-  if (m_btnShowCombination == TRUE) {
+  if (m_btnShowMasterPassword == TRUE) {
     m_pctlPasskey->SetPasswordChar(0);
     m_pctlPasskey->SetWindowText(m_passkey);
 
@@ -270,12 +275,13 @@ void CPasskeySetup::OnYubikeyBtn()
   // unlike non-Yubi usage, here we accept empty passwords,
   // which will give token-based authentication.
   // A non-empty password with Yubikey is 2-factor auth.
-  CGeneralMsgBox gmb;
   if (m_passkey != m_verify) {
+    CGeneralMsgBox gmb;
     gmb.AfxMessageBox(IDS_ENTRIESDONOTMATCH);
     ((CEdit*)GetDlgItem(IDC_VERIFY))->SetFocus();
     return;
   }
+  GetDlgItem(IDOK)->EnableWindow(FALSE); // BR1465 - don't allow closing w/o yk press
   yubiRequestHMACSha1(m_passkey);
 }
 

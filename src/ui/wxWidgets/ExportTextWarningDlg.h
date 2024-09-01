@@ -1,17 +1,22 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
  * http://www.opensource.org/licenses/artistic-license-2.0.php
  */
 
-#ifndef __EXPORTTEXTWARNINGDLG_H__
-#define __EXPORTTEXTWARNINGDLG_H__
+/** \file ExportTextWarningDlg.h
+* 
+*/
+
+#ifndef _EXPORTTEXTWARNINGDLG_H_
+#define _EXPORTTEXTWARNINGDLG_H_
 
 #include <wx/dialog.h> // Base class: wxDialog
 
-#include "./AdvancedSelectionDlg.h"
+#include "AdvancedSelectionDlg.h"
+#include "SafeCombinationCtrl.h"
 #ifndef NO_YUBI
 #include "YubiMixin.h"
 #endif
@@ -19,51 +24,50 @@
 struct SelectionCriteria;
 
 #ifndef NO_YUBI
-class CExportTextWarningDlgBase : public wxDialog, private CYubiMixin
+class ExportTextWarningDlgBase : public wxDialog, private YubiMixin
 #else
-class CExportTextWarningDlgBase : public wxDialog
+class ExportTextWarningDlgBase : public wxDialog
 #endif
 {
 
-  DECLARE_CLASS( CExportTextWarningDlgBase )
+  DECLARE_CLASS( ExportTextWarningDlgBase )
   DECLARE_EVENT_TABLE()
-
 public:
-  CExportTextWarningDlgBase(wxWindow* parent);
-  ~CExportTextWarningDlgBase();
+  SelectionCriteria* selCriteria;
+  StringX           passKey;
+  wxString          delimiter;
+protected:
+  explicit ExportTextWarningDlgBase(wxWindow *parent);
+  ~ExportTextWarningDlgBase();
 
   void OnAdvancedSelection( wxCommandEvent& evt );
 
   virtual void DoAdvancedSelection() = 0;
-
-  SelectionCriteria* selCriteria;
-  StringX           passKey;
-  wxString          delimiter;
 private:
 #ifndef NO_YUBI
   void OnYubibtnClick( wxCommandEvent& event );
   void OnPollingTimer(wxTimerEvent& timerEvent);
 #endif
   const wxString defDelim;
-  CSafeCombinationCtrl* m_combinationEntry;
-  wxBitmapButton* m_YubiBtn;
-  wxStaticText* m_yubiStatusCtrl;
-  wxTimer* m_pollingTimer; // for Yubi, but can't go into mixin :-(
+  SafeCombinationCtrl* m_combinationEntry;
 };
 
 template <class DlgType>
-class CExportTextWarningDlg : public CExportTextWarningDlgBase
+class ExportTextWarningDlg : public ExportTextWarningDlgBase
 {
 public:
-  CExportTextWarningDlg(wxWindow* parent) : CExportTextWarningDlgBase(parent)
+  static ExportTextWarningDlg* Create(wxWindow *parent) {
+    return new ExportTextWarningDlg(parent);
+  }
+protected:
+  explicit ExportTextWarningDlg(wxWindow *parent) : ExportTextWarningDlgBase(parent)
   {
     SetTitle(DlgType::GetTitle());
   }
 
   virtual void DoAdvancedSelection() {
-    AdvancedSelectionDlg<DlgType> dlg(this, selCriteria);
-    dlg.ShowModal();
+    ShowModalAndGetResult<AdvancedSelectionDlg<DlgType>>(this, selCriteria);
   }
 };
 
-#endif // __EXPORTTEXTWARNINGDLG_H__
+#endif // _EXPORTTEXTWARNINGDLG_H_

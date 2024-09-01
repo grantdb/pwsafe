@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -9,8 +9,8 @@
 //-----------------------------------------------------------------------------
 
 #include "Item.h"
-#include "BlowFish.h"
-#include "TwoFish.h"
+#include "crypto/BlowFish.h"
+#include "crypto/TwoFish.h"
 #include "PWSrand.h"
 #include "UTF8Conv.h"
 #include "Util.h"
@@ -249,6 +249,42 @@ void CItem::GetField(const CItemField &field,
   field.Get(value, length, MakeBlowFish());
 }
 
+void CItem::GetField(const CItemField &field, std::vector<unsigned char> &v) const
+{
+  size_t length = field.GetLength();
+  if (length < TwoFish::BLOCKSIZE)
+    length = TwoFish::BLOCKSIZE;
+  v.resize(length);
+  length = v.size();
+  field.Get(& v[0], length, MakeBlowFish());
+  v.resize(length);
+}
+
+void CItem::GetField(const int ft, std::vector<unsigned char> &v) const
+{
+  auto fiter = m_fields.find(ft);
+  if (fiter == m_fields.end()) {
+    v.clear();
+    return;
+  }
+  GetField(fiter->second, v);
+}
+
+uint8_t CItem::GetFieldAsByte(const CItemField& field, uint8_t default_value) const
+{
+  std::vector<uint8_t> v;
+  GetField(field, v);
+  return v.empty() ? default_value : v[0];
+}
+
+uint8_t CItem::GetFieldAsByte(const int ft, uint8_t default_value) const
+{
+  auto fiter = m_fields.find(ft);
+  if (fiter == m_fields.end())
+    return default_value;
+  return GetFieldAsByte(fiter->second, default_value);
+}
+
 StringX CItem::GetField(const int ft) const
 {
   auto fiter = m_fields.find(ft);
@@ -281,4 +317,31 @@ void CItem::GetTime(int whichtime, time_t &t) const
     }
   } else // fiter == m_fields.end()
     t = 0;
+}
+
+
+void CItem::push_length(std::vector<char> &v, uint32 s) const
+{
+  v.insert(v.end(),
+    reinterpret_cast<char *>(&s), reinterpret_cast<char *>(&s) + sizeof(uint32));
+}
+
+// Overload rather than specialize template function
+// See http://www.gotw.ca/publications/mill17.htm
+void CItem::push(std::vector<char> &v, char type, const StringX &str) const
+{
+  if (!str.empty()) {
+    CUTF8Conv utf8conv;
+    bool status;
+    const unsigned char *utf8;
+    size_t utf8Len;
+    status = utf8conv.ToUTF8(str, utf8, utf8Len);
+    if (status) {
+      v.push_back(type);
+      push_length(v, static_cast<uint32>(utf8Len));
+      v.insert(v.end(), reinterpret_cast<const char *>(utf8),
+               reinterpret_cast<const char *>(utf8) + utf8Len);
+    } else
+      pws_os::Trace(_T("ItemData.cpp: push(%ls): ToUTF8 failed!\n"), str.c_str());
+  }
 }

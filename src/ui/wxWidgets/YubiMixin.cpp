@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
@@ -9,69 +9,74 @@
 /** \file YubiMixin.cpp
 * 
 */
-// For compilers that support precompilation, includes "wx/wx.h".
-#include "wx/wxprec.h"
 
-#ifdef __BORLANDC__
-#pragma hdrstop
-#endif
+// For compilers that support precompilation, includes "wx/wx.h".
+#include <wx/wxprec.h>
 
 #ifndef WX_PRECOMP
-#include "wx/wx.h"
+#include <wx/wx.h>
 #endif
+
+#include "os/unix/PWYubi.h"
+#include "os/sleep.h"
+
+#include "YubiMixin.h"
 
 #include <iomanip>
 #include <sstream>
 
-#include "YubiMixin.h"
-#include "os/unix/PWYubi.h"
-#include "os/sleep.h"
+int YubiMixin::s_pollingInterval = YubiMixin::POLLING_INTERVAL_DEFAULT;
 
-void CYubiMixin::SetupMixin(wxWindow *btn, wxWindow *status)
+void YubiMixin::SetupMixin(wxEvtHandler *eventHandler, wxWindow *btn, wxWindow *status, int timerId)
 {
-  m_prompt1 = _("<- Click on button to the left"); // change via SetPrompt1
-  m_prompt2 = _("Now touch your YubiKey's button"); // change via SetPrompt2
+  m_prompt1 = _("Activate YubiKey"); // change via SetPrompt1
+  m_prompt2 = _("Touch YubiKey's button"); // change via SetPrompt2
   m_btn = btn;
   m_status = status;
   m_present = !IsYubiInserted(); // lie to trigger correct actions in timer even
-  // Hide Yubi controls if user doesn't have one:
-  if (m_btn != nullptr) m_btn->Show(yubiExists());
-  if (m_status != nullptr) m_status->Show(yubiExists());
+  if ((m_btn != nullptr) && (m_status != nullptr)) {
+    // Hide Yubi controls if user doesn't have one:
+    m_btn->Show(yubiExists());
+    m_status->Show(yubiExists());
+    if (IsPollingEnabled() && (timerId != YubiMixin::POLLING_TIMER_NONE)) {
+      m_pollingTimer = new wxTimer(eventHandler, timerId);
+      m_pollingTimer->Start(GetPollingInterval());
+    }
+  }
 }
 
-bool CYubiMixin::yubiExists() const
+bool YubiMixin::yubiExists() const
 {
   return PWYubi::YubiExists();
 }
 
-void CYubiMixin::yubiInserted(void)
+void YubiMixin::yubiInserted(void)
 {
   m_btn->Enable(true);
   m_status->SetForegroundColour(wxNullColour);
   m_status->SetLabel(m_prompt1);
 }
 
-void CYubiMixin::yubiRemoved(void)
+void YubiMixin::yubiRemoved(void)
 {
   m_btn->Enable(false);
   m_status->SetForegroundColour(wxNullColour);
-  m_status->SetLabel(_("Please insert your YubiKey"));
+  m_status->SetLabel(_("Insert YubiKey"));
 }
 
-bool CYubiMixin::IsYubiInserted() const
+bool YubiMixin::IsYubiInserted() const
 {
   const PWYubi yubi;
   return yubi.IsYubiInserted();
 }
 
-void CYubiMixin::HandlePollingTimer()
+void YubiMixin::HandlePollingTimer()
 {
   // Show Yubi controls when inserted first time:
-  if (yubiExists()) {
-    wxWindow *parent = nullptr; // assume both have same parent
-    if (m_btn != nullptr) {m_btn->Show(true); parent = m_btn->GetParent();}
-    if (m_status != nullptr) {m_status->Show(true); parent = m_btn->GetParent();}
-    if (parent != nullptr) parent->Layout();
+  if (yubiExists() && (!m_btn->IsShown() || !m_status->IsShown())) {
+    m_btn->Show(true);
+    m_status->Show(true);
+    updateLayout();
   }
 
   // Currently hmac check is blocking (ugh), so no need to check here
@@ -83,15 +88,44 @@ void CYubiMixin::HandlePollingTimer()
   }
 }
 
-void CYubiMixin::UpdateStatus()
+void YubiMixin::SetPollingInterval(int value) {
+  if (value <= YubiMixin::POLLING_INTERVAL_OFF) {
+    s_pollingInterval = YubiMixin::POLLING_INTERVAL_OFF; // indicates to disable the polling
+  }
+  else if (value < YubiMixin::POLLING_INTERVAL_MIN /* ms */) {
+    s_pollingInterval = YubiMixin::POLLING_INTERVAL_MIN; // limit the polling interval to a minimum
+  }
+  else if (value > YubiMixin::POLLING_INTERVAL_MAX /* ms */) {
+    s_pollingInterval = YubiMixin::POLLING_INTERVAL_MAX; // limit the polling interval to a maximum
+  }
+  else {
+    s_pollingInterval = value;  // the user defined polling interval
+  }
+}
+
+void YubiMixin::UpdateStatus()
 {
   if (m_present)
     yubiInserted();
   else
     yubiRemoved();
+
+  updateLayout();
 }
 
-bool CYubiMixin::PerformChallengeResponse(wxWindow *win,
+void YubiMixin::updateLayout()
+{
+  // Update the dialog's layout as additional controls
+  // have appeared or the prompt has changed.
+  if (m_btn) {
+    auto *parent = m_btn->GetParent();
+    if (parent != nullptr) {
+      parent->GetSizer()->Layout();
+    }
+  }
+}
+
+bool YubiMixin::PerformChallengeResponse(wxWindow *win,
             const StringX &challenge,
             StringX &response,
             bool oldYubiChallenge)
@@ -168,7 +202,7 @@ bool CYubiMixin::PerformChallengeResponse(wxWindow *win,
   return retval;
 }
 
-StringX CYubiMixin::Bin2Hex(const unsigned char *buf, int len) const
+StringX YubiMixin::Bin2Hex(const unsigned char *buf, int len) const
 {
   std::wostringstream os;
   os << std::setw(2);

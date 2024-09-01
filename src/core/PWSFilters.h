@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -45,6 +45,7 @@ enum FieldType {
   FT_USER          = CItemData::USER,
   FT_NOTES         = CItemData::NOTES,
   FT_PASSWORD      = CItemData::PASSWORD,
+  FT_TWOFACTORKEY  = CItemData::TWOFACTORKEY,
   FT_CTIME         = CItemData::CTIME,
   FT_PMTIME        = CItemData::PMTIME,
   FT_ATIME         = CItemData::ATIME,
@@ -379,7 +380,7 @@ class PWSFilters : public std::map<st_Filterkey, st_filters, ltfk> {
                           const StringX &strXMLData,
                           const stringT &strXMLFileName,
                           const stringT &strXSDFileName, stringT &strErrors,
-                          Asker *pAsker);
+                          Asker *pAsker, Reporter *pReporter = nullptr);
 
   static stringT GetFilterDescription(const st_FilterRow &st_fldata);
  private:
@@ -394,7 +395,7 @@ class PWSFilterManager {
   bool PassesFiltering(const CItemData &ci, const PWScore &core);
   bool PassesEmptyGroupFiltering(const StringX &sxGroup);
   void SetFindFilter(const bool &bFilter) { m_bFindFilterActive = bFilter; }
-  void SetFilterFindEntries(std::vector<pws_os::CUUID> *pvFoundUUIDs);
+  void SetFilterFindEntries(UUIDVector *pvFoundUUIDs);
 
   // predefined filters accessors, use by assigning to m_currentfilter
   const st_filters &GetExpireFilter() const {return m_expirefilter;}
@@ -418,7 +419,7 @@ class PWSFilterManager {
    bool m_bFindFilterActive;
    // Vector of found entries' UUID for advance search to display only those
    // entries satisfying a search
-   std::vector<pws_os::CUUID> m_vFltrFoundUUIDs;
+   UUIDVector m_vFltrFoundUUIDs;
 };
 
 #endif  /* __PWSFILTERS_H */

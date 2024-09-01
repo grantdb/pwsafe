@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -14,7 +14,6 @@
 #include "Options_PropertySheet.h"
 #include "GeneralMsgBox.h"
 
-#include "core/PwsPlatform.h"
 #include "core/PWSprefs.h"
 #include "os/env.h"
 
@@ -40,11 +39,13 @@ COptionsSecurity::COptionsSecurity(CWnd *pParent, st_Opt_master_data *pOPTMD)
 {
   m_ClearClipboardOnMinimize = M_ClearClipboardOnMinimize();
   m_ClearClipboardOnExit = M_ClearClipboardOnExit();
+  m_ExcludeFromClipboardHistory = M_ExcludefromClipboardHistory();
   m_LockOnMinimize = M_LockOnMinimize();
   m_ConfirmCopy = M_ConfirmCopy();
   m_LockOnWindowLock = M_LockOnWindowLock();
   m_LockOnIdleTimeout = M_LockOnIdleTimeout();
   m_CopyPswdBrowseURL = M_CopyPswdBrowseURL();
+  m_ExcludeFromScreenCapture = M_ExcludeFromScreenCapture();
   m_IdleTimeOut = M_IdleTimeOut();
   SetHashIter(M_HashIters());
 }
@@ -60,13 +61,16 @@ void COptionsSecurity::DoDataExchange(CDataExchange* pDX)
   //{{AFX_DATA_MAP(COptionsSecurity)
   DDX_Check(pDX, IDC_CLEARBOARDONMINIMIZE, m_ClearClipboardOnMinimize);
   DDX_Check(pDX, IDC_CLEARBOARDONEXIT, m_ClearClipboardOnExit);
+  DDX_Check(pDX, IDC_EXCLUDE_FROM_CB_HIST, m_ExcludeFromClipboardHistory);
   DDX_Check(pDX, IDC_CONFIRMCOPY, m_ConfirmCopy);
   DDX_Check(pDX, IDC_LOCKONMINIMIZE, m_LockOnMinimize);
   DDX_Check(pDX, IDC_LOCKONSCREEN, m_LockOnWindowLock);
   DDX_Check(pDX, IDC_LOCK_TIMER, m_LockOnIdleTimeout);
   DDX_Check(pDX, IDC_COPYPSWDURL, m_CopyPswdBrowseURL);
+  DDX_Check(pDX, IDC_EXCLUDE_FROM_SCR_CAP, m_ExcludeFromScreenCapture);
+  DDX_Control(pDX, IDC_EXCLUDE_FROM_SCR_CAP_HELP, m_Help4);
   DDX_Text(pDX, IDC_IDLE_TIMEOUT, m_IdleTimeOut);
-
+  
   DDX_Control(pDX, IDC_COPYPSWDURL, m_chkbox[0]);
   DDX_Control(pDX, IDC_LOCK_TIMER, m_chkbox[1]);
 
@@ -103,6 +107,8 @@ BOOL COptionsSecurity::OnInitDialog()
   // Database preferences - can't change in R/O mode of if no DB is open
   if (!GetMainDlg()->IsDBOpen() || GetMainDlg()->IsDBReadOnly()) {
     GetDlgItem(IDC_COPYPSWDURL)->EnableWindow(FALSE);
+    GetDlgItem(IDC_EXCLUDE_FROM_CB_HIST)->EnableWindow(FALSE);
+    GetDlgItem(IDC_EXCLUDE_FROM_SCR_CAP)->EnableWindow(FALSE);
     GetDlgItem(IDC_LOCK_TIMER)->EnableWindow(FALSE);
     GetDlgItem(IDC_IDLESPIN)->EnableWindow(FALSE);
     GetDlgItem(IDC_IDLE_TIMEOUT)->EnableWindow(FALSE);
@@ -131,10 +137,12 @@ BOOL COptionsSecurity::OnInitDialog()
     m_Help1.Init(IDB_QUESTIONMARK);
     m_Help2.Init(IDB_QUESTIONMARK);
     m_Help3.Init(IDB_QUESTIONMARK);
+    m_Help4.Init(IDB_QUESTIONMARK);
 
     AddTool(IDC_LOCKONMINIMIZEHELP, IDS_DBLOCK);
     AddTool(IDC_LOCKONWORKSTATIONLOCKHELP, IDS_DBLOCK);
     AddTool(IDC_LOCKONIDLEHELP, IDS_DBLOCK);
+    AddTool(IDC_EXCLUDE_FROM_SCR_CAP_HELP, IDS_EXCLUDE_FROM_SCR_CAP_HELP);
     ActivateToolTip();
   } else {
     m_Help1.EnableWindow(FALSE);
@@ -143,6 +151,8 @@ BOOL COptionsSecurity::OnInitDialog()
     m_Help2.ShowWindow(SW_HIDE);
     m_Help3.EnableWindow(FALSE);
     m_Help3.ShowWindow(SW_HIDE);
+    m_Help4.EnableWindow(FALSE);
+    m_Help4.ShowWindow(SW_HIDE);
   }
 
   return TRUE;  // return TRUE unless you set the focus to a control
@@ -184,16 +194,18 @@ LRESULT COptionsSecurity::OnQuerySiblings(WPARAM wParam, LPARAM lParam)
     }
     case PP_DATA_CHANGED:
       UpdateHashIter();
-      if (M_ClearClipboardOnMinimize() != m_ClearClipboardOnMinimize ||
-          M_ClearClipboardOnExit()     != m_ClearClipboardOnExit     ||
-          M_LockOnMinimize()           != m_LockOnMinimize           ||
-          M_ConfirmCopy()              != m_ConfirmCopy              ||
-          M_LockOnWindowLock()         != m_LockOnWindowLock         ||
-          M_LockOnIdleTimeout()        != m_LockOnIdleTimeout        ||
-          M_CopyPswdBrowseURL()        != m_CopyPswdBrowseURL        ||
-          M_HashIters()                != m_HashIter                 ||
-          (m_LockOnIdleTimeout         == TRUE &&
-           M_IdleTimeOut()             != m_IdleTimeOut))
+      if (M_ClearClipboardOnMinimize()    != m_ClearClipboardOnMinimize    ||
+          M_ClearClipboardOnExit()        != m_ClearClipboardOnExit        ||
+          M_ExcludefromClipboardHistory() != m_ExcludeFromClipboardHistory ||
+          M_LockOnMinimize()              != m_LockOnMinimize              ||
+          M_ConfirmCopy()                 != m_ConfirmCopy                 ||
+          M_LockOnWindowLock()            != m_LockOnWindowLock            ||
+          M_LockOnIdleTimeout()           != m_LockOnIdleTimeout           ||
+          M_CopyPswdBrowseURL()           != m_CopyPswdBrowseURL           ||
+          M_ExcludeFromScreenCapture()    != m_ExcludeFromScreenCapture    ||
+          M_HashIters()                   != m_HashIter                    ||
+          (m_LockOnIdleTimeout            == TRUE &&
+           M_IdleTimeOut()                != m_IdleTimeOut))
         return 1L;
       break;
     case PP_UPDATE_VARIABLES:
@@ -248,11 +260,13 @@ BOOL COptionsSecurity::OnApply()
 
   M_ClearClipboardOnMinimize() = m_ClearClipboardOnMinimize;
   M_ClearClipboardOnExit() = m_ClearClipboardOnExit;
+  M_ExcludefromClipboardHistory() = m_ExcludeFromClipboardHistory;
   M_LockOnMinimize() = m_LockOnMinimize;
   M_ConfirmCopy() = m_ConfirmCopy;
   M_LockOnWindowLock() = m_LockOnWindowLock;
   M_LockOnIdleTimeout() = m_LockOnIdleTimeout;
   M_CopyPswdBrowseURL() = m_CopyPswdBrowseURL;
+  M_ExcludeFromScreenCapture() = m_ExcludeFromScreenCapture;
   M_IdleTimeOut() = m_IdleTimeOut;
   UpdateHashIter();
   M_HashIters() = m_HashIter;
@@ -316,12 +330,14 @@ HBRUSH COptionsSecurity::OnCtlColor(CDC *pDC, CWnd *pWnd, UINT nCtlColor)
   // Database preferences - associated static text
   switch (pWnd->GetDlgCtrlID()) {
     case IDC_COPYPSWDURL:
+    case IDC_EXCLUDE_FROM_CB_HIST:
     case IDC_LOCK_TIMER:
     case IDC_STATIC_IDLEMINS:
     case IDC_STATIC_UNLOCKDIFFICULTY:
     case IDC_STATIC_HASHITER:
     case IDC_STATIC_HASHITER_MIN:
     case IDC_STATIC_HASHITER_MAX:
+    case IDC_EXCLUDE_FROM_SCR_CAP:
       pDC->SetTextColor(CR_DATABASE_OPTIONS);
       pDC->SetBkMode(TRANSPARENT);
       break;

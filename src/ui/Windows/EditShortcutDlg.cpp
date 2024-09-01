@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -16,12 +16,14 @@
 #include "DboxMain.h"
 #include "EditShortcutDlg.h"
 #include "ControlExtns.h"
+#include "winutils.h"
 
 #include "core/PWSprefs.h"
 #include "core/ItemData.h"
 
 #include <shlwapi.h>
 #include <fstream>
+
 using namespace std;
 
 #ifdef _DEBUG
@@ -35,8 +37,10 @@ bool CEditShortcutDlg::m_bShowUUID = false;
 CEditShortcutDlg::CEditShortcutDlg(CItemData *pci, CWnd* pParent,
   const CSecString &cs_tg, const CSecString &cs_tt, const CSecString &cs_tu)
   : CPWDialog(CEditShortcutDlg::IDD, pParent),
-  m_tg(cs_tg), m_tt(cs_tt), m_tu(cs_tu), m_group(cs_tg),
-  m_pci(pci), m_bIsModified(false), m_Edit_IsReadOnly(false)
+  m_Edit_IsReadOnly(false),
+  m_pci(pci), m_group(cs_tg), 
+  m_tg(cs_tg), m_tt(cs_tt), m_tu(cs_tu),
+  m_bIsModified(false)
 {
   ASSERT(pci != NULL);
 
@@ -278,7 +282,8 @@ void CEditShortcutDlg::SetGroupComboBoxWidth()
   m_ex_group.ReleaseDC(pDC);
 
   // Adjust the width for the vertical scroll bar and the left and right border.
-  dx += ::GetSystemMetrics(SM_CXVSCROLL) + 2 * ::GetSystemMetrics(SM_CXEDGE);
+  dx += WinUtil::GetSystemMetrics(SM_CXVSCROLL, m_hWnd) + 2 * WinUtil::GetSystemMetrics(SM_CXEDGE, m_hWnd);
+
 
   // Set the width of the list box so that every item is completely visible.
   m_ex_group.SetDroppedWidth(dx);

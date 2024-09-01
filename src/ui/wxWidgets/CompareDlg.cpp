@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
@@ -9,39 +9,40 @@
 /** \file CompareDlg.cpp
 *
 */
+
 // For compilers that support precompilation, includes "wx/wx.h".
 #include "wx/wxprec.h"
-
-#ifdef __BORLANDC__
-#pragma hdrstop
-#endif
 
 #ifndef WX_PRECOMP
 #include "wx/wx.h"
 #endif
 
-#include "./CompareDlg.h"
-#include "./DbSelectionPanel.h"
-#include "./wxutils.h"
-#include "../../core/PWScore.h"
-#include "./AdvancedSelectionDlg.h"
-#include "./ComparisonGridTable.h"
-#include "./SizeRestrictedPanel.h"
-#include "../../core/core.h"
-#include "./addeditpropsheet.h"
-#include "./fieldselectiondlg.h"
-#include "./SelectionCriteria.h"
-
-#include <wx/statline.h>
-#include <wx/grid.h>
-#include <wx/ptr_scpd.h>
-#include <wx/filename.h>
-
 #ifdef __WXMSW__
 #include <wx/msw/msvcrt.h>
 #endif
 
-enum {ID_BTN_COMPARE = 100 };
+#include <wx/filename.h>
+#include <wx/grid.h>
+#include <wx/ptr_scpd.h>
+#include <wx/statline.h>
+
+#include "core/core.h"
+#include "core/PWScore.h"
+
+#include "AddEditPropSheetDlg.h"
+#include "AdvancedSelectionDlg.h"
+#include "CompareDlg.h"
+#include "ComparisonGridTable.h"
+#include "DbSelectionPanel.h"
+#include "FieldSelectionDlg.h"
+#include "SelectionCriteria.h"
+#include "SizeRestrictedPanel.h"
+#include "core/StringX.h"
+#include "ViewReportDlg.h"
+
+enum {ID_BTN_COMPARE = 100,
+      ID_BTN_REPORT = 102
+};
 
 enum {
   ID_COPY_FIELD_TO_CURRENT_DB = 100,
@@ -59,6 +60,7 @@ DEFINE_EVENT_TYPE(EVT_EXPAND_DATA_PANELS)
 
 BEGIN_EVENT_TABLE( CompareDlg, wxDialog )
   EVT_BUTTON( ID_BTN_COMPARE,  CompareDlg::OnCompare )
+  EVT_BUTTON( ID_BTN_REPORT,  CompareDlg::OnShowReport )
   EVT_GRID_CELL_RIGHT_CLICK(CompareDlg::OnGridCellRightClick)
   EVT_MENU(ID_EDIT_IN_CURRENT_DB, CompareDlg::OnEditInCurrentDB)
   EVT_MENU(ID_VIEW_IN_COMPARISON_DB, CompareDlg::OnViewInComparisonDB)
@@ -69,6 +71,8 @@ BEGIN_EVENT_TABLE( CompareDlg, wxDialog )
   EVT_MENU(ID_COPY_FIELD_TO_CURRENT_DB, CompareDlg::OnCopyFieldsToCurrentDB)
   EVT_MENU(ID_SYNC_SELECTED_ITEMS_WITH_CURRENT_DB, CompareDlg::OnSyncItemsWithCurrentDB)
   EVT_MENU(ID_SYNC_ALL_ITEMS_WITH_CURRENT_DB, CompareDlg::OnSyncItemsWithCurrentDB)
+
+  EVT_UPDATE_UI( ID_BTN_REPORT, CompareDlg::OnUpdateUI )
 END_EVENT_TABLE()
 
 struct ComparisonData {
@@ -77,42 +81,42 @@ struct ComparisonData {
   CompareData data;
   wxSizerItem* sizerBelow;  //for managing the spacers in between
 
-  ComparisonData(): pane(0), grid(0), sizerBelow(0){}
+  ComparisonData(): pane(nullptr), grid(nullptr), sizerBelow(nullptr){}
   ~ComparisonData() { /*nothing to do.  All window objects deleted automatically */ }
-};
-
-struct ContextMenuData {
-  ComparisonData* cdata;
-  wxArrayInt selectedRows;    //indexes into the grid
-  wxArrayInt selectedItems;   //indexes into the table
-  CItemData::FieldType field;
 };
 
 wxDEFINE_SCOPED_PTR_TYPE(MultiCommands)
 
-CompareDlg::CompareDlg(wxWindow* parent, PWScore* currentCore): wxDialog(parent,
-                                                                wxID_ANY,
-                                                                _("Compare current database with another database"),
-                                                                wxDefaultPosition,
-                                                                wxDefaultSize,
-                                                                wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxMAXIMIZE_BOX),
-                                                                m_currentCore(currentCore),
-                                                                m_otherCore(new PWSAuxCore),
-                                                                m_selCriteria(new SelectionCriteria),
-                                                                m_dbPanel(0),
-                                                                m_dbSelectionPane(0),
-                                                                m_optionsPane(0),
-                                                                m_current(new ComparisonData),
-                                                                m_comparison(new ComparisonData),
-                                                                m_conflicts(new ComparisonData),
-                                                                m_identical(new ComparisonData)
+CompareDlg::CompareDlg(wxWindow *parent, PWScore* currentCore): wxDialog(parent,
+                                                        wxID_ANY,
+                                                        _("Compare current database with another database"),
+                                                        wxDefaultPosition,
+                                                        wxDefaultSize,
+                                                        wxDEFAULT_DIALOG_STYLE|wxRESIZE_BORDER|wxMAXIMIZE_BOX),
+                                                        m_currentCore(currentCore),
+                                                        m_otherCore(new PWSAuxCore),
+                                                        m_selCriteria(new SelectionCriteria),
+                                                        m_dbPanel(nullptr),
+                                                        m_dbSelectionPane(nullptr),
+                                                        m_optionsPane(nullptr),
+                                                        m_current(new ComparisonData),
+                                                        m_comparison(new ComparisonData),
+                                                        m_conflicts(new ComparisonData),
+                                                        m_identical(new ComparisonData)
 {
-  SetExtraStyle(wxWS_EX_VALIDATE_RECURSIVELY);
+  wxASSERT(!parent || parent->IsTopLevel());
+
+  SetExtraStyle(GetExtraStyle() | wxWS_EX_VALIDATE_RECURSIVELY);
 
   //compare all fields by default
   m_selCriteria->SelectAllFields();
 
   CreateControls();
+}
+
+CompareDlg* CompareDlg::Create(wxWindow *parent, PWScore* core)
+{
+  return new CompareDlg(parent, core);
 }
 
 CompareDlg::~CompareDlg()
@@ -128,6 +132,7 @@ CompareDlg::~CompareDlg()
 void CompareDlg::CreateControls()
 {
   auto *dlgSizer = new wxBoxSizer(wxVERTICAL);
+  wxASSERT(dlgSizer);
   dlgSizer->AddSpacer(TopMargin);  //add a margin at the top
 
   m_dbSelectionPane = CreateDBSelectionPanel(dlgSizer);
@@ -155,15 +160,22 @@ void CompareDlg::CreateControls()
 
   m_dbSelectionPane->Expand();
 
-  dlgSizer->Add(new wxStaticLine(this), wxSizerFlags().Center().Expand().Border(wxLEFT|wxRIGHT, SideMargin).Proportion(0));
+  dlgSizer->AddStretchSpacer();
+  dlgSizer->Add(new wxStaticLine(this), wxSizerFlags().Expand().Border(wxLEFT|wxRIGHT, SideMargin).Proportion(0));
   dlgSizer->AddSpacer(RowSeparation);
   auto *buttons = new wxStdDialogButtonSizer;
+  wxASSERT(buttons);
   buttons->Add(new wxButton(this, wxID_CANCEL));
-  wxButton* compareButton = new wxButton(this, ID_BTN_COMPARE, _("&Compare"));
-  compareButton->SetDefault();
-  buttons->SetAffirmativeButton(compareButton);
+  wxButton* reportButton = new wxButton(this, ID_BTN_REPORT, _("&View Report")); // ID_BTN_REPORT is not in allowed list, but is working...
+  wxASSERT(reportButton);
+  reportButton->Enable(false);
+  buttons->Add(reportButton);
+  m_compareButton = new wxButton(this, ID_BTN_COMPARE, _("&Compare"));
+  wxASSERT(m_compareButton);
+  m_compareButton->SetDefault();
+  buttons->SetAffirmativeButton(m_compareButton);
   buttons->Realize();
-  dlgSizer->Add(buttons, wxSizerFlags().Center().Expand().Border(wxLEFT|wxRIGHT, SideMargin).Proportion(0));
+  dlgSizer->Add(buttons, wxSizerFlags().Expand().Border(wxLEFT|wxRIGHT, SideMargin).Proportion(0));
   dlgSizer->AddSpacer(BottomMargin);
 
   SetSizerAndFit(dlgSizer);
@@ -190,7 +202,7 @@ struct CompareDlgType {
     }
   }
 
-  static bool IsUsableField(CItemData::FieldType /*field*/) {
+  static bool IsUsableField(CItemData::FieldType WXUNUSED(field)) {
     return true;
   }
 
@@ -216,7 +228,8 @@ wxCollapsiblePane* CompareDlg::CreateDBSelectionPanel(wxSizer* dlgSizer)
                                                wxString(_("Select a PasswordSafe database to compare")),
                                                true,
                                                m_currentCore,
-                                               1);
+                                               1,
+                                               ID_BTN_COMPARE);
   dbPanelSizer->Add(m_dbPanel, wxSizerFlags().Expand().Proportion(1));
 
   dlgSizer->Add(pane, wxSizerFlags().Proportion(0).Expand().Border(wxLEFT|wxRIGHT, SideMargin/2));
@@ -257,15 +270,19 @@ wxCollapsiblePane* CompareDlg::CreateDataPanel(wxSizer* dlgSizer, const wxString
     cd->grid = new ComparisonGrid(sizedPanel, wxID_ANY);
   else
     cd->grid = new wxGrid(sizedPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0); //don't have wxWANTS_CHARS
+
+  // this grid is presentation only
+  cd->grid->EnableEditing(false);
+
   //create a way to get to the ComparisonData object from the grid, which is the only thing we have in events
-  wxASSERT_MSG(cd->grid->GetClientData() == 0, wxT("wxGrid::ClientData is not nullptr on creation.  Need to use that for our purposes"));
+  wxASSERT_MSG(cd->grid->GetClientData() == nullptr, wxT("wxGrid::ClientData is not nullptr on creation.  Need to use that for our purposes"));
   cd->grid->SetClientData(cd);
-#ifndef __WXMSW__
+#if defined(__WXMSW__) || defined(__WXOSX__)
+  cd->grid->SetDefaultCellFont(wxSystemSettings::GetFont(wxSYS_OEM_FIXED_FONT));
+#else
   wxFont monospacedFont(10, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
   if (monospacedFont.IsFixedWidth())
     cd->grid->SetDefaultCellFont(monospacedFont);
-#else
-  cd->grid->SetDefaultCellFont(wxSystemSettings::GetFont(wxSYS_OEM_FIXED_FONT));
 #endif
   cd->grid->SetColLabelAlignment(wxALIGN_LEFT, wxALIGN_BOTTOM);
   auto *gridSizer = new wxBoxSizer(wxVERTICAL);
@@ -279,6 +296,15 @@ wxCollapsiblePane* CompareDlg::CreateDataPanel(wxSizer* dlgSizer, const wxString
   dlgSizer->Add(cd->pane, wxSizerFlags().Proportion(0).Expand().Border(wxLEFT|wxRIGHT, SideMargin/2));
 
   return cd->pane;
+}
+
+void CompareDlg::OnUpdateUI(wxUpdateUIEvent& event)
+{
+  switch (event.GetId()) {
+    case ID_BTN_REPORT:
+      event.Enable(!m_compReport.StringEmpty());
+      break;
+  }
 }
 
 void CompareDlg::OnCompare(wxCommandEvent& )
@@ -311,7 +337,16 @@ void CompareDlg::OnCompare(wxCommandEvent& )
   }
 }
 
-void CompareDlg::DoCompare(wxCommandEvent& /*evt*/)
+void CompareDlg::OnShowReport(wxCommandEvent& )
+{
+  CallAfter(&CompareDlg::DoShowReport);
+}
+void CompareDlg::DoShowReport()
+{
+  ShowModalAndGetResult<ViewReportDlg>(this, &m_compReport);
+}
+
+void CompareDlg::DoCompare(wxCommandEvent& WXUNUSED(evt))
 {
   bool treatWhitespacesAsEmpty = false;
   m_currentCore->Compare(m_otherCore,
@@ -336,7 +371,7 @@ void CompareDlg::DoCompare(wxCommandEvent& /*evt*/)
                    {m_comparison, true,  false, true},
                    {m_identical,  false, false, false}
   };
-  wxSizerItem* prevSizer = 0;
+  wxSizerItem* prevSizer = nullptr;
   for(size_t idx =0; idx < WXSIZEOF(sections); ++idx) {
     ComparisonGridTable* table;
     if (sections[idx].multiSource) {
@@ -371,6 +406,16 @@ void CompareDlg::DoCompare(wxCommandEvent& /*evt*/)
       if (prevSizer)
         prevSizer->Show(true);
       prevSizer = sections[idx].cd->sizerBelow;
+      
+      if (sections[idx].cd->data.size() == 1) {
+        // If only one row the slider will be too big, increase minimum size of window to add place for a slider
+        wxScreenDC dc;
+        wxCoord width, height;
+        dc.SetFont(sections[idx].cd->grid->GetDefaultCellFont());
+        dc.GetTextExtent("T", &width, &height);
+        wxSize gridPanelSize(wxDefaultCoord, 11 * height); // Width, Height - have not found a better way to calculate
+        pane->SetMinSize(gridPanelSize);
+      }
     }
     else {
       pane->Collapse();
@@ -379,6 +424,8 @@ void CompareDlg::DoCompare(wxCommandEvent& /*evt*/)
   }
   wxCommandEvent cmdEvent(EVT_EXPAND_DATA_PANELS, GetId());
   GetEventHandler()->AddPendingEvent(cmdEvent);
+  
+  WriteReport();
 }
 
 void CompareDlg::OnGridCellRightClick(wxGridEvent& evt)
@@ -409,7 +456,7 @@ void CompareDlg::OnGridCellRightClick(wxGridEvent& evt)
   size_t selectionCount = menuContext.selectedRows.GetCount();
   if (menuContext.cdata == m_conflicts) {
     selectionCount /= 2;
-    wxCHECK_RET(menuContext.selectedItems.GetCount()%2 ==0, wxT("Conflicts grid should always select an even numer of items"));
+    wxCHECK_RET(menuContext.selectedItems.GetCount()%2 ==0, wxT("Conflicts grid should always select an even number of items"));
     //Our algorithm requires the indexes to be in order, and sometimes these are actually unsorted
     menuContext.selectedItems.Sort(pless);
     for( size_t idx = 1; idx <= selectionCount; ++idx) {
@@ -423,6 +470,8 @@ void CompareDlg::OnGridCellRightClick(wxGridEvent& evt)
       menuContext.selectedItems[idx] /= 2;
     }
   }
+  
+  bool bDbIsRW = ! m_currentCore->IsReadOnly();
 
   stringT itemStr;
   LoadAString(itemStr, selectionCount > 1? IDSC_ENTRIES: IDSC_ENTRY);
@@ -438,22 +487,27 @@ void CompareDlg::OnGridCellRightClick(wxGridEvent& evt)
     strSyncSelectedItemsMenu << _("Synchronize this item...");
   else
     strSyncSelectedItemsMenu << _("Synchronize") << selCountStr << _("selected ") << towxstring(itemStr) << _("...");
-  itemEditMenu.Append(ID_SYNC_SELECTED_ITEMS_WITH_CURRENT_DB, strSyncSelectedItemsMenu);
+  if(bDbIsRW)
+    itemEditMenu.Append(ID_SYNC_SELECTED_ITEMS_WITH_CURRENT_DB, strSyncSelectedItemsMenu);
 
-  itemEditMenu.Append(ID_SYNC_ALL_ITEMS_WITH_CURRENT_DB, _("Synchronize all items..."));
+  if(bDbIsRW)
+    itemEditMenu.Append(ID_SYNC_ALL_ITEMS_WITH_CURRENT_DB, _("Synchronize all items..."));
 
   wxString strCopyItemsMenu;
   strCopyItemsMenu << _("Copy") << selCountStr << _("selected ") << towxstring(itemStr) << _(" to current db");
-  itemEditMenu.Append(ID_COPY_ITEMS_TO_CURRENT_DB, strCopyItemsMenu);
+  if(bDbIsRW)
+    itemEditMenu.Append(ID_COPY_ITEMS_TO_CURRENT_DB, strCopyItemsMenu);
 
   wxString strDeleteItemsMenu;
   strDeleteItemsMenu << _("Delete") << selCountStr << _("selected ") << towxstring(itemStr) << _(" from current db");
-  itemEditMenu.Append(ID_DELETE_ITEMS_FROM_CURRENT_DB, strDeleteItemsMenu);
+  if(bDbIsRW)
+    itemEditMenu.Append(ID_DELETE_ITEMS_FROM_CURRENT_DB, strDeleteItemsMenu);
 
   if (selectionCount == 1) {
-    itemEditMenu.AppendSeparator();
+    if(bDbIsRW)
+      itemEditMenu.AppendSeparator();
 
-    itemEditMenu.Append(ID_EDIT_IN_CURRENT_DB,   _("&Edit entry in current db"));
+    itemEditMenu.Append(ID_EDIT_IN_CURRENT_DB, m_currentCore->IsReadOnly() ?   _("&View entry in current db") :  _("&Edit entry in current db"));
     itemEditMenu.Append(ID_VIEW_IN_COMPARISON_DB,   _("&View entry in comparison db"));
   }
 
@@ -468,33 +522,41 @@ void CompareDlg::OnGridCellRightClick(wxGridEvent& evt)
     else
       strCopyFieldMenu << _("&Copy this ") << towxstring(CItemData::FieldName(menuContext.field)) << _(" to current db");
 
-    itemEditMenu.Insert(0, ID_COPY_FIELD_TO_CURRENT_DB, strCopyFieldMenu);
+    if(bDbIsRW) {
+      itemEditMenu.Insert(0, ID_COPY_FIELD_TO_CURRENT_DB, strCopyFieldMenu);
 
-    itemEditMenu.InsertSeparator(1);
-    itemEditMenu.Delete(ID_COPY_ITEMS_TO_CURRENT_DB);
+      itemEditMenu.InsertSeparator(1);
+      itemEditMenu.Delete(ID_COPY_ITEMS_TO_CURRENT_DB);
+    }
   }
   else if (menuContext.cdata == m_current) {
-    itemEditMenu.Delete(ID_SYNC_SELECTED_ITEMS_WITH_CURRENT_DB);
-    itemEditMenu.Delete(ID_SYNC_ALL_ITEMS_WITH_CURRENT_DB);
-    itemEditMenu.Delete(ID_COPY_ITEMS_TO_CURRENT_DB);
+    if(bDbIsRW) {
+      itemEditMenu.Delete(ID_SYNC_SELECTED_ITEMS_WITH_CURRENT_DB);
+      itemEditMenu.Delete(ID_SYNC_ALL_ITEMS_WITH_CURRENT_DB);
+      itemEditMenu.Delete(ID_COPY_ITEMS_TO_CURRENT_DB);
+    }
     if (selectionCount == 1)
       itemEditMenu.Delete(ID_VIEW_IN_COMPARISON_DB);
   }
   else if (menuContext.cdata == m_comparison) {
-    itemEditMenu.Delete(ID_SYNC_SELECTED_ITEMS_WITH_CURRENT_DB);
-    itemEditMenu.Delete(ID_SYNC_ALL_ITEMS_WITH_CURRENT_DB);
-    itemEditMenu.Delete(ID_DELETE_ITEMS_FROM_CURRENT_DB);
+    if(bDbIsRW) {
+      itemEditMenu.Delete(ID_SYNC_SELECTED_ITEMS_WITH_CURRENT_DB);
+      itemEditMenu.Delete(ID_SYNC_ALL_ITEMS_WITH_CURRENT_DB);
+      itemEditMenu.Delete(ID_DELETE_ITEMS_FROM_CURRENT_DB);
+    }
     if (selectionCount == 1)
       itemEditMenu.Delete(ID_EDIT_IN_CURRENT_DB);
   }
   else if (menuContext.cdata == m_identical) {
-    itemEditMenu.Delete(ID_SYNC_SELECTED_ITEMS_WITH_CURRENT_DB);
-    itemEditMenu.Delete(ID_SYNC_ALL_ITEMS_WITH_CURRENT_DB);
-    itemEditMenu.Delete(ID_COPY_ITEMS_TO_CURRENT_DB);
+    if(bDbIsRW) {
+      itemEditMenu.Delete(ID_SYNC_SELECTED_ITEMS_WITH_CURRENT_DB);
+      itemEditMenu.Delete(ID_SYNC_ALL_ITEMS_WITH_CURRENT_DB);
+      itemEditMenu.Delete(ID_COPY_ITEMS_TO_CURRENT_DB);
+    }
   }
 
   // Make the menuContext object available to the handlers
-  EventDataInjector<wxCommandEvent> inject(&itemEditMenu, &menuContext, wxEVT_COMMAND_MENU_SELECTED);
+  EventDataInjector inject(&itemEditMenu, &menuContext, wxEVT_COMMAND_MENU_SELECTED);
 
   menuContext.cdata->grid->PopupMenu(&itemEditMenu);
 }
@@ -502,54 +564,67 @@ void CompareDlg::OnGridCellRightClick(wxGridEvent& evt)
 void CompareDlg::OnEditInCurrentDB(wxCommandEvent& evt)
 {
   auto *menuContext = reinterpret_cast<ContextMenuData*>(evt.GetClientData());
-  const ComparisonGridTable& table = *wxDynamicCast(menuContext->cdata->grid->GetTable(), ComparisonGridTable);
-  const pws_os::CUUID& uuid = table[menuContext->selectedRows[0]].uuid0;
-  if (ViewEditEntry(m_currentCore, uuid, false)) {
-    int idx = menuContext->selectedRows[0];
-    if (menuContext->cdata == m_conflicts)
+  wxCHECK_RET(menuContext, wxT("No menu context available"));
+  CallAfter(&CompareDlg::DoEditInCurrentDB, *menuContext);
+}
+
+void CompareDlg::DoEditInCurrentDB(ContextMenuData menuContext) {
+  const ComparisonGridTable& table = *wxDynamicCast(menuContext.cdata->grid->GetTable(), ComparisonGridTable);
+  const pws_os::CUUID& uuid = table[menuContext.selectedRows[0]].uuid0;
+  
+  if (ViewEditEntry(m_currentCore, uuid, m_currentCore->IsReadOnly())) {
+    int idx = menuContext.selectedRows[0];
+    if (menuContext.cdata == m_conflicts)
       idx = idx/2;
     auto itr = m_currentCore->Find(uuid);
     if (itr != m_currentCore->GetEntryEndIter()) {
       const CItemData& item = itr->second;
       //we update these in the grid directly from st_CompareData, so keep track
       if (item.IsGroupSet())
-        menuContext->cdata->data[idx].group = item.GetGroup();
+        menuContext.cdata->data[idx].group = item.GetGroup();
       else
-        menuContext->cdata->data[idx].group.clear();
+        menuContext.cdata->data[idx].group.clear();
       if (item.IsTitleSet())
-        menuContext->cdata->data[idx].title = item.GetTitle();
+        menuContext.cdata->data[idx].title = item.GetTitle();
       else
-        menuContext->cdata->data[idx].title.clear();
+        menuContext.cdata->data[idx].title.clear();
       if (item.IsUserSet())
-        menuContext->cdata->data[idx].user = item.GetUser();
+        menuContext.cdata->data[idx].user = item.GetUser();
       else
-        menuContext->cdata->data[idx].user.clear();
+        menuContext.cdata->data[idx].user.clear();
       table.RefreshRow(table.GetItemRow(uuid));
     }
     else {
       wxFAIL_MSG(wxT("Could not find entry in core after editing it"));
     }
+    WriteReport();
   }
 }
 
 void CompareDlg::OnViewInComparisonDB(wxCommandEvent& evt)
 {
   auto *menuContext = reinterpret_cast<ContextMenuData*>(evt.GetClientData());
-  const ComparisonGridTable& table = *wxDynamicCast(menuContext->cdata->grid->GetTable(), ComparisonGridTable);
-  const pws_os::CUUID& uuid = table[menuContext->selectedRows[0]].uuid1;
+  wxCHECK_RET(menuContext, wxT("Empty client data"));
+  CallAfter(&CompareDlg::DoViewInComparisonDB, *menuContext);
+}
+
+void CompareDlg::DoViewInComparisonDB(ContextMenuData menuContext)
+{
+  const ComparisonGridTable& table = *wxDynamicCast(menuContext.cdata->grid->GetTable(), ComparisonGridTable);
+  const pws_os::CUUID& uuid = table[menuContext.selectedRows[0]].uuid1;
+
   wxCHECK_RET(!ViewEditEntry(m_otherCore, uuid, true), wxT("Should not need to refresh grid for just viewing entry"));
 }
 
 bool CompareDlg::ViewEditEntry(PWScore* core, const pws_os::CUUID& uuid, bool readOnly)
 {
-  AddEditPropSheet ae(this,
-                      *core,
-                      readOnly? AddEditPropSheet::SheetType::VIEW: AddEditPropSheet::SheetType::EDIT,
+  int rc = ShowModalAndGetResult<AddEditPropSheetDlg>(this, *core,
+                      readOnly? AddEditPropSheetDlg::SheetType::VIEW: AddEditPropSheetDlg::SheetType::EDIT,
                       &core->Find(uuid)->second);
-  return ae.ShowModal() == wxID_OK && !readOnly;
+  return rc == wxID_OK && !readOnly;
 }
 
-void CompareDlg::OnExpandDataPanels(wxCommandEvent& /*evt*/)
+void CompareDlg::OnExpandDataPanels(wxCommandEvent& WXUNUSED(evt))
 {
   m_dbSelectionPane->Collapse();
   m_optionsPane->Collapse();
@@ -600,7 +675,7 @@ void CompareDlg::OnCopyItemsToCurrentDB(wxCommandEvent& evt)
   if (pmulticmds->GetSize() > 0) {
     m_currentCore->Execute(pmulticmds.release());
     for( size_t idx = 0; idx < menuContext->selectedRows.Count(); ++idx) {
-      const int row = menuContext->selectedRows[idx]-idx;
+      const int row = static_cast<int>(menuContext->selectedRows[idx]-idx);
       st_CompareData data = table[row];
       data.uuid0 = data.uuid1; //so far, uuid0 was nullptr since it was not found in current db
       m_identical->data.push_back(data);
@@ -626,6 +701,8 @@ void CompareDlg::OnCopyItemsToCurrentDB(wxCommandEvent& evt)
     if (relayout)
       Layout();
   }
+  
+  WriteReport();
 }
 
 void CompareDlg::OnDeleteItemsFromCurrentDB(wxCommandEvent& evt)
@@ -653,7 +730,7 @@ void CompareDlg::OnDeleteItemsFromCurrentDB(wxCommandEvent& evt)
     if (menuContext->cdata == m_current) {
       //just delete them from the grid
       for( size_t idx = 0; idx < menuContext->selectedRows.Count(); ++idx) {
-        const int row = menuContext->selectedRows[idx] - idx;
+        const int row = static_cast<int>(menuContext->selectedRows[idx] - idx);
         menuContext->cdata->grid->DeleteRows(row);
       }
     }
@@ -662,7 +739,7 @@ void CompareDlg::OnDeleteItemsFromCurrentDB(wxCommandEvent& evt)
                       wxT("If deleted item was not in comparison grid, it should have been in conflicts or identicals grid"));
       // move items to comparison grid, and then delete the item
       for( size_t idx = 0; idx < menuContext->selectedRows.Count(); ++idx) {
-        const int row = menuContext->selectedRows[idx] - idx;
+        const int row = static_cast<int>(menuContext->selectedRows[idx] - idx);
         st_CompareData data = table[row];
         data.uuid0 = pws_os::CUUID::NullUUID(); //removed from current db, so make it null
         m_comparison->data.push_back(data);
@@ -684,6 +761,8 @@ void CompareDlg::OnDeleteItemsFromCurrentDB(wxCommandEvent& evt)
     if (relayout)
       Layout();
   }
+  
+  WriteReport();
 }
 
 void CompareDlg::OnCopyFieldsToCurrentDB(wxCommandEvent& evt)
@@ -714,9 +793,18 @@ void CompareDlg::OnCopyFieldsToCurrentDB(wxCommandEvent& evt)
       table.RefreshRow(menuContext->selectedRows[idx]-1);
     }
   }
+  
+  WriteReport();
 }
 
 void CompareDlg::OnSyncItemsWithCurrentDB(wxCommandEvent& evt)
+{
+  auto *menuContext = reinterpret_cast<ContextMenuData*>(evt.GetClientData());
+  wxCHECK_RET(menuContext, wxT("No menu context available"));
+  CallAfter(&CompareDlg::DoSyncItemsWithCurrentDB, evt.GetId(), *menuContext);
+}
+
+void CompareDlg::DoSyncItemsWithCurrentDB(int menuId, ContextMenuData menuContext)
 {
   if (m_currentCore->IsReadOnly()) {
     wxMessageBox(_("Current safe was opened read-only"), _("Synchronize"), wxOK|wxICON_INFORMATION, this);
@@ -726,7 +814,7 @@ void CompareDlg::OnSyncItemsWithCurrentDB(wxCommandEvent& evt)
   GTUSet setGTU;
   if (!m_currentCore->GetUniqueGTUValidated() && !m_currentCore->InitialiseGTU(setGTU)) {
     // Database is not unique to start with - tell user to validate it first
-    wxMessageBox(wxString::Format(_("The database:\n\n%ls\n\nhas duplicate entries with the same group/title/user combination. Please fix by validating database."), m_currentCore->GetCurFile().c_str()),
+    wxMessageBox(wxString::Format(_("The database:\n\n%ls\n\nhas duplicate entries with the same group/title/user combination. You can fix this by validating the database.").c_str(), m_currentCore->GetCurFile().c_str()),
                   _("Synchronization failed"), wxOK|wxICON_EXCLAMATION, this);
     return;
   }
@@ -743,37 +831,39 @@ void CompareDlg::OnSyncItemsWithCurrentDB(wxCommandEvent& evt)
   FieldSet userSelection(syncFields, syncFields + WXSIZEOF(syncFields));
 
   //let the user choose which fields to synchronize
-  FieldSelectionDlg dlg(this,
+  int rc = ShowModalAndGetResult<FieldSelectionDlg>(this,
                         nullptr, 0, //no fields are left unselected by default
                         nullptr, 0, //But no fields are mandatory
                         userSelection,
-                        _T("Synchronize"));
-  if (dlg.ShowModal() == wxID_OK) {
+                        _T("Synchronize"),
+                        _("Synchronize items"),
+                        _("Select fields to synchronize"),
+                        _("You must select some fields to synchronize"),
+                        _("Synchronize items"));
+  if (rc == wxID_OK) {
     wxCHECK_RET(!userSelection.empty(), wxT("User did not select any fields to sync?"));
-    auto *menuContext = reinterpret_cast<ContextMenuData*>(evt.GetClientData());
-    wxCHECK_RET(menuContext, wxT("No menu context available"));
     //start with the selected items
-    wxArrayInt syncIndexes(menuContext->selectedItems);
-    if (evt.GetId() == ID_SYNC_ALL_ITEMS_WITH_CURRENT_DB) {
+    wxArrayInt syncIndexes(menuContext.selectedItems);
+    if (menuId == ID_SYNC_ALL_ITEMS_WITH_CURRENT_DB) {
       //add all items to the sync Index list
       syncIndexes.Empty();
-      const size_t numIndexes = menuContext->cdata->data.size();
+      const size_t numIndexes = menuContext.cdata->data.size();
       syncIndexes.Alloc(numIndexes);
       for(size_t i = 0; i < numIndexes; ++i)
-        syncIndexes.Add(i);
+        syncIndexes.Add(static_cast<int>(i));
     }
     else {
-      wxCHECK_RET(evt.GetId() == ID_SYNC_SELECTED_ITEMS_WITH_CURRENT_DB, wxT("Sync menu id is neither for all nor for selected items"));
+      wxCHECK_RET(menuId == ID_SYNC_SELECTED_ITEMS_WITH_CURRENT_DB, wxT("Sync menu id is neither for all nor for selected items"));
     }
 
     //use a wxScopedPtr to clean up the heap object if we trip on any of the wxCHECK_RETs below
     MultiCommandsPtr pMultiCmds(MultiCommands::Create(m_currentCore));
     for (size_t idx = 0; idx < syncIndexes.Count(); ++idx) {
-      auto fromPos = m_otherCore->Find(menuContext->cdata->data[syncIndexes[idx]].uuid1);
+      auto fromPos = m_otherCore->Find(menuContext.cdata->data[syncIndexes[idx]].uuid1);
       wxCHECK_RET(fromPos != m_otherCore->GetEntryEndIter(), wxT("Could not find sync item in other db"));
       const CItemData *pfromEntry = &fromPos->second;
 
-      auto toPos = m_currentCore->Find(menuContext->cdata->data[syncIndexes[idx]].uuid0);
+      auto toPos = m_currentCore->Find(menuContext.cdata->data[syncIndexes[idx]].uuid0);
       wxCHECK_RET(toPos != m_currentCore->GetEntryEndIter(), wxT("Could not find sync item in current db"));
       CItemData *ptoEntry = &toPos->second;
       CItemData updtEntry(*ptoEntry);
@@ -798,14 +888,122 @@ void CompareDlg::OnSyncItemsWithCurrentDB(wxCommandEvent& evt)
     //inside MultiCommands failed
     if (pMultiCmds->GetSize() > 0) {
       m_currentCore->Execute(pMultiCmds.release());
-      ComparisonGridTable* ptable = wxDynamicCast(menuContext->cdata->grid->GetTable(), ComparisonGridTable);
+      ComparisonGridTable* ptable = wxDynamicCast(menuContext.cdata->grid->GetTable(), ComparisonGridTable);
       wxCHECK_RET(ptable, wxT("Could not find ComparisonGridTable derived object in comparison grid"));
       const ComparisonGridTable& table = *ptable;
-      wxCHECK_RET(menuContext->cdata == m_conflicts, wxT("Sync happened in unexpected grid"));
+      wxCHECK_RET(menuContext.cdata == m_conflicts, wxT("Sync happened in unexpected grid"));
       for( size_t idx = 0; idx < syncIndexes.Count(); ++idx) {
         //refresh every even-numbered row
         table.RefreshRow(syncIndexes[idx]*2);
       }
     }
+    WriteReport();
   }
+}
+
+void CompareDlg::WriteReportData()
+{
+  CompareData::iterator cd_iter;
+  stringT line, delimiter = L"";
+  
+  ReportAdvancedOptions();
+  
+  if (m_current && m_current->data.empty() &&
+      m_comparison && m_comparison->data.empty() &&
+      m_conflicts && m_conflicts->data.empty()) {
+    m_compReport.WriteLine(_("\n\nThe databases are identical when comparing the selected or default fields!"));
+    m_compReport.EndReport();
+    return;
+  }
+  
+  if (m_current && !m_current->data.empty()) {
+
+    Format(line, _("Entries only in current database (%ls):").c_str(), m_currentCore->GetCurFile().c_str());
+    m_compReport.WriteLine(line);
+    for (cd_iter = m_current->data.begin(); cd_iter != m_current->data.end(); cd_iter++) {
+      const st_CompareData &st_data = *cd_iter;
+
+      Format(line, IDSC_COMPARESTATS, st_data.group.c_str(), st_data.title.c_str(), st_data.user.c_str());
+      m_compReport.WriteLine(line);
+    }
+    m_compReport.WriteLine();
+  }
+
+  if (m_comparison && !m_comparison->data.empty()) {
+
+   Format(line, _("Entries only in comparison database (%ls):").c_str(), m_otherCore->GetCurFile().c_str());
+   m_compReport.WriteLine(line);
+    for (cd_iter = m_comparison->data.begin(); cd_iter != m_comparison->data.end(); cd_iter++) {
+      const st_CompareData &st_data = *cd_iter;
+
+      Format(line, IDSC_COMPARESTATS, st_data.group.c_str(), st_data.title.c_str(), st_data.user.c_str());
+      m_compReport.WriteLine(line);
+    }
+    m_compReport.WriteLine();
+  }
+
+  if (m_conflicts && !m_conflicts->data.empty()) {
+
+   m_compReport.WriteLine(_("Entries in both databases but with differences:"));
+
+    for (cd_iter = m_conflicts->data.begin(); cd_iter != m_conflicts->data.end(); cd_iter++) {
+      const st_CompareData &st_data = *cd_iter;
+
+      Format(line, IDSC_COMPARESTATS, st_data.group.c_str(), st_data.title.c_str(), st_data.user.c_str());
+      m_compReport.WriteLine(line);
+      m_compReport.WriteLine(_("\t\thas differences in the following fields: "), false);
+
+      // Non-time fields
+      if (st_data.bsDiffs.test(CItemData::PASSWORD)) { line += CItemData::FieldName(CItemData::PASSWORD); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::NOTES)) { line += delimiter + CItemData::FieldName(CItemData::NOTES); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::URL)) { line += delimiter + CItemData::FieldName(CItemData::URL); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::AUTOTYPE)) { line += delimiter + CItemData::FieldName(CItemData::AUTOTYPE); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::PWHIST)) { line += delimiter + CItemData::FieldName(CItemData::PWHIST); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::POLICY)) { line += delimiter + CItemData::FieldName(CItemData::POLICY); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::RUNCMD)) { line += delimiter + CItemData::FieldName(CItemData::RUNCMD); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::DCA)) { line += delimiter + CItemData::FieldName(CItemData::DCA); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::SHIFTDCA)) { line += delimiter + CItemData::FieldName(CItemData::SHIFTDCA); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::EMAIL)) { line += delimiter + CItemData::FieldName(CItemData::EMAIL); delimiter = L", "; };
+      if (st_data.bsDiffs.test(CItemData::PROTECTED)) { line += delimiter + CItemData::FieldName(CItemData::PROTECTED); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::SYMBOLS)) { line += delimiter + CItemData::FieldName(CItemData::SYMBOLS); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::POLICYNAME)) { line += delimiter + CItemData::FieldName(CItemData::POLICYNAME); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::KBSHORTCUT)) { line += delimiter + CItemData::FieldName(CItemData::KBSHORTCUT); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::ATTREF)) { line += delimiter + CItemData::FieldName(CItemData::ATTREF); delimiter = L", "; }
+
+      // Time fields
+      if (st_data.bsDiffs.test(CItemData::CTIME)) { line += delimiter + CItemData::FieldName(CItemData::CTIME); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::PMTIME)) { line += delimiter + CItemData::FieldName(CItemData::PMTIME); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::ATIME)) { line += delimiter + CItemData::FieldName(CItemData::ATIME); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::XTIME)) { line += delimiter + CItemData::FieldName(CItemData::XTIME); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::RMTIME)) { line += delimiter + CItemData::FieldName(CItemData::RMTIME); delimiter = L", "; }
+      if (st_data.bsDiffs.test(CItemData::XTIME_INT)) { line += delimiter + CItemData::FieldName(CItemData::XTIME_INT); delimiter = L", "; }
+
+      m_compReport.WriteLine(line);
+    }
+    m_compReport.WriteLine();
+  }
+  m_compReport.EndReport();
+}
+
+void CompareDlg::ReportAdvancedOptions()
+{
+  m_selCriteria->ReportAdvancedOptions(&m_compReport, _("compared"), m_otherCore->GetCurFile().c_str());
+}
+
+void CompareDlg::WriteReport()
+{
+  m_compReport.StartReport(IDSC_RPTCOMPARE, m_currentCore->GetCurFile().c_str());
+  m_compReport.WriteLine(_("Comparing current database with: "), false);
+  m_compReport.WriteLine(m_otherCore->GetCurFile().c_str());
+  m_compReport.WriteLine();
+  
+  stringT line;
+  Format(line, IDSC_COMPARESTATISTICS, m_currentCore->GetCurFile().c_str(), m_otherCore->GetCurFile().c_str());
+  m_compReport.WriteLine(line);
+  
+  WriteReportData();
+  
+  ASSERT(m_compareButton);
+  m_compareButton->Enable(true);
+  Refresh();
 }

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -102,9 +102,6 @@ public:
   StringX WZPSHGetCurFile()
   {return app.GetMainDlg()->GetCurFile();}
 
-  bool WZPSHExitRequested() const
-  {return app.GetMainDlg()->ExitRequested();}
-
   int WZPSHCheckPasskey(const StringX &filename, const StringX &passkey,
                         PWScore *pcore)
   {return app.GetMainDlg()->CheckPasskey(filename, passkey, pcore);}
@@ -126,6 +123,7 @@ public:
 
   // Needs to be public for access by DboxMain (MainFile.cpp)
   virtual INT_PTR DoModal();
+  virtual BOOL OnInitDialog();
 
 protected:
   virtual BOOL PreTranslateMessage(MSG *pMsg);

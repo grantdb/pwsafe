@@ -13,14 +13,14 @@ export VER_MAJOR
 export VER_MINOR
 export VER_REV
 export VER_SPECIAL
-export RELEASENUM := $(VER_MAJOR).$(VER_MINOR)
+
+export RELEASENUM := $(VER_MAJOR).$(VER_MINOR).$(VER_REV)
 export RELEASE_SPECIAL := $(VER_SPECIAL)
 export RELEASENAME := $(RELEASENUM)$(RELEASE_SPECIAL)
 
-.PHONY:    all clean debug-clean release-clean debug release \
-	unicodedebug unicoderelease deb rpm rpmbuild tar signatures \
-	dist sha1sums upload upload-sf upload-src-sf upload-github git-tag I18N \
-	help test debug-test release-test
+.PHONY:    all tar signatures \
+	sha1sums upload upload-sf upload-src-sf upload-github git-tag I18N \
+	help
 
 RELEASEDIR := ./Releases/
 
@@ -32,6 +32,7 @@ RM := /bin/rm -rf
 GIT := git
 GZIP := gzip
 ECHO := /bin/echo
+TAR := /usr/bin/tar
 
 GPG := /usr/bin/gpg
 GPG_SIGN := $(GPG) --detach-sign --default-key $(GPG_KEY)
@@ -44,62 +45,31 @@ RELTAG = wx$(subst .,_,$(RELEASENAME))
 
 export CPPFLAGS += -std=c++11
 
-all: I18N unicodedebug unicoderelease
-
-unicodedebug unicoderelease:
-	$(MAKE) -C src/os/unix $@
-	$(MAKE) -C src/core $@
-	$(MAKE) -C src/ui/wxWidgets CONFIG=$@
+all:
+	@echo "Toplevel make is no longer supported for building Linux versions of PasswordSafe. Please use cmake as described in README.LINUX.DEVELOPERS.md"
 
 
-debug:
-	$(MAKE) unicodedebug
-
-release:
-	$(MAKE) unicoderelease
-
-clean: debug-clean release-clean
-
-debug-clean:
-	$(MAKE) CONFIG=unicodedebug -C src/os/unix clean
-	$(MAKE) CONFIG=unicodedebug -C src/core clean
-	$(MAKE) CONFIG=unicodedebug -C src/ui/wxWidgets clean
-	$(MAKE) CONFIG=unicodedebug -C src/test clean
-
-release-clean:
-	$(MAKE) CONFIG=unicoderelease -C src/os/unix clean
-	$(MAKE) CONFIG=unicoderelease -C src/core clean
-	$(MAKE) CONFIG=unicoderelease -C src/ui/wxWidgets clean
-	$(MAKE) CONFIG=unicoderelease -C src/test clean
-
-# dist prepares stuff for upload - deprecated for Linux, until
-# we find an elegant way to tell deb and rpm distros apart.
-dist: 
-	@$(ECHO) "Run 'make deb' or 'make rpm' to build the respective package"
-
-# rpmbuild is called as part of the rpmbuild invocation from install/rpm/Makefile,
-# which we call via 'make rpm' from here.
-rpmbuild: release I18N help
-
-deb:	release tar
-	@$(MKDIR) $(RELEASEDIR)
-	$(MAKE) -C install/$@ \
-	RELEASENAME=$(RELEASENAME) RELEASEDIR=../../$(RELEASEDIR)
-	$(MAKE) signatures sha1sums
-
-rpm:	I18N tar
-	@$(MKDIR) $(RELEASEDIR)
-	$(MAKE) -C install/$@ \
-	RELEASENAME=$(RELEASENAME)
-	$(MAKE) signatures sha1sums
 
 tar:
 	@$(MKDIR)  $(RELEASEDIR)
 	@$(GIT) archive --format=tar.gz \
 	--prefix=$(PKG_BASE)-$(RELEASENAME)/ \
 	-o $(RELEASEDIR)/$(SRC_TGZ) \
-	HEAD
-	@echo "Done."
+	$(RELEASENAME)
+
+# Following needed because GitHub creates its own tar.gz and .zip files for a release
+# and we need to verify those before signing them
+cmpsrc-github: tar
+	(cd $(RELEASEDIR); $(TAR) xzf $(SRC_TGZ) && \
+	../Misc/sighlp_cmp.py -f ChangeLog -f pwsafe.pot -f version.h -v 1 -s $(RELEASENAME).zip \
+												https://github.com/pwsafe/pwsafe/archive/$(RELEASENAME).zip \
+	                      $(PKG_BASE)-$(RELEASENAME)/ && $(GPG_SIGN) $(RELEASENAME).zip; \
+	../Misc/sighlp_cmp.py -f ChangeLog -f pwsafe.pot -f version.h -v 1 -s $(RELEASENAME).tar.gz \
+												https://github.com/pwsafe/pwsafe/archive/$(RELEASENAME).tar.gz \
+												$(PKG_BASE)-$(RELEASENAME)/ && $(GPG_SIGN) $(RELEASENAME).tar.gz)
+
+	(cd $(RELEASEDIR); $(RM) $(RELEASENAME).zip $(RELEASENAME).tar.gz &&	$(RM) -rf $(PKG_BASE)-$(RELEASENAME))
+	@echo "GitHub source signature files ready to upload from $(RELEASEDIR)"
 
 sha1sums:
 	(cd $(RELEASEDIR); $(SHA1SUM) *$(RELEASENAME)*)
@@ -133,14 +103,6 @@ I18N:
 
 help:
 	$(MAKE) -C help
-
-test: debug-test
-
-debug-test:
-	$(MAKE) CONFIG=unicodedebug -C src/test
-
-release-test:
-	$(MAKE) CONFIG=unicoderelease -C src/test
 
 
 # Local variables:

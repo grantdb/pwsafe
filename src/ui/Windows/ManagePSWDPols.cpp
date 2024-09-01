@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -18,6 +18,7 @@
 
 #include "GeneralMsgBox.h"
 #include "Fonts.h"
+#include "winutils.h"
 
 #include "core/core.h"
 
@@ -25,15 +26,19 @@
 
 #include <algorithm>
 
+
 using namespace std;
 
 // CManagePSWDPols dialog
 CManagePSWDPols::CManagePSWDPols(CWnd* pParent, const bool bLongPPs)
   : CPWDialog(CManagePSWDPols::IDD, pParent),
-  m_iSelectedItem(-1), m_bChanged(false), m_iSortEntriesIndex(0),
-  m_bSortEntriesAscending(true), m_iSortNamesIndex(0), m_bSortNamesAscending(true),
-  m_bViewPolicy(true), m_bLongPPs(bLongPPs), m_iundo_pos(-1), m_pCopyBtn(NULL),
-  m_bCopyPasswordEnabled(false), m_bImageLoaded(FALSE), m_bDisabledImageLoaded(FALSE)
+  m_iundo_pos(-1),
+  m_pCopyBtn(nullptr), m_bCopyPasswordEnabled(false),
+  m_bImageLoaded(FALSE), m_bDisabledImageLoaded(FALSE),
+  m_iSortNamesIndex(0), m_iSortEntriesIndex(0), 
+  m_bSortNamesAscending(true), m_bSortEntriesAscending(true), 
+  m_iSelectedItem(-1), m_bChanged(false),
+  m_bViewPolicy(true), m_bLongPPs(bLongPPs)
 {
   ASSERT(pParent != NULL);
 
@@ -219,27 +224,17 @@ BOOL CManagePSWDPols::OnInitDialog()
   UINT nImageID = PWSprefs::GetInstance()->GetPref(PWSprefs::UseNewToolbar) ?
     IDB_COPYPASSWORD_NEW : IDB_COPYPASSWORD_CLASSIC;
 
-  m_bImageLoaded = m_CopyPswdBitmap.Attach(::LoadImage(
-                  ::AfxFindResourceHandle(MAKEINTRESOURCE(nImageID), RT_BITMAP),
-                  MAKEINTRESOURCE(nImageID), IMAGE_BITMAP, 0, 0,
-                  (LR_DEFAULTSIZE | LR_CREATEDIBSECTION | LR_SHARED)));
-  
+  m_bImageLoaded = WinUtil::LoadScaledBitmap(m_CopyPswdBitmap, nImageID, true, m_hWnd);
+
   ASSERT(m_bImageLoaded);
-  if (m_bImageLoaded) {
-    FixBitmapBackground(m_CopyPswdBitmap);
-  }
 
   nImageID = PWSprefs::GetInstance()->GetPref(PWSprefs::UseNewToolbar) ?
     IDB_COPYPASSWORD_NEW_D : IDB_COPYPASSWORD_CLASSIC_D;
 
-  m_bDisabledImageLoaded = m_DisabledCopyPswdBitmap.Attach(
-    ::LoadImage(::AfxFindResourceHandle(MAKEINTRESOURCE(nImageID), RT_BITMAP),
-      MAKEINTRESOURCE(nImageID), IMAGE_BITMAP, 0, 0,
-      (LR_DEFAULTSIZE | LR_CREATEDIBSECTION | LR_SHARED)));
+  m_bDisabledImageLoaded = WinUtil::LoadScaledBitmap(m_DisabledCopyPswdBitmap, nImageID, true, m_hWnd);
 
   ASSERT(m_bDisabledImageLoaded);
   if (m_bDisabledImageLoaded) {
-    FixBitmapBackground(m_DisabledCopyPswdBitmap);
     m_pCopyBtn->SetBitmap(m_DisabledCopyPswdBitmap);
   }
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -48,6 +48,10 @@ ItemAttTest::ItemAttTest()
 
 void ItemAttTest::SetUp()
 {
+    if (!pws_os::FileExists(fullfileName)) {
+        wcout << L"Can't find " << fullfileName << L", no sense in continuing." << endl;
+        FAIL();
+    }
 }
 
 // And now the tests...
@@ -107,8 +111,8 @@ TEST_F(ItemAttTest, ImpExp)
   unsigned char *m1 = new unsigned char[flen];
   unsigned char *m2 = new unsigned char[flen];
 
-  ASSERT_EQ(1, fread(m1, flen, 1, f1));
-  ASSERT_EQ(1, fread(m2, flen, 1, f2));
+  ASSERT_EQ(1U, fread(m1, flen, 1, f1));
+  ASSERT_EQ(1U, fread(m2, flen, 1, f2));
 
   fclose(f1); fclose(f2);
   EXPECT_EQ(0, memcmp(m1, m2, flen));

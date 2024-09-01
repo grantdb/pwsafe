@@ -10,9 +10,8 @@ set (RESPWSL_SRCS
 
 set (RESPWSL_RES ResPWSL.rc)
 
-add_executable( ResPWSL
-                EXCLUDE_FROM_ALL
-                ${RESPWSL_SRCS} ${RESPWSL_RES})
+add_executable( ResPWSL ${RESPWSL_SRCS} ${RESPWSL_RES})
+target_link_libraries( ResPWSL PRIVATE harden_interface )
 
 set_property( TARGET ResPWSL
               PROPERTY FOLDER Tools )

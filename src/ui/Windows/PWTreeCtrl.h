@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -90,6 +90,9 @@ public:
   HTREEITEM FindItem(const CString &path, HTREEITEM hRoot);
   const StringX &GetDroppedFile() const {return m_droppedFile;}
 
+  static const wchar_t GROUP_SEP;
+  static const wchar_t *GROUP_SEP2;
+
  protected:
   virtual BOOL PreTranslateMessage(MSG *pMsg);
 
@@ -161,8 +164,8 @@ private:
   CFont *GetFontBasedOnStatus(HTREEITEM &hItem, CItemData *pci, COLORREF &cf);
 
   // Notes Display
-  UINT_PTR m_nHoverNDTimerID, m_nShowNDTimerID;
-  CPoint m_HoverNDPoint;
+  UINT_PTR m_nHoverInfoDisplayTimerID, m_nShowInfoDisplayTimerID;
+  CPoint m_HoverInfoDisplayPoint;
   bool m_bShowNotes, m_bMouseInWindow;
 
   // Filter

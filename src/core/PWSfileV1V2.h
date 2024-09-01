@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -12,8 +12,13 @@
 #ifndef __PWSFILEV1V2_H
 #define __PWSFILEV1V2_H
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverloaded-virtual"
+#endif
+
 #include "PWSfile.h"
-#include "BlowFish.h"
+#include "crypto/BlowFish.h"
 
 class PWSfileV1V2 : public PWSfile
 {
@@ -34,7 +39,7 @@ protected:
   virtual size_t WriteCBC(unsigned char type, const StringX &data);
 
 private:
-  PWSfileV1V2& operator=(const PWSfileV1V2&); // Do not implement
+  PWSfileV1V2& operator=(const PWSfileV1V2&) = delete; // Do not implement
   size_t ReadCBC(unsigned char &type, StringX &data);
   // crypto stuff for reading/writing files:
   unsigned char m_salt[SaltLength];
@@ -42,5 +47,9 @@ private:
   int WriteV2Header();
   int ReadV2Header();
 };
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 
 #endif /*  __PWSFILEV1V2_H */

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -9,6 +9,7 @@
 #include "../stdafx.h"
 #include "PWFilterLC.h"
 #include "PWFiltersDlg.h"
+#include "../winutils.h"
 
 #include "SetHistoryFiltersDlg.h"
 #include "SetPolicyFiltersDlg.h"
@@ -20,6 +21,7 @@
 
 #include <algorithm>
 
+
 using namespace std;
 
 #ifdef _DEBUG
@@ -29,14 +31,14 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 CPWFilterLC::CPWFilterLC()
-  : m_pPWF(NULL), m_iType(DFTYPE_INVALID), m_pfilters(NULL), m_bInitDone(false),
-   m_fwidth(-1), m_lwidth(-1), m_rowheight(-1),
-   m_bSetFieldActive(false), m_bSetLogicActive(false),
-   m_iItem(-1), m_numfilters(0), m_pFont(NULL),
-   m_pwchTip(NULL),
+  : m_pfilters(nullptr), m_pwchTip(nullptr), m_pPWF(nullptr),
+  m_bInitDone(false), m_bSetFieldActive(false), m_bSetLogicActive(false),
+  m_numfilters(0), m_iType(DFTYPE_INVALID),
   // Following 4 variables only used if "m_iType == DFTYPE_MAIN"
   m_bPWHIST_Set(false), m_bPOLICY_Set(false), m_bATTACHMENT_Set(false),
-  m_GoodHistory(false), m_GoodPolicy(false), m_GoodAttachment(false)
+  m_GoodHistory(false), m_GoodPolicy(false), m_GoodAttachment(false),
+  m_fwidth(-1), m_lwidth(-1), m_rowheight(-1),
+  m_pFont(nullptr), m_iItem(-1)
 {
   m_crGrayText   = ::GetSysColor(COLOR_GRAYTEXT);
   m_crWindow     = ::GetSysColor(COLOR_WINDOW);
@@ -812,6 +814,7 @@ bool CPWFilterLC::SetField(const int iItem)
         case FT_EMAIL:
         case FT_SYMBOLS:
         case FT_POLICYNAME:
+        case FT_TWOFACTORKEY:
           bAddPresent = true;
           mt = PWSMatch::MT_STRING;
           break;
@@ -1593,6 +1596,10 @@ void CPWFilterLC::SetUpComboBoxData()
         stf.ftype = FT_PASSWORD;
         m_vFcbx_data.push_back(stf);
 
+        stf.cs_text = CItemData::GetUserInterfaceFieldName(CItemData::TWOFACTORKEY).c_str();
+        stf.ftype = FT_TWOFACTORKEY;
+        m_vFcbx_data.push_back(stf);
+
         stf.cs_text = CItemData::FieldName(CItemData::NOTES).c_str();
         stf.ftype = FT_NOTES;
         m_vFcbx_data.push_back(stf);
@@ -2036,10 +2043,9 @@ void CPWFilterLC::DrawComboBox(const int iSubItem, const int index)
   if (ht * n >= wrc.Height()) {
     // Only resize if combobox listctrl won't fit in dialog
     sz.cy = ht * ((n / 2) + 2);
-
     if ((rect.top - sz.cy) < 0 ||
-        (rect.bottom + sz.cy > ::GetSystemMetrics(SM_CYSCREEN))) {
-      int ifit = max((rect.top / ht), (::GetSystemMetrics(SM_CYSCREEN) - rect.bottom) / ht);
+        (rect.bottom + sz.cy > WinUtil::GetSystemMetrics(SM_CYSCREEN, m_hWnd))) {
+      int ifit = max((rect.top / ht), (WinUtil::GetSystemMetrics(SM_CYSCREEN, m_hWnd) - rect.bottom) / ht);
       int ht2 = ht * ifit;
       sz.cy = std::min((long)ht2, sz.cy);
     }
@@ -2104,7 +2110,7 @@ void CPWFilterLC::SetComboBoxWidth(const int iSubItem)
   m_ComboBox.ReleaseDC(pDC);
 
   // Adjust the width for the vertical scroll bar and the left and right border.
-  dx += ::GetSystemMetrics(SM_CXVSCROLL) + 2 * ::GetSystemMetrics(SM_CXEDGE);
+  dx += WinUtil::GetSystemMetrics(SM_CXVSCROLL, m_hWnd) + 2 * WinUtil::GetSystemMetrics(SM_CXEDGE, m_hWnd);
 
   // Now set column widths
   if (iSubItem == FLC_FLD_COMBOBOX) {

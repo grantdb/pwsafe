@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -54,13 +54,14 @@ public:
   int Set(const stringT &csBaseKeyName, const stringT &csValueName,
           int iValue);
   int Set(const stringT &csBaseKeyName, const stringT &csValueName,
-          const stringT &csValue);
+          const stringT &csValue,
+          pugi::xml_node_type xmlType = pugi::xml_node_type::node_pcdata);
 
   int GetWithAttributes(const stringT &csBaseKeyName, const stringT &csValueName,
                         int iDefaultValue);
   int SetWithAttributes(const stringT &csBaseKeyName, const stringT &csValueName,
                         const int &iValue);
-
+  
   std::vector<st_prefShortcut> GetShortcuts(const stringT &csBaseKeyName);
   int SetShortcuts(const stringT &csBaseKeyName, 
                    std::vector<st_prefShortcut> v_shortcuts);
@@ -83,7 +84,8 @@ public:
 
 private:
   int SetPreference(const stringT &sPath, const stringT &sValue,
-                    std::vector<st_prefAttribs> *pvprefAttribs = nullptr);
+                    std::vector<st_prefAttribs> *pvprefAttribs = nullptr,
+                    pugi::xml_node_type xmlType = pugi::xml_node_type::node_pcdata);
 
   pugi::xml_document *m_pXMLDoc;
   stringT m_csConfigFile;

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -36,11 +36,13 @@ protected:
 
   BOOL m_ClearClipboardOnMinimize;
   BOOL m_ClearClipboardOnExit;
+  BOOL m_ExcludeFromClipboardHistory;
   BOOL m_LockOnMinimize;
   BOOL m_ConfirmCopy;
   BOOL m_LockOnWindowLock;
   BOOL m_LockOnIdleTimeout;
   BOOL m_CopyPswdBrowseURL;
+  BOOL m_ExcludeFromScreenCapture;
   int m_IdleTimeOut;
   //}}AFX_DATA
 
@@ -49,7 +51,7 @@ protected:
   uint32 m_HashIter;
 
   CButtonExtn m_chkbox[2];
-  CTBMStatic m_Help1, m_Help2, m_Help3;
+  CTBMStatic m_Help1, m_Help2, m_Help3, m_Help4;
 
   // Overrides
   // ClassWizard generate virtual function overrides
@@ -67,7 +69,6 @@ protected:
   afx_msg LRESULT OnQuerySiblings(WPARAM wParam, LPARAM lParam);
   afx_msg void OnHelp();
   afx_msg void OnLockOnIdleTimeout();
-  afx_msg void OnLockOnMinimize();
   afx_msg HBRUSH OnCtlColor(CDC *pDC, CWnd *pWnd, UINT nCtlColor);
   //}}AFX_MSG
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -9,13 +9,12 @@
 #include "ThisMfcApp.h"
 #include "DboxMain.h"
 #include "PWPropertySheet.h"
+#include "winutils.h"
 
-extern const wchar_t *EYE_CATCHER;
-
-IMPLEMENT_DYNAMIC(CPWPropertySheet, CPropertySheet)
+IMPLEMENT_DYNAMIC(CPWPropertySheet, CMFCPropertySheet)
 
 CPWPropertySheet::CPWPropertySheet(UINT nID, CWnd *pParent, const bool bLongPPs)
-  : CPropertySheet(nID, pParent), m_bKeepHidden(true)
+  : CMFCPropertySheet(nID, pParent), m_bKeepHidden(true)
 {
   m_bLongPPs = bLongPPs;
 
@@ -23,14 +22,14 @@ CPWPropertySheet::CPWPropertySheet(UINT nID, CWnd *pParent, const bool bLongPPs)
 }
 
 CPWPropertySheet::CPWPropertySheet(LPCTSTR pszCaption, CWnd* pParent, const bool bLongPPs)
-  : CPropertySheet(pszCaption, pParent), m_bKeepHidden(false)
+  : CMFCPropertySheet(pszCaption, pParent), m_bKeepHidden(false)
 {
   m_bLongPPs = bLongPPs;
 
   m_psh.dwFlags |= PSH_HASHELP;
 }
 
-BEGIN_MESSAGE_MAP(CPWPropertySheet, CPropertySheet)
+BEGIN_MESSAGE_MAP(CPWPropertySheet, CMFCPropertySheet)
   ON_WM_WINDOWPOSCHANGING()
   ON_WM_SHOWWINDOW()
   ON_WM_MENUCHAR()
@@ -43,13 +42,8 @@ DboxMain *CPWPropertySheet::GetMainDlg() const
 
 LRESULT CPWPropertySheet::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-  if (GetMainDlg()->m_eye_catcher != NULL &&
-      wcscmp(GetMainDlg()->m_eye_catcher, EYE_CATCHER) == 0) {
-    GetMainDlg()->ResetIdleLockCounter(message);
-  } else
-    pws_os::Trace(L"CPWPropertySheet::WindowProc - couldn't find DboxMain ancestor\n");
-
-  return CPropertySheet::WindowProc(message, wParam, lParam);
+  GetMainDlg()->ResetIdleLockCounter(message);
+  return CMFCPropertySheet::WindowProc(message, wParam, lParam);
 }
 
 void CPWPropertySheet::OnWindowPosChanging(WINDOWPOS *lpwndpos)
@@ -59,30 +53,34 @@ void CPWPropertySheet::OnWindowPosChanging(WINDOWPOS *lpwndpos)
   if(m_bKeepHidden)
     lpwndpos->flags &= ~SWP_SHOWWINDOW;
 
-  CPropertySheet::OnWindowPosChanging(lpwndpos);
+  CMFCPropertySheet::OnWindowPosChanging(lpwndpos);
 }
 
 void CPWPropertySheet::OnShowWindow(BOOL bShow, UINT nStatus)
 {
   if(!m_bKeepHidden)
-    CPropertySheet::OnShowWindow(bShow, nStatus);
+    CMFCPropertySheet::OnShowWindow(bShow, nStatus);
 }
 
 BOOL CPWPropertySheet::OnInitDialog()
 {
-  CPropertySheet::OnInitDialog();
+  BOOL retval = CMFCPropertySheet::OnInitDialog();
 
   // If started with Tall and won't fit - return to be called again with Wide
   if (m_bLongPPs && !GetMainDlg()->LongPPs(this)) {
     EndDialog(-1);
-    return TRUE;
+    return retval;
   }
 
   // It's OK - show it
   m_bKeepHidden = false;
   ShowWindow(SW_SHOW);
-  
-  return TRUE;  // return TRUE unless you set the focus to a control
+
+  CScreenCaptureStateControl::SetLastDisplayAffinityError(
+    WinUtil::SetWindowExcludeFromScreenCapture(m_hWnd, app.IsExcludeFromScreenCapture())
+  );
+
+  return retval;  // return TRUE unless you set the focus to a control
 }
 
 INT_PTR CPWPropertySheet::DoModal()
@@ -92,7 +90,7 @@ INT_PTR CPWPropertySheet::DoModal()
     app.DisableAccelerator();
 
   CPWDialog::GetDialogTracker()->AddOpenDialog(this);
-  INT_PTR rc = CPropertySheet::DoModal();
+  INT_PTR rc = CMFCPropertySheet::DoModal();
   CPWDialog::GetDialogTracker()->RemoveOpenDialog(this);
 
   if (bAccEn)
@@ -103,7 +101,7 @@ INT_PTR CPWPropertySheet::DoModal()
 
 LRESULT CPWPropertySheet::OnMenuChar(UINT nChar, UINT nFlags, CMenu *pMenu)
 {
-  // Stop beeps when presing Alt+<key> in the HotKeyCtrls
+  // Stop beeps when pressing Alt+<key> in the HotKeyCtrls
   const int nID = GetFocus()->GetDlgCtrlID();
 
   // IDs correspond to AddEdit_Additional Entry Keyboard Shortcut Hotkey and
@@ -111,5 +109,5 @@ LRESULT CPWPropertySheet::OnMenuChar(UINT nChar, UINT nFlags, CMenu *pMenu)
   if (nID == IDC_ENTKBSHCTHOTKEY || nID == IDC_SHORTCUTHOTKEY)
     return MNC_CLOSE << 16;
 
- return CPropertySheet::OnMenuChar(nChar, nFlags, pMenu);
+ return CMFCPropertySheet::OnMenuChar(nChar, nFlags, pMenu);
 }

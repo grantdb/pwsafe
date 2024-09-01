@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -15,6 +15,7 @@
 #include "DboxMain.h"
 #include "CreateShortcutDlg.h"
 #include "ControlExtns.h"
+#include "winutils.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -26,8 +27,8 @@ static char THIS_FILE[] = __FILE__;
 CCreateShortcutDlg::CCreateShortcutDlg(CWnd* pParent, 
   const CSecString &cs_basegroup, const CSecString &cs_basetitle, const CSecString &cs_baseuser)
   : CPWDialog(CCreateShortcutDlg::IDD, pParent),
-  m_basegroup(cs_basegroup), m_basetitle(cs_basetitle), m_baseuser(cs_baseuser),
-  m_group(cs_basegroup), m_username(cs_baseuser)
+  m_username(cs_baseuser), m_group(cs_basegroup),
+  m_basegroup(cs_basegroup), m_basetitle(cs_basetitle), m_baseuser(cs_baseuser)
 {
 }
 
@@ -164,7 +165,7 @@ void CCreateShortcutDlg::SetGroupComboBoxWidth()
   m_ex_group.ReleaseDC(pDC);
 
   // Adjust the width for the vertical scroll bar and the left and right border.
-  dx += ::GetSystemMetrics(SM_CXVSCROLL) + 2 * ::GetSystemMetrics(SM_CXEDGE);
+  dx += WinUtil::GetSystemMetrics(SM_CXVSCROLL, m_hWnd) + 2 * WinUtil::GetSystemMetrics(SM_CXEDGE, m_hWnd);
 
   // Set the width of the list box so that every item is completely visible.
   m_ex_group.SetDroppedWidth(dx);

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -46,10 +46,10 @@ COptionsShortcuts::COptionsShortcuts(CWnd *pParent, st_Opt_master_data *pOPTMD)
 : COptions_PropertyPage(pParent,
                         COptionsShortcuts::IDD, COptionsShortcuts::IDD_SHORT,
                         pOPTMD),
-  m_bShortcutsChanged(false),
-  m_bSortAscending(true), m_iSortedColumn(0),
-  m_bKBSortAscending(true), m_iKBSortedColumn(0),
-  m_bWarnUserKBShortcut(false), m_iOldAppHotKey(0)
+  m_iOldAppHotKey(0),
+  m_bShortcutsChanged(false), m_bWarnUserKBShortcut(false),
+  m_iSortedColumn(0), m_iKBSortedColumn(0),
+  m_bSortAscending(true), m_bKBSortAscending(true)
 {
   m_AppHotKeyValue = M_AppHotKey_Value();
   m_bAppHotKeyEnabled = M_AppHotKeyEnabled();
@@ -446,7 +446,7 @@ void COptionsShortcuts::InitialSetup(const MapMenuShortcuts MapMenuShortcuts,
 }
 
 // Tortuous route to get here!
-// Menu m_HotKey looses focus and calls parent (CListCtrl) that calls here
+// Menu m_HotKey loses focus and calls parent (CListCtrl) that calls here
 void COptionsShortcuts::OnMenuShortcutKillFocus(const int item, const UINT id,
                                                 const WORD wVirtualKeyCode, 
                                                 const WORD wPWSModifiers)
@@ -763,7 +763,7 @@ int COptionsShortcuts::CheckAppHotKey()
 
       CGeneralMsgBox gmb;
       CString cs_title(MAKEINTRESOURCE(IDS_SHORTCUT_WARNING));
-      gmb.MessageBox(cs_errmsg, cs_title, MB_OK | MB_ICONSTOP); gmb;
+      gmb.MessageBox(cs_errmsg, cs_title, MB_OK | MB_ICONSTOP);
 
       ((CHotKeyCtrl *)GetDlgItem(IDC_APPHOTKEY_CTRL))->SetFocus();
 

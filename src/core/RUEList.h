@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -17,9 +17,10 @@
 #include <vector>
 #include "ItemData.h"
 #include "StringX.h"
-#include "PWScore.h"
-#include "../os/UUID.h"
+#include "os/UUID.h"
+#include "coredefs.h"
 //-----------------------------------------------------------------------------
+class PWScore;
 
 /*
 * CRUEList is a class that contains the recently used entries
@@ -32,14 +33,15 @@ struct RUEntryData {
 
 // private struct: one of these for each owner-draw menu item
 struct CRUEItemData {
+private:
+  // identifies menu owner-draw data as mine
+  const unsigned long RUEMENUITEMID = MAKELONG(MAKEWORD('R', 'U'),MAKEWORD('E', 'M'));
+public:
   unsigned long magicNum;      // magic number identifying me
   int           nImage;        // index of button image in image list
 
   CRUEItemData() : magicNum(RUEMENUITEMID), nImage(-1) {}
   bool IsRUEID() const {return magicNum == RUEMENUITEMID;}
-private:
-  // identifies menu owner-draw data as mine
-  const unsigned long RUEMENUITEMID = MAKELONG(MAKEWORD('R', 'U'),MAKEWORD('E', 'M'));
 };
 
 typedef std::deque<pws_os::CUUID> RUEList;

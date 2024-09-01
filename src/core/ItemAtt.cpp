@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -9,8 +9,8 @@
 //-----------------------------------------------------------------------------
 
 #include "ItemAtt.h"
-#include "BlowFish.h"
-#include "TwoFish.h"
+#include "crypto/BlowFish.h"
+#include "crypto/TwoFish.h"
 #include "PWSrand.h"
 #include "PWSfile.h"
 #include "PWSfileV4.h"
@@ -115,12 +115,6 @@ void CItemAtt::SetContent(const unsigned char *content, size_t clen)
   SetField(CONTENT, content, clen);
 }
 
-time_t CItemAtt::GetCTime(time_t &t) const
-{
-  CItem::GetTime(ATTCTIME, t);
-  return t;
-}
-
 StringX CItemAtt::GetTime(int whichtime, PWSUtil::TMC result_format) const
 {
   time_t t;
@@ -175,18 +169,23 @@ int CItemAtt::Import(const stringT &fname)
     return PWScore::CANT_OPEN_FILE;
 
   auto flen = static_cast<size_t>(pws_os::fileLength(fhandle));
+  if (flen > CItemAtt::MAX_SIZE) {
+    pws_os::FClose(fhandle, false);
+    return PWScore::MAX_SIZE_EXCEEDED;
+  }
+
   auto *data = new unsigned char[flen];
   if (data == nullptr)
     return PWScore::FAILURE;
 
   size_t nread = fread(data, flen, 1, fhandle);
   if (nread != 1) {
-    fclose(fhandle);
+    pws_os::FClose(fhandle, false);
     status = PWScore::READ_FAIL;
     goto done;
   }
 
-  if (fclose(fhandle) != 0) {
+  if (pws_os::FClose(fhandle, true) != 0) {
     status = PWScore::READ_FAIL;
     goto done;
   }
@@ -378,7 +377,7 @@ int CItemAtt::Read(PWSfile *in)
         ASSERT(utf8Len == sizeof(uint32));
         if (!gotIV || !gotEK || gotContent || utf8Len != sizeof(uint32))
           goto exit;
-        content_len = getInt32(utf8);
+        content_len = static_cast<size_t>(getInt32(utf8));
 
         TwoFish fish(EK, sizeof(EK));
         trashMemory(EK, sizeof(EK));
@@ -431,7 +430,7 @@ int CItemAtt::Read(PWSfile *in)
     trashMemory(AK, sizeof(AK));
     
     // calculate HMAC
-    hmac.Update(content, (unsigned long)content_len);
+    hmac.Update(content, static_cast<unsigned long>(content_len));
     hmac.Final(calculated_digest);
 
     if (memcmp(expected_digest, calculated_digest,
@@ -542,7 +541,7 @@ bool CItemAtt::Matches(const stringT &stValue, int iObject,
   ASSERT(iFunction != 0); // must be positive or negative!
 
   StringX sx_Object;
-  auto ft = static_cast<FieldType>(iObject);
+  auto ft = static_cast<::FieldType>(iObject);
   switch (ft) {
     case AT_TITLE:
     case AT_FILENAME:
@@ -603,4 +602,121 @@ bool CItemAtt::Matches(time_t time1, time_t time2, int iObject,
     }
     return PWSMatch::Match(time1, time2, testtime, iFunction);
   }
+}
+
+void CItemAtt::SerializePlainText(vector<char> &v)  const
+{
+  uuid_array_t uuid_array;
+  time_t t = 0;
+    
+  v.clear();
+  
+  // write mandatoty field ATTUUID
+  v.push_back(ATTUUID);
+  GetUUID(uuid_array);
+  CItem::push_length(v, sizeof(uuid_array_t));
+  v.insert(v.end(), uuid_array, (uuid_array + sizeof(uuid_array_t)));
+    
+  if(IsTitleSet())
+    push(v, ATTTITLE, GetTitle());
+    
+  if(IsCreationTimeSet()) {
+    GetCTime(t);
+    push(v, ATTCTIME, t);
+  }
+
+  if(IsFieldSet(MEDIATYPE))
+    push(v, MEDIATYPE, GetMediaType());
+  if(IsFieldSet(FILENAME))
+    push(v, FILENAME, GetFileName());
+  if(IsFieldSet(FILEPATH))
+    push(v, FILEPATH, GetFilePath());
+    
+  if(HasContent()) {
+    size_t length = GetContentSize();
+    size_t realLen = GetContentLength();
+    if(length) {
+      auto *data = new unsigned char[length];
+      if(GetContent(data, length)) {
+        v.push_back(CONTENT);
+        push_length(v, static_cast<uint32>(realLen));
+        v.insert(v.end(), data, (data + realLen));
+        trashMemory(data, length);
+        delete[] data;
+      }
+    }
+  }
+    
+  if(IsFieldSet(FILECTIME)) {
+    GetFileCTime(t);
+    push(v, FILECTIME, t);
+  }
+  if(IsFieldSet(FILEMTIME)) {
+    GetFileMTime(t);
+    push(v, FILEMTIME, t);
+  }
+  if(IsFieldSet(FILEATIME)) {
+    GetFileATime(t);
+    push(v, FILEATIME, t);
+  }
+    
+  int end = END; // just to keep the compiler happy...
+  v.push_back(static_cast<char>(end));
+  push_length(v, 0);
+}
+
+
+bool CItemAtt::DeSerializePlainText(const std::vector<char> &v)
+{
+    auto iter = v.begin();
+    int emergencyExit = 255;
+    
+    while (iter != v.end()) {
+      unsigned char type = *iter++;
+      if (static_cast<uint32>(distance(v.end(), iter)) < sizeof(uint32)) {
+        ASSERT(0); // type must ALWAYS be followed by length
+        return false;
+      }
+      if (type == END) {
+        return true; // happy end
+      }
+        
+      uint32 len = *(reinterpret_cast<const uint32 *>(&(*iter)));
+      ASSERT(len < v.size()); // sanity check
+      iter += sizeof(uint32);
+
+      if (--emergencyExit == 0) {
+        ASSERT(0);
+        return false;
+      }
+
+#ifdef PWS_BIG_ENDIAN
+    unsigned char buf[len] = {0};
+        
+    switch(type) {
+      case ATTCTIME:
+      case FILECTIME:
+      case FILEMTIME:
+      case FILEATIME:
+
+        memcpy(buf, &(*iter), len);
+        byteswap(buf, buf + len - 1);
+
+        if (!SetField(type, buf, len))
+          return false;
+        break;
+
+      default:
+        if (!SetField(type, reinterpret_cast<const unsigned char *>(&(*iter)), len))
+          return false;
+        break;
+    }
+#else
+    if (!SetField(type, reinterpret_cast<const unsigned char *>(&(*iter)), len))
+      return false;
+#endif
+    iter += len;
+  }
+
+  return false;
 }

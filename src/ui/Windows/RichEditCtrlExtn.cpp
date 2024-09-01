@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -193,7 +193,7 @@ void CRichEditCtrlExtn::SetWindowText(LPCWSTR lpszString)
   // Disable Font Binding in Rich Edit (http://msdn.microsoft.com/en-us/library/windows/desktop/hh298436%28v=vs.85%29.aspx)
   // When it enabled, control tries to change font for chars, that it think aren't present in default font
   // For example, for non-English messages, it can change font from MS Sans to Calibri when it found e.g.
-  // "french quotes" ('«', '»'). The worst in this case that it also may change font size and then not return
+  // "french quotes" ('Â«', 'Â»'). The worst in this case that it also may change font size and then not return
   // all back, so the last part of the message will be printed using different font type/size
   // Example of code taken from http://blogs.msdn.com/b/michkap/archive/2006/02/13/531110.aspx
   CRichEditCtrl::SendMessage(EM_SETLANGOPTIONS, 0, (LPARAM)(CRichEditCtrl::SendMessage(EM_GETLANGOPTIONS, 0, 0) & ~IMF_AUTOFONT));

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -18,10 +18,11 @@
 #include <errno.h>
 #include <cassert>
 #include <fstream>
+#include <sstream>
 
 #include <dirent.h>
 #include <fnmatch.h>
-#ifndef __FreeBSD__
+#if !defined(__FreeBSD__) && !defined(__OpenBSD__)
 #include <malloc.h> // for free
 #endif
 
@@ -202,11 +203,74 @@ static stringT GetLockFileName(const stringT &filename)
   return retval;
 }
 
+/**
+ * Removes an orphan lock file (*.plk) for the file currently being opened.
+ * 
+ * A lock file contains the information "user@machine:nnnnnnnn".
+ * - user:      Users account name that was used to open a database.
+ * - machine:   The name of the host at which a database was opened.
+ * - nnnnnnnn:  The process id of the application that created the lock file.
+ * 
+ * The lock file is removed if and only if all of the following conditions are true:
+ * 1. user matches current user
+ * 2. machine matches current machine
+ * 3. process that created the file no longer exists
+ * 
+ * @param filename database filename
+ * @param lockFileHandle lock file handle
+ */
+void pws_os::TryUnlockFile(const stringT &filename, HANDLE &lockFileHandle)
+{
+  const stringT lockFilename = GetLockFileName(filename);
+
+  size_t mbsSize = wcstombs(nullptr, lockFilename.c_str(), lockFilename.length()) + 1;
+  std::unique_ptr<char[]> mbsFilename(new char[mbsSize]);
+  wcstombs(mbsFilename.get(), lockFilename.c_str(), mbsSize);
+
+  int fileHandle = open(mbsFilename.get(), O_RDONLY, (S_IREAD | S_IWRITE));
+
+  // If not failed to open the file read locker data ("user@machine:nnnnnnnn") from it
+  if (fileHandle != -1) {
+
+    StringXStream lockerStream;
+    if (PWSUtil::loadFile(lockFilename.c_str(), lockerStream)) {
+      stringT locker = stringx2std(lockerStream.str());
+
+      stringT plkUser(_T(""));
+      stringT plkHost(_T(""));
+      int plkPid = -1;
+
+      if (PWSUtil::GetLockerData(locker, plkUser, plkHost, plkPid)) {
+        if (
+          (plkUser == pws_os::getusername()) &&                             // Is it the same user...
+          (plkHost == pws_os::gethostname()) &&                             // at the same machine...
+          (pws_os::processExists(plkPid) == ProcessCheckResult::NOT_FOUND)  // with a newly started application instance?
+        ) {
+          UnlockFile(filename, lockFileHandle);
+          pws_os::Trace(
+            L"Orphan .plk file (%ls) removed of user= %ls @ host= %ls and process= %d", 
+            lockFilename.c_str(), plkUser.c_str(), plkHost.c_str(), plkPid
+          );
+        }
+      }
+    }
+
+    close(fileHandle);
+  }
+}
+
 bool pws_os::LockFile(const stringT &filename, stringT &locker,
                       HANDLE &lockFileHandle)
 {
   UNREFERENCED_PARAMETER(lockFileHandle);
   const stringT lock_filename = GetLockFileName(filename);
+
+  // If there is a matching plk file to the database (filename) 
+  // we will try to remove it if it meets the criteria for removal.
+  if (pws_os::IsLockedFile(filename)) {
+    pws_os::TryUnlockFile(filename, lockFileHandle);
+  }
+  
   bool retval = false;
   size_t lfs = wcstombs(nullptr, lock_filename.c_str(), lock_filename.length()) + 1;
   char *lfn = new char[lfs];
@@ -227,6 +291,11 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker,
         StringXStream lockerStream;
         if (PWSUtil::loadFile(lock_filename.c_str(), lockerStream)) {
           locker = stringx2std(lockerStream.str());
+
+          if (!PWSUtil::HasValidLockerData(locker)) {
+            locker = _T("");
+            Format(locker, IDSC_INVALIDLOCKER, lock_filename.c_str());
+          }
         }
         else {
           LoadAString(locker, IDSC_CANTREADLOCKER);
@@ -284,6 +353,10 @@ bool pws_os::IsLockedFile(const stringT &filename)
 
 std::FILE *pws_os::FOpen(const stringT &filename, const TCHAR *mode)
 {
+  if (filename.empty()) { // set to stdin/stdout, depending on mode[0] (r/w/a)
+	  return mode[0] == L'r' ? stdin : stdout;
+  }
+  
   const char *cfname = nullptr;
   const char *cmode = nullptr;
   size_t fnsize = wcstombs(nullptr, filename.c_str(), 0) + 1;
@@ -314,7 +387,7 @@ int pws_os::FClose(std::FILE *fd, const bool &bIsWrite)
   return 0;
 }
 
-ulong64 pws_os::fileLength(std::FILE *fp)
+size_t pws_os::fileLength(std::FILE *fp)
 {
   if (fp == nullptr)
     return -1;
@@ -324,7 +397,7 @@ ulong64 pws_os::fileLength(std::FILE *fp)
   struct stat st;
   if (fstat(fd, &st) == -1)
     return -1;
-  return ulong64(st.st_size);
+  return size_t(st.st_size);
 }
 
 bool pws_os::GetFileTimes(const stringT &filename,
@@ -355,4 +428,37 @@ bool pws_os::SetFileTimes(const stringT &filename,
   UNREFERENCED_PARAMETER(atime);
 
   return true;
+}
+
+bool pws_os::ProgramExists(const stringT &filename)
+{
+  stringT pathEnvVar = pws_os::getenv("PATH", false);
+  
+  if (pathEnvVar.empty()) {
+    return false;
+  }
+
+  std::wistringstream wstringstream(pathEnvVar);
+  stringT path;
+
+  while(std::getline(wstringstream, path, _T(':')))
+  {
+    if (path.empty()) {
+      continue;
+    }
+    
+    if (path.back() != pws_os::PathSeparator) {
+      path.append(1, pws_os::PathSeparator);
+      path.append(filename);
+    }
+    else {
+      path.append(filename);
+    }
+    
+    if (pws_os::FileExists(path)) {
+      return true;
+    }
+  }
+  
+  return false;
 }

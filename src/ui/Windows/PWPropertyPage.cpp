@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -10,8 +10,6 @@
 #include "DboxMain.h"
 #include "PWPropertyPage.h"
 #include "GeneralMsgBox.h"
-
-extern const wchar_t *EYE_CATCHER;
 
 IMPLEMENT_DYNAMIC(CPWPropertyPage, CPropertyPage)
 
@@ -25,6 +23,26 @@ DboxMain *CPWPropertyPage::GetMainDlg() const
 {
   return app.GetMainDlg();
 }
+
+BOOL CPWPropertyPage::OnInitDialog()
+{
+  CWnd* pTitleWnd = GetDlgItem(IDC_PS_TITLE);
+
+  if (pTitleWnd != nullptr) {
+    // If there's a IDC_PS_TITLE text, emphasize it
+    CFont* pfont = pTitleWnd->GetFont();
+    LOGFONT lf; pfont->GetLogFont(&lf);
+    lf.lfItalic = TRUE;
+    lf.lfWeight = FW_BOLD;
+    lf.lfUnderline = TRUE;
+
+    HFONT hfont = ::CreateFontIndirect(&lf);
+    CFont* pBoldFont = CFont::FromHandle(hfont);
+    pTitleWnd->SetFont(pBoldFont);
+  }
+  return CPropertyPage::OnInitDialog();
+}
+
 
 bool CPWPropertyPage::InitToolTip(int Flags, int delayTimeFactor)
 {
@@ -86,11 +104,6 @@ void CPWPropertyPage::ShowHelp(const CString &topicFile)
 
 LRESULT CPWPropertyPage::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-  if (GetMainDlg()->m_eye_catcher != NULL &&
-      wcscmp(GetMainDlg()->m_eye_catcher, EYE_CATCHER) == 0) {
-    GetMainDlg()->ResetIdleLockCounter(message);
-  } else
-    pws_os::Trace(L"CPWPropertyPage::WindowProc - couldn't find DboxMain ancestor\n");
-
+  GetMainDlg()->ResetIdleLockCounter(message);
   return CPropertyPage::WindowProc(message, wParam, lParam);
 }

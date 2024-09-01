@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -10,7 +10,7 @@
 
 class DboxMain; // for GetMainDlg()
 
-class CPWPropertySheet : public CPropertySheet
+class CPWPropertySheet : public CMFCPropertySheet
 {
 public:
   CPWPropertySheet(UINT nID, CWnd* pParent, const bool bLongPPs);
@@ -22,9 +22,9 @@ public:
 
 protected:
   // Following override to reset idle timeout on any event
-  virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
+  virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) override;
   // Following override to stop accelerators interfering
-  virtual BOOL OnInitDialog();
+  virtual BOOL OnInitDialog() override;
 
   DECLARE_DYNAMIC(CPWPropertySheet)
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -16,18 +16,20 @@
 #include "StringXStream.h"
 #include "UTF8Conv.h"
 #include "PWPolicy.h"
+#include "PWSLog.h"
 
 #include "os/typedefs.h"
 #include "os/debug.h"
 #include "os/pws_tchar.h"
 #include "os/file.h"
+#include "os/env.h"
 #include "os/dir.h"
 #include "os/registry.h"
-#include "os/logit.h"
 
 #include <fstream>
 #include <algorithm>
 #include <iomanip>
+#include <climits>
 
 #ifdef _WIN32
 #include <LMCons.h> // for UNLEN
@@ -124,13 +126,22 @@ const PWSprefs::boolPref PWSprefs::m_bool_prefs[NumBoolPrefs] = {
   {_T("LockDBOnIdleTimeout"), true, ptDatabase},            // database
   {_T("HighlightChanges"), true, ptApplication},            // application
   {_T("HideSystemTray"), false, ptApplication},             // application
-  {_T("UsePrimarySelectionForClipboard"), false, ptApplication}, //application
+  {_T("UsePrimarySelectionForClipboard"), false, ptApplication}, // application
   {_T("CopyPasswordWhenBrowseToURL"), false, ptDatabase},   // database
-  {_T("UseAltAutoType"), false, ptApplication},             //application
-  {_T("IgnoreHelpLoadError"), false, ptApplication},        //application
-  {_T("VKPlaySound"), false, ptApplication},                //application
-  {_T("ListSortAscending"), true, ptApplication},           //application
-  {_T("EnableWindowTransparency"), false, ptApplication },  //application
+  {_T("UseAltAutoType"), false, ptApplication},             // application
+  {_T("IgnoreHelpLoadError"), false, ptApplication},        // application
+  {_T("VKPlaySound"), false, ptApplication},                // application
+  {_T("ListSortAscending"), true, ptApplication},           // application
+  {_T("EnableWindowTransparency"), false, ptApplication},   // application
+  {_T("ShowMenuSeparator"), true, ptApplication},           // application
+  {_T("AutoAdjColWidth"), false, ptApplication},            // application
+  {_T("ToolbarShowText"), true, ptApplication},             // application
+  {_T("DragAndDropShowRoot"), false, ptApplication},        // application
+  {_T("ShowAliasSelection"), false, ptApplication},         // application
+  {_T("ExcludeFromClipboardHistory"), true, ptDatabase},    // database
+  {_T("FindToolBarActive"), false, ptApplication},          // application
+  {_T("ExcludeFromScreenCapture"), true, ptDatabase},       // database
+
 };
 
 // Default value = -1 means set at runtime
@@ -177,6 +188,8 @@ const PWSprefs::intPref PWSprefs::m_int_prefs[NumIntPrefs] = {
   {_T("AddEditFontPtSz"), 0, ptApplication, 0, -1},                 // application
   {_T("VKFontPtSz"), 0, ptApplication, 0, -1},                      // application
   {_T("WindowTransparency"), 0, ptApplication, 0, 50},              // application
+  {_T("DefaultExpiryDays"), 90, ptApplication, 1, 3650},            // application
+  {_T("DNDMaximumMemorySize"), 14000, ptApplication, -1, INT_MAX},   // application
 };
 
 const PWSprefs::stringPref PWSprefs::m_string_prefs[NumStringPrefs] = {
@@ -208,6 +221,8 @@ const PWSprefs::stringPref PWSprefs::m_string_prefs[NumStringPrefs] = {
   {_T("AddEditFont"), _T(""), ptApplication },                      // application
   {_T("AddEditSampleText"), _T("AaBbYyZz 0O1IlL"), ptApplication},  // application
   {_T("AltNotesEditorCmdLineParms"), _T(""), ptApplication},        // application
+  {_T("TreeSort"), _T("group"), ptApplication},                     // application
+
 };
 
 PWSprefs *PWSprefs::GetInstance()
@@ -247,14 +262,13 @@ PWSprefs::PWSprefs() : m_pXML_Config(nullptr)
   m_PSSrect.top = m_PSSrect.bottom = m_PSSrect.left = m_PSSrect.right = -1;
   m_PSSrect.changed = false;
 
-  m_MRUitems = new stringT[m_int_prefs[MaxMRUItems].maxVal];
+  m_MRUitems.resize(m_int_prefs[MaxMRUItems].maxVal);
   InitializePreferences();
 }
 
 PWSprefs::~PWSprefs()
 {
   delete m_pXML_Config;
-  delete[] m_MRUitems;
 }
 
 bool PWSprefs::CheckRegistryExists() const
@@ -287,7 +301,7 @@ unsigned int PWSprefs::GetPrefDefVal(IntPrefs pref_enum) const
   return m_int_prefs[pref_enum].defVal;
 }
 
-StringX PWSprefs::GetPrefDefVal(StringPrefs pref_enum) const
+const TCHAR*  PWSprefs::GetPrefDefVal(StringPrefs pref_enum) const
 {
   return m_string_prefs[pref_enum].defVal;
 }
@@ -339,7 +353,7 @@ StringX PWSprefs::GetAllStringPrefs(const bool bUseCopy)
     LastView, TreeFont, BackupPrefixValue, ListColumns,
     ColumnWidths, MainToolBarButtons, PasswordFont,
     TreeListSampleText, PswdSampleText,
-    LastUsedKeyboard, VKeyboardFontName, VKSampleText, LanguageFile
+    LastUsedKeyboard, VKeyboardFontName, VKSampleText, LanguageFile, TreeSort
   };
 
   TCHAR delim;
@@ -401,55 +415,55 @@ void PWSprefs::GetPrefPSSRect(long &top, long &bottom,
   right = m_PSSrect.right;
 }
 
-int PWSprefs::GetMRUList(stringT *MRUFiles) const
+unsigned int PWSprefs::GetMRUList(std::vector<stringT> &MRUFiles) const
 {
-  ASSERT(MRUFiles != nullptr);
-
-  if (m_ConfigOption == CF_NONE || m_ConfigOption == CF_REGISTRY)
+  if (m_ConfigOption == CF_NONE || m_ConfigOption == CF_REGISTRY || m_ConfigOption == CF_FILE_RW_NEW) {
+    MRUFiles.clear();
     return 0;
+  }
 
-  const int n = GetPref(PWSprefs::MaxMRUItems);
-  for (int i = 0; i < n; i++)
-    MRUFiles[i] = m_MRUitems[i];
+  MRUFiles = m_MRUitems;
+  const unsigned int n = GetPref(PWSprefs::MaxMRUItems);
 
-  return n;
+  if (MRUFiles.size() > n)
+    MRUFiles.erase(MRUFiles.begin() + n, MRUFiles.end());
+ 
+  return static_cast<unsigned int>(MRUFiles.size());
 }
 
-int PWSprefs::SetMRUList(const stringT *MRUFiles, int n, int max_MRU)
+unsigned int PWSprefs::SetMRUList(const std::vector<stringT> &MRUFiles, int max_MRU)
 {
-  ASSERT(n == 0 || MRUFiles != nullptr); // if n is zero, wx passes nullptr
 
   if (m_ConfigOption == CF_NONE || m_ConfigOption == CF_REGISTRY ||
       m_ConfigOption == CF_FILE_RO)
     return 0;
 
-  int i, cnt;
-  bool changed = false;
+  std::vector<stringT> cleanMRU; // MRUFiles w/o backups
   // remember the ones in use
-  for (i = 0, cnt = 1; i < n; i++) {
-    if (MRUFiles[i].empty() ||
-      // Don't remember backup files
-      MRUFiles[i].substr(MRUFiles[i].length() - 4) == _T(".bak") ||
-      MRUFiles[i].substr(MRUFiles[i].length() - 5) == _T(".bak~") ||
-      MRUFiles[i].substr(MRUFiles[i].length() - 5) == _T(".ibak") ||
-      MRUFiles[i].substr(MRUFiles[i].length() - 6) == _T(".ibak~"))
+  for (const auto &entry : MRUFiles) {
+    const auto el = entry.length();
+    // Ignore backup files
+    if ((el == 0) ||
+      (el >= 4 && entry.substr(el - 4) == _T(".bak")) ||
+      (el >= 5 && entry.substr(el - 5) == _T(".bak~")) ||
+      (el >= 5 && entry.substr(el - 5) == _T(".ibak")) ||
+      (el >= 6 && entry.substr(el - 6) == _T(".ibak~"))
+    )
       continue;
-    if (m_MRUitems[cnt - 1] != MRUFiles[i]) {
-      m_MRUitems[cnt - 1] = MRUFiles[i];
-      changed = true;
-    }
-    cnt++;
+    cleanMRU.push_back(entry);
   }
-  // Remove any not in use
-  for (i = cnt - 1; i < max_MRU; i++) {
-    if (!m_MRUitems[i].empty()) {
-      m_MRUitems[i] = _T("");
-      changed = true;
-    }
-  }
-  if (changed)
+
+  // trim cleanMRU to max_MRU
+  if (cleanMRU.size() > static_cast<std::size_t>(max_MRU))
+    cleanMRU.erase(cleanMRU.begin() + max_MRU, cleanMRU.end());
+
+  bool changed = (cleanMRU != m_MRUitems);
+
+  if (changed) {
+    m_MRUitems = cleanMRU;
     m_prefs_changed[APP_PREF] = true;
-  return n;
+  }
+  return static_cast<unsigned int>(m_MRUitems.size());
 }
 
 PWPolicy PWSprefs::GetDefaultPolicy(const bool bUseCopy) const
@@ -1062,10 +1076,10 @@ void PWSprefs::FindConfigFile()
    */
 
   const stringT sExecDir = PWSdirs::GetExeDir();
+  const stringT sCnfgDir = PWSdirs::GetConfigDir();
 
   // Set path & name of config file
   if (!m_userSetCfgFile) { // common case
-    const stringT sCnfgDir = PWSdirs::GetConfigDir();
     m_configfilename = sExecDir + cfgFileName;
     if (pws_os::FileExists(m_configfilename)) {
       // old (exe dir) exists, is host/user there?
@@ -1075,13 +1089,9 @@ void PWSprefs::FindConfigFile()
     // not in exe dir or host/user not there
     m_configfilename = sCnfgDir + cfgFileName;
   } else { // User specified config file via SetConfigFile()
-    // As per pre-use of Local AppData directory,
-    // If file name's relative, it's expected to be in the
-    // same directory as the executable
-    stringT sDrive, sDir, sFile, sExt;
-    pws_os::splitpath(m_configfilename, sDrive, sDir, sFile, sExt);
-    if (sDrive.empty() || sDir.empty())
-      m_configfilename = sExecDir + sFile + sExt;
+    // In Windows, file path is made absolute in ThisMfcApp::GetConfigFromCommandLine(), nothing more to do
+    if (!pws_os::IsWindows() && m_configfilename[0] != L'/') // make absolute for non-Windows, if needed
+        m_configfilename = sCnfgDir + m_configfilename;
   }
 }
 
@@ -1475,10 +1485,13 @@ bool PWSprefs::LoadProfileFromFile()
   m_PSSrect.left = m_pXML_Config->Get(m_csHKCU_POS, _T("PSS_left"), -1);
   m_PSSrect.right = m_pXML_Config->Get(m_csHKCU_POS, _T("PSS_right"), -1);
 
+  // The XML tag 'Layout'
+  m_PrefLayout = m_pXML_Config->Get(m_csHKCU_PREF, _T("Layout"), L"");
+
   // Load most recently used file list
   for (i = m_intValues[MaxMRUItems]; i > 0; i--) {
     Format(csSubkey, L"Safe%02d", i);
-    m_MRUitems[i-1] = m_pXML_Config->Get(m_csHKCU_MRU, csSubkey, L"");
+    m_MRUitems.push_back(m_pXML_Config->Get(m_csHKCU_MRU, csSubkey, L""));
   }
 
   m_vShortcuts = m_pXML_Config->GetShortcuts(m_csHKCU_SHCT);
@@ -1576,18 +1589,11 @@ void PWSprefs::SaveApplicationPreferences()
         break;
       case CF_FILE_RW:
       case CF_FILE_RW_NEW:
-      {
-        stringT obuff;
-        Format(obuff, L"%d", m_rect.top);
-        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"top", obuff) == 0);
-        Format(obuff, L"%d", m_rect.bottom);
-        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"bottom", obuff) == 0);
-        Format(obuff, L"%d", m_rect.left);
-        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"left", obuff) == 0);
-        Format(obuff, L"%d", m_rect.right);
-        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"right", obuff) == 0);
+        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"top", static_cast<int>(m_rect.top)) == 0);
+        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"bottom", static_cast<int>(m_rect.bottom)) == 0);
+        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"left", static_cast<int>(m_rect.left)) == 0);
+        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"right", static_cast<int>(m_rect.right)) == 0);
         break;
-      }
       case CF_FILE_RO:
       case CF_NONE:
       default:
@@ -1610,38 +1616,35 @@ void PWSprefs::SaveApplicationPreferences()
         break;
       case CF_FILE_RW:
       case CF_FILE_RW_NEW:
-      {
-        stringT obuff;
-        Format(obuff, L"%d", m_PSSrect.top);
-        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"PSS_top", obuff) == 0);
-        Format(obuff, L"%d", m_PSSrect.bottom);
-        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"PSS_bottom", obuff) == 0);
-        Format(obuff, L"%d", m_PSSrect.left);
-        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"PSS_left", obuff) == 0);
-        Format(obuff, L"%d", m_PSSrect.right);
-        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"PSS_right", obuff) == 0);
+        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"PSS_top", static_cast<int>(m_PSSrect.top)) == 0);
+        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"PSS_bottom", static_cast<int>(m_PSSrect.bottom)) == 0);
+        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"PSS_left", static_cast<int>(m_PSSrect.left)) == 0);
+        VERIFY(m_pXML_Config->Set(m_csHKCU_POS, L"PSS_right", static_cast<int>(m_PSSrect.right)) == 0);
         break;
-      }
       case CF_FILE_RO:
       case CF_NONE:
       default:
         break;
     }
-    m_rect.changed = false;
-  } // m_rect.changed
+    m_PSSrect.changed = false;
+  } // m_PSSrect.changed
 
   if (m_ConfigOption == CF_FILE_RW ||
       m_ConfigOption == CF_FILE_RW_NEW) {
-    int j;
-    const int n = GetPref(PWSprefs::MaxMRUItems);
+    VERIFY(m_pXML_Config->Set(m_csHKCU_PREF, L"Layout", m_PrefLayout, pugi::xml_node_type::node_cdata) == 0);
+  }
+
+  if (m_ConfigOption == CF_FILE_RW ||
+      m_ConfigOption == CF_FILE_RW_NEW) {
+    int j = 0;
     // Delete ALL MRU entries
     m_pXML_Config->DeleteSetting(m_csHKCU_MRU, _T(""));
     // Now put back the ones we want
     stringT csSubkey;
-    for (j = 0; j < n; j++) {
-      if (!m_MRUitems[j].empty()) {
-        Format(csSubkey, L"Safe%02d", j + 1);
-        m_pXML_Config->Set(m_csHKCU_MRU, csSubkey, m_MRUitems[j]);
+    for (auto item : m_MRUitems) {
+      if (!item.empty()) {
+        Format(csSubkey, L"Safe%02d", ++j);
+        m_pXML_Config->Set(m_csHKCU_MRU, csSubkey, item);
       }
     }
 
@@ -1653,11 +1656,8 @@ void PWSprefs::SaveApplicationPreferences()
       m_ConfigOption == CF_FILE_RW_NEW) {
     if (m_pXML_Config->XML_Store(m_csHKCU_PREF)) // can't be new after succ. store
       m_ConfigOption = CF_FILE_RW;
-    else
-    if (!m_pXML_Config->getReason().empty() &&
-        m_pReporter != nullptr)
+    else if (!m_pXML_Config->getReason().empty() && m_pReporter != nullptr)
       (*m_pReporter)(m_pXML_Config->getReason()); // show what went wrong
-
     m_pXML_Config->Unlock();
     delete m_pXML_Config;
     m_pXML_Config = nullptr;
@@ -1822,7 +1822,7 @@ stringT PWSprefs::GetXMLPreferences()
   stringT retval(_T(""));
   ostringstreamT os;
 
-  os << _S("\t<Preferences>") << endl;
+  os << _T("\t<Preferences>") << endl;
   int i;
   for (i = 0; i < NumBoolPrefs; i++) {
     if (m_boolValues[i] != m_bool_prefs[i].defVal &&

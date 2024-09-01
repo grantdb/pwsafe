@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -7,7 +7,7 @@
 */
 
 #include "../debug.h"
-#include "../core/Util.h"
+#include "../pws_str.h"
 
 #if defined(_DEBUG) || defined(DEBUG)
 
@@ -23,7 +23,7 @@ void pws_os::Trace(LPCTSTR lpszFormat, ...)
   va_list args;
   va_start(args, lpszFormat);
 
-  unsigned int num_required = GetStringBufSize(lpszFormat, args);
+  unsigned int num_required = pws_os::GetStringBufSize(lpszFormat, args);
   va_end(args);//after using args we should reset list
   va_start(args, lpszFormat);
 
@@ -159,7 +159,7 @@ bool pws_os::DisableDumpAttach()
 }
 
 #else  /* _DEBUG or DEBUG */
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__)
 /*bool pws_os::DisableDumpAttach()
 {
   // prevent ptrace and creation of core dumps
@@ -179,7 +179,19 @@ bool pws_os::DisableDumpAttach()
   setrlimit(RLIMIT_CORE, &rlim);
   return true;
 }
+
+#elif defined(__OpenBSD__)
+
+#include <sys/resource.h>
+
+bool pws_os::DisableDumpAttach()
+{
+	struct rlimit corelimit = {0, 0};
+	return setrlimit(RLIMIT_CORE, &corelimit) == 0;
+}
+
 #else
+
 #include <sys/prctl.h>
 
 bool pws_os::DisableDumpAttach()

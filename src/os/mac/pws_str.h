@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -15,8 +15,11 @@ namespace pws_os {
    */
     extern int wctoi(const wchar_t *s);
     extern double wctof(const wchar_t *s);
-  extern int wcscasecmp(const wchar_t* s1, const wchar_t* s2);
+    extern int wcscasecmp(const wchar_t* s1, const wchar_t* s2);
     extern wchar_t* wcsdup(const wchar_t* src);
+
+    extern unsigned int GetStringBufSize(const TCHAR *fmt, va_list args);
+
 };
 
 #endif /* __PWS_STR_H */

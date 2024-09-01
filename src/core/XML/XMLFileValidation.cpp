@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -13,8 +13,6 @@
 */
 
 #include "XMLDefs.h"   // Required if testing "USE_XML_LIBRARY"
-
-#ifdef USE_XML_LIBRARY
 
 #include "XMLFileValidation.h"
 
@@ -64,10 +62,17 @@ const XMLFileValidation::st_file_elements XMLFileValidation::m_file_elements[XLE
   {_T("DefaultUsername"), {XLE_PREF_DEFAULTUSERNAME, 0}},
   {_T("DefaultAutotypeString"), {XLE_PREF_DEFAULTAUTOTYPESTRING, 0}},
   {_T("DefaultSymbols"), {XLE_PREF_DEFAULTSYMBOLS, 0}},
+  {_T("CopyPasswordWhenBrowseToURL"), {XLE_PREF_COPYPASSWORDWHENBROWSETOURL, 0}},
+  {_T("ExcludeFromScreenCapture"), {XLE_PREF_EXCLUDEFROMSCREENCAPTURE, 0}},
   {_T("group"), {0, XLE_GROUP}},
   {_T("title"), {0, XLE_TITLE}},
   {_T("username"), {0, XLE_USERNAME}},
   {_T("password"), {0, XLE_PASSWORD}},
+  {_T("twofactorkey"), {0, XLE_TWOFACTORKEY}},
+  {_T("totpconfig"), {0, XLE_TOTPCONFIG}},
+  {_T("totpstarttime"), {0, XLE_TOTPSTARTTIME}},
+  {_T("totptimestep"), {0, XLE_TOTPTIMESTEP}},
+  {_T("totplength"), {0, XLE_TOTPLENGTH}},
   {_T("url"), {0, XLE_URL}},
   {_T("autotype"), {0, XLE_AUTOTYPE}},
   {_T("runcommand"), {0, XLE_RUNCOMMAND}},
@@ -85,7 +90,7 @@ const XMLFileValidation::st_file_elements XMLFileValidation::m_file_elements[XLE
   {_T("xtime_interval"), {0, XLE_XTIME_INTERVAL}},
   {_T("pwhistory"), {0, XLE_PWHISTORY}},
   {_T("PasswordPolicy"), {0, XLE_ENTRY_PASSWORDPOLICY}},
-  {_T("symbols"), {0, XLE_SYMBOLS}},
+  {_T("symbols"), {XLE_SYMBOLS, XLE_SYMBOLS}},
   {_T("kbshortcut"), {0, XLE_KBSHORTCUT}},
   {_T("status"), {0, XLE_STATUS}},
   {_T("max"), {0, XLE_MAX}},
@@ -95,7 +100,7 @@ const XMLFileValidation::st_file_elements XMLFileValidation::m_file_elements[XLE
   {_T("changedx"), {0, XLE_CHANGEDX}},
   {_T("oldpassword"), {0, XLE_OLDPASSWORD}},
   {_T("PWLength"), {0, XLE_ENTRY_PWLENGTH}},
-  {_T("NamedPasswordPolicies"), {0, XLE_PASSWORDPOLICYNAMES}},
+  {_T("NamedPasswordPolicies"), {XLE_PASSWORDPOLICYNAMES, XLE_PASSWORDPOLICYNAMES}},
   {_T("Policy"), {XLE_POLICY, 0}},
   {_T("PWName"), {XLE_PWNAME, 0}},
   {_T("PasswordPolicyName"), {0, XLE_ENTRY_PASSWORDPOLICYNAME}},
@@ -120,6 +125,8 @@ XMLFileValidation::~XMLFileValidation()
 bool XMLFileValidation::GetElementInfo(const wchar_t *name, st_file_element_data &edata)
 #elif USE_XML_LIBRARY == XERCES
 bool XMLFileValidation::GetElementInfo(const XMLCh *name, st_file_element_data &edata)
+#else
+bool XMLFileValidation::GetElementInfo(const TCHAR *name, st_file_element_data &edata)
 #endif
 {
 #if USE_XML_LIBRARY == XERCES
@@ -142,5 +149,3 @@ bool XMLFileValidation::GetElementInfo(const XMLCh *name, st_file_element_data &
     return false;
   }
 }
-
-#endif /* USE_XML_LIBRARY */

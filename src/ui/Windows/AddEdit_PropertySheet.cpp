@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -61,6 +61,7 @@ CAddEdit_PropertySheet::CAddEdit_PropertySheet(UINT nID, CWnd* pParent,
     m_AEMD.username = L"";
     m_AEMD.realpassword = L"";
     m_AEMD.lastpassword = L"";
+    m_AEMD.twofactorkey = L"";
     m_AEMD.notes = m_AEMD.originalnotesTRC = L"";
     m_AEMD.URL = L"";
     m_AEMD.email = L"";
@@ -169,7 +170,7 @@ void CAddEdit_PropertySheet::OnSysCommand(UINT nID, LPARAM lParam)
 
 BOOL CAddEdit_PropertySheet::OnInitDialog()
 {
-  CPWPropertySheet::OnInitDialog();
+  BOOL retval = CPWPropertySheet::OnInitDialog();
 
   // Change the Window title for Edit/View
   switch (m_AEMD.uicaller) {
@@ -210,7 +211,7 @@ BOOL CAddEdit_PropertySheet::OnInitDialog()
       break;
   }
   
-  return TRUE;  // return TRUE unless you set the focus to a control
+  return retval;  // return TRUE unless you set the focus to a control
 }
 
 void CAddEdit_PropertySheet::SetSymbolsChanged(bool bSymbolsChanged)
@@ -319,6 +320,7 @@ BOOL CAddEdit_PropertySheet::OnApply(const int &iCID)
       m_bIsModified = (m_AEMD.group       != m_AEMD.pci->GetGroup()      ||
                        m_AEMD.title       != m_AEMD.pci->GetTitle()      ||
                        m_AEMD.username    != m_AEMD.pci->GetUser()       ||
+                       m_AEMD.twofactorkey!= m_AEMD.pci->GetTwoFactorKey() ||
                        m_AEMD.notes       != m_AEMD.originalnotesTRC     ||
                        m_AEMD.URL         != m_AEMD.pci->GetURL()        ||
                        m_AEMD.autotype    != m_AEMD.pci->GetAutoType()   ||
@@ -344,8 +346,8 @@ BOOL CAddEdit_PropertySheet::OnApply(const int &iCID)
         // Just modify all - even though only 1 may have actually been modified
         m_AEMD.pci->SetGroup(m_AEMD.group);
         m_AEMD.pci->SetTitle(m_AEMD.title);
-        m_AEMD.pci->SetUser(m_AEMD.username.IsEmpty() ?
-                                  m_AEMD.defusername : m_AEMD.username);
+        m_AEMD.pci->SetUser(m_AEMD.username);
+        m_AEMD.pci->SetTwoFactorKey(m_AEMD.twofactorkey);
         if (m_bNotesChanged)
           m_AEMD.pci->SetNotes(m_AEMD.notes);
 
@@ -403,21 +405,24 @@ BOOL CAddEdit_PropertySheet::OnApply(const int &iCID)
       m_AEMD.pci->SetXTimeInt(m_AEMD.XTimeInt);
 
       if (bIsPSWDModified || m_AEMD.locXTime != m_AEMD.oldlocXTime) {
-        CItemData *pciA(m_AEMD.pci);
-        if (m_AEMD.pci->IsAlias()) {
-          pciA = m_AEMD.pcore->GetBaseEntry(m_AEMD.pci);
-        }
-
-        if (bIsPSWDModified) {
-          m_AEMD.pci->UpdatePassword(m_AEMD.realpassword);
-          m_AEMD.locPMTime = m_AEMD.pci->GetPMTimeL();
-        }
+        CItemData *pciA = (m_AEMD.pci->IsAlias()) ? m_AEMD.pcore->GetBaseEntry(m_AEMD.pci) : m_AEMD.pci;
 
         if (m_AEMD.locXTime != m_AEMD.oldlocXTime) {
           pciA->SetXTime(m_AEMD.tttXTime);
           m_AEMD.locXTime = pciA->GetXTimeL();
           m_AEMD.oldlocXTime = m_AEMD.locXTime;
         }
+
+        if (bIsPSWDModified) {
+          m_AEMD.pci->UpdatePassword(m_AEMD.realpassword); // also updates exp time if entry's recurring exp set
+          m_AEMD.locPMTime = m_AEMD.pci->GetPMTimeL();
+         if (m_AEMD.XTimeInt != 0) {
+           // if entry has a recurring password interval, then
+           // changing the password ==> updated expiry
+            pciA->GetXTime(m_AEMD.tttXTime);
+            m_AEMD.locXTime = pciA->GetXTimeL();
+          }
+        } // bIsPSWDModified
       }
 
       if (m_bIsModified && !bIsPSWDModified) {
@@ -425,11 +430,11 @@ BOOL CAddEdit_PropertySheet::OnApply(const int &iCID)
         m_AEMD.pci->SetRMTime(t);
       }
 
+      m_bIsModified = m_bIsModified || bIsPSWDModified;
+
       if (m_bIsModified)
         SendMessage(PSM_QUERYSIBLINGS,
               (WPARAM)CPWPropertyPage::PP_UPDATE_TIMES, 0L);
-
-      m_bIsModified = m_bIsModified || bIsPSWDModified;
       break;
 
     case IDS_ADDENTRY:
@@ -439,6 +444,7 @@ BOOL CAddEdit_PropertySheet::OnApply(const int &iCID)
       m_AEMD.pci->SetUser(m_AEMD.username.IsEmpty() ?
                                 m_AEMD.defusername : m_AEMD.username);
       m_AEMD.pci->SetPassword(m_AEMD.realpassword);
+      m_AEMD.pci->SetTwoFactorKey(m_AEMD.twofactorkey);
       m_AEMD.pci->SetNotes(m_AEMD.notes);
       m_AEMD.pci->SetURL(m_AEMD.URL);
       m_AEMD.pci->SetAutoType(m_AEMD.autotype);
@@ -457,7 +463,7 @@ BOOL CAddEdit_PropertySheet::OnApply(const int &iCID)
         m_AEMD.pci->SetXTimeInt(m_AEMD.XTimeInt);
 
       if (m_AEMD.SavePWHistory == TRUE)
-        m_AEMD.pci->SetPWHistory(MakePWHistoryHeader(TRUE, m_AEMD.MaxPWHistory, 0));
+        m_AEMD.pci->SetPWHistory(PWHistList::MakePWHistoryHeader(TRUE, m_AEMD.MaxPWHistory, 0));
 
       if (m_AEMD.ibasedata > 0) {
         // Password in alias format AND base entry exists
@@ -588,6 +594,7 @@ void CAddEdit_PropertySheet::SetupInitialValues()
   m_AEMD.username = m_AEMD.pci->GetUser();
   m_AEMD.realpassword = m_AEMD.oldRealPassword = m_AEMD.pci->GetPassword();
   m_AEMD.lastpassword = m_AEMD.pci->GetPreviousPassword();
+  m_AEMD.twofactorkey = m_AEMD.pci->GetTwoFactorKey();
   m_AEMD.notes = m_AEMD.originalnotesTRC = m_AEMD.pci->GetNotes();
   m_AEMD.URL = m_AEMD.pci->GetURL();
   m_AEMD.email = m_AEMD.pci->GetEmail();
@@ -672,19 +679,16 @@ void CAddEdit_PropertySheet::SetupInitialValues()
   // If user changes the password of its base entry from the
   // alias, we do record them in the base entry if the user wants them.
   // For an alias, we will show its base entry's password history
-  size_t num_err;
   if (m_AEMD.pci->IsAlias())
     m_AEMD.PWHistory = pciA->GetPWHistory();
   else
     m_AEMD.PWHistory = m_AEMD.pci->GetPWHistory();
 
-  BOOL HasHistory = CreatePWHistoryList(m_AEMD.PWHistory,
-                                        m_AEMD.MaxPWHistory,
-                                        num_err,
-                                        m_AEMD.pwhistlist,
-                                        PWSUtil::TMC_EXPORT_IMPORT) ? TRUE : FALSE;
+  m_AEMD.pwhistlist = PWHistList(m_AEMD.PWHistory, PWSUtil::TMC_EXPORT_IMPORT);
+
   m_AEMD.oldNumPWHistory = m_AEMD.NumPWHistory = m_AEMD.pwhistlist.size();
-  m_AEMD.oldSavePWHistory = m_AEMD.SavePWHistory = HasHistory;
+  m_AEMD.oldSavePWHistory = m_AEMD.SavePWHistory = m_AEMD.pwhistlist.isSaving();
+  m_AEMD.MaxPWHistory = m_AEMD.pwhistlist.getMax();
   if (m_AEMD.MaxPWHistory == 0)
     m_AEMD.MaxPWHistory = PWSprefs::GetInstance()->GetPref(PWSprefs::NumPWHistoryDefault);
   

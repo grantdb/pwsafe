@@ -17,3 +17,5 @@ pwsafe*.msi
 *.vc.opendb
 /.vs
 *.VC.db
+.vscode
+*dmg

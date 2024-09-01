@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -14,10 +14,6 @@
 
 #include "SysColStatic.h"
 #include "SecString.h"
-
-#include "core/PwsPlatform.h"
-
-#include "afxcmn.h"
 
 //-----------------------------------------------------------------------------
 /**
@@ -51,7 +47,7 @@ class CPasskeyEntry : public CPKBaseDlg
 public:
   CPasskeyEntry(CWnd* pParent,
                 const CString& a_filespec, int index, /* GCP_NORMAL */
-                bool bReadOnly, bool bFileReadOnly, bool bForceReadOnly, bool bHideReadOnly);
+                bool bReadOnly, bool bFileReadOnly, bool bForceReadOnly, bool bHideReadOnly, bool bIsAppWindow);
 
   ~CPasskeyEntry();
 
@@ -69,10 +65,11 @@ protected:
   CSysColStatic m_ctlLogoText;
   CButton m_ctlOK;
 
-  BOOL m_btnReadOnly, m_btnShowCombination;
+  BOOL m_btnReadOnly, m_btnShowMasterPassword;
   bool m_bFileReadOnly;
   bool m_bForceReadOnly;
   bool m_bHideReadOnly;
+  bool m_bIsAppWindow;
 
   //}}AFX_DATA
   CString m_SelectedDatabase;
@@ -102,7 +99,7 @@ protected:
   afx_msg void OnComboEditChange();
   afx_msg void OnComboSelChange();
   afx_msg void OnBnClickedReadonly();
-  afx_msg void OnShowCombination();
+  afx_msg void OnShowMasterPassword();
   afx_msg void OnOpenFileBrowser();
   afx_msg void OnVirtualKeyboard();
   afx_msg void OnYubikeyBtn();

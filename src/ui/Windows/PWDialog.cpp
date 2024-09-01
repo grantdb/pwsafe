@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -10,11 +10,10 @@
 #include "DboxMain.h"
 #include "PWDialog.h"
 #include "GeneralMsgBox.h"
+#include "winutils.h"
 
 #include <algorithm>
 #include <functional>
-
-extern const wchar_t *EYE_CATCHER;
 
 static CPWDialogTracker the_tracker;
 CPWDialogTracker *CPWDialog::sm_tracker = &the_tracker; // static member
@@ -24,6 +23,15 @@ IMPLEMENT_DYNAMIC(CPWDialog, CDialog)
 DboxMain *CPWDialog::GetMainDlg() const
 {
   return app.GetMainDlg();
+}
+
+BOOL CPWDialog::OnInitDialog()
+{
+  BOOL bResult = CDialog::OnInitDialog();
+  CScreenCaptureStateControl::SetLastDisplayAffinityError(
+    WinUtil::SetWindowExcludeFromScreenCapture(m_hWnd, app.IsExcludeFromScreenCapture())
+  );
+  return bResult;
 }
 
 bool CPWDialog::InitToolTip(int Flags, int delayTimeFactor)
@@ -85,17 +93,13 @@ void CPWDialog::ShowHelp(const CString &topicFile)
 
 LRESULT CPWDialog::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-  if (GetMainDlg()->m_eye_catcher != NULL &&
-      wcscmp(GetMainDlg()->m_eye_catcher, EYE_CATCHER) == 0) {
-    GetMainDlg()->ResetIdleLockCounter(message);
-  } else
-    pws_os::Trace(L"CPWDialog::WindowProc - couldn't find DboxMain ancestor\n");
-
+  GetMainDlg()->ResetIdleLockCounter(message);
   return CDialog::WindowProc(message, wParam, lParam);
 }
 
 INT_PTR CPWDialog::DoModal()
 {
+  GetMainDlg()->SetThreadDpiAwarenessContext();
   bool bAccEn = app.IsAcceleratorEnabled();
   if (bAccEn)
     app.DisableAccelerator();
@@ -138,6 +142,15 @@ bool CPWDialogTracker::AnyOpenDialogs() const
   return retval;
 }
 
+bool CPWDialogTracker::AnyModalDialogs() const
+{
+  CSingleLock autoLock(&m_mutex, TRUE);
+  if (!autoLock.IsLocked()) return false;
+  return m_dialogs.end() != std::find_if(
+    m_dialogs.begin(), m_dialogs.end(),
+    [](CWnd* p) { return p->m_nFlags & (WF_MODALLOOP | WF_CONTINUEMODAL); });
+}
+
 void CPWDialogTracker::AddOpenDialog(CWnd *dlg)
 {
   m_mutex.Lock();
@@ -160,7 +173,8 @@ void CPWDialogTracker::Apply(void (*f)(CWnd *))
   m_mutex.Lock();
   dialogs = m_dialogs;
   m_mutex.Unlock();
-  std::for_each(dialogs.begin(), dialogs.end(), std::ptr_fun(f));
+  std::function<void(decltype(dialogs)::value_type)> func = f;
+  std::for_each(dialogs.begin(), dialogs.end(), func);
 }
 
 bool CPWDialogTracker::VerifyCanCloseDialogs()

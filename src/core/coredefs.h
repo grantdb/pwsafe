@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -121,6 +121,7 @@ typedef KBShortcutMap::const_iterator KBShortcutMapConstIter;
 typedef std::pair<int32, pws_os::CUUID> KBShortcutMapPair;
 
 struct PopulatePWPVector {
+  PopulatePWPVector(const PopulatePWPVector&) = default;
   PopulatePWPVector(std::vector<StringX> *pvPWPolicies) :
     m_pvPWPolicies(pvPWPolicies) {}
 
@@ -132,7 +133,7 @@ struct PopulatePWPVector {
   }
 
 private:
-  PopulatePWPVector& operator=(const PopulatePWPVector&); // Do not implement
+  PopulatePWPVector& operator=(const PopulatePWPVector&) = delete; // Do not implement
   std::vector<StringX> *m_pvPWPolicies;
 };
 

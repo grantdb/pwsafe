@@ -1,4 +1,4 @@
-﻿// TortoiseSVN - a Windows shell extension for easy version control
+// TortoiseSVN - a Windows shell extension for easy version control
 
 // Copyright (C) 2003-2006, 2008-2013, 2015 - TortoiseSVN
 
@@ -19,7 +19,6 @@
 #include "stdafx.h"
 #include "UnicodeUtils.h"
 #include <memory>
-#include <emmintrin.h>
 
 CUnicodeUtils::CUnicodeUtils(void)
 {

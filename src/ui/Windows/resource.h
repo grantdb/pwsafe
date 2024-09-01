@@ -396,6 +396,26 @@
 #define IDB_LOCKED_TRAY_INDEX           558
 #define IDB_UNLOCKED_TRAY_INDEX         559
 #define IDB_COPYPASSWORD_CLASSIC_D      560
+#define IDB_OPTION_PAGES                561
+#define IDB_BROWSEALT_CLASSIC           562
+#define IDB_BROWSEALT_NEW               563
+#define IDB_BROWSEALT_NEW_D             564
+#define IDB_SCRCAP_FIRST                565
+#define IDB_SCRCAP_BASE_EMPTY           565
+#define IDB_SCRCAP_ALLOWED              566
+#define IDB_SCRCAP_ALLOWED_IMPLICIT     567
+#define IDB_SCRCAP_ALLOWED_FORCED1      568
+#define IDB_SCRCAP_ALLOWED_FORCED2      569
+#define IDB_SCRCAP_EXCLUDED             570
+#define IDB_SCRCAP_STATE_ERROR          571
+#define IDB_SCRCAP_LAST                 571
+#define IDB_COPY2FAAUTHCODE_CLASSIC     580
+#define IDB_COPY2FAAUTHCODE_NEW         581
+#define IDB_COPY2FAAUTHCODE_NEW_D       582
+#define IDB_VIEW2FAAUTHCODE_CLASSIC     583
+#define IDB_VIEW2FAAUTHCODE_NEW         584
+#define IDB_VIEW2FAAUTHCODE_NEW_D       585
+#define IDD_DISPLAY_AUTH_CODE           600
 #define IDC_APPVERSION                  1000
 #define IDC_VERSION                     1001
 #define IDC_APPVERSION2                 1002
@@ -509,11 +529,14 @@
 #define IDC_RESPIN                      1132
 #define IDC_MRUSPIN                     1133
 #define IDC_PWHSPIN                     1134
+#define IDC_PWHSPIN2                    1135
+#define IDC_DEDSPIN                     1135
 #define IDC_PWHISTORY_LIST              1136
 #define IDC_SAVEPWHISTORY               1137
 #define IDC_MAXPWHISTORY                1138
 #define IDC_DEFPWHNUM                   1139
 #define IDC_COPY_OLDPW_TO_CLIPBOARD     1140
+#define IDC_DEFEXPIRYDAYS               1140
 #define IDC_CLEAR_PWHIST                1141
 #define IDC_SAVE_PWHIST                 1143
 #define IDC_STATIC_OLDPW1               1144
@@ -553,6 +576,8 @@
 #define IDC_SAVEDAPP                    1197
 #define IDC_NUMATTACHMENTS              1198
 #define IDC_BACKUPBEFORESAVE            1199
+#define IDC_SAVEDON2                    1199
+#define IDC_PWDSETON                    1199
 #define IDC_DFLTBACKUPPREFIX            1200
 #define IDC_USERBACKUPPREFIX            1201
 #define IDC_USERBACKUPPREFIXVALUE       1202
@@ -741,6 +766,7 @@
 #define IDC_STATIC_RWSTATUS             1424
 #define IDC_COPYPASSWORD                1425
 #define IDC_DEFPWHIDESYSTRAY            1426
+#define IDC_TWOFACTORCODE               1426
 #define IDC_ADVANCED_RESET              1427
 #define IDC_ENTRY                       1428
 #define IDC_DATABASE                    1430
@@ -758,6 +784,7 @@
 #define IDC_STATIC_IDLEMINS             1445
 #define IDC_STATIC_NUMPWSDHIST          1446
 #define IDC_STATIC_DEFAUTOTYPE          1447
+#define IDC_STATIC_DEFEXPIRYDAYS        1447
 #define IDC_STATIC_PSWDLENGTH           1448
 #define IDC_SHIFT_DOUBLE_CLICK_ACTION   1449
 #define IDC_STATIC_PREFERENCES          1451
@@ -810,9 +837,9 @@
 #define IDC_DB_DEF_AUTOTYPE_TEXT        1501
 #define IDC_DADSPIN                     1502
 #define IDC_CAPSLOCK                    1503
-#define IDC_STATIC_NEWCOMBI             1504
+#define IDC_STATIC_NEWMSTPWD            1504
 #define IDC_STATIC_VERIFY               1505
-#define IDC_STATIC_COMBI                1506
+#define IDC_STATIC_MSPWD                1506
 #define IDC_PASSKEY2                    1507
 #define IDC_VERIFY2                     1508
 #define IDC_VKB2                        1509
@@ -885,21 +912,34 @@
 #define IDC_COPYPASSWORDHELP2           1587
 #define IDC_STATIC_MESSAGE              1588
 #define IDC_ALTEDITOR_CMDLINE           1589
-#define IDC_SHOWCOMBINATION             1590
+#define IDC_SHOWMASTERPASSWORD          1590
 #define IDC_ENABLETRANSPARENCY          1591
 #define IDC_TRANSPARENCY                1592
 #define IDC_TRANSPARENCYHELP            1593
 #define IDC_STATIC_MAXTRANSPARENCY      1594
 #define IDC_STATIC_MINTRANSPARENCY      1595
 #define IDC_TESTTRANSPARENCY            1596
+#define IDC_PS_TITLE                    1599
+#define IDC_EXCLUDE_FROM_CB_HIST        1601
+#define IDC_STATIC_PASSWORD2            1602
+#define IDC_EXCLUDE_FROM_SCR_CAP        1603
+#define IDC_EXCLUDE_FROM_SCR_CAP_HELP   1604
+#define IDC_TIMEOUT_ENABLE_CONTROLS     1610
+#define IDC_SCRCAP_STATE_CTL            1611
+#define IDC_TWOFACTORKEY                1612
+#define IDC_SHOW_2FAKEY                 1613
+#define IDC_AC_STATIC_ENTRYNAME         1614
+#define IDC_AC_BUTTON_COPY_TWOFACTORCODE 1615
+#define IDC_AC_STATIC_TWOFACTORCODE     1616
+#define IDC_STATIC_TWOFACTORCODE        1622
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        561
+#define _APS_NEXT_RESOURCE_VALUE        573
 #define _APS_NEXT_COMMAND_VALUE         30001
-#define _APS_NEXT_CONTROL_VALUE         1597
+#define _APS_NEXT_CONTROL_VALUE         1623
 #define _APS_NEXT_SYMED_VALUE           557
 #endif
 #endif

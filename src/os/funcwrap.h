@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -9,12 +9,12 @@
 #define _FUNCWRAP_H
 
 #include "typedefs.h"
-#include <errno.h>
+#include <cerrno>
 #include <cstring>
 #include <ctime>
 
 /**
- * Some function wrappers for cross platform/complier compatibility
+ * Some function wrappers for cross platform/compiler compatibility
 */
 #ifndef _MSC_VER
 #ifndef _MAX__TIME64_T
@@ -36,12 +36,8 @@ inline errno_t localtime_s(struct tm *_tm, const time_t *time)
     _tm->tm_wday=_tm->tm_yday=_tm->tm_isdst=-1;
     return EINVAL;
   }
-  struct tm *res = std::localtime(time);
-  if (res) {
-    *_tm = *res;
-    return 0;
-  }
-  return EINVAL;
+  ::localtime_r(time, _tm);
+  return 0;
 }
 
 inline errno_t memcpy_s(void *dst, size_t dst_size, const void *src, size_t cnt)

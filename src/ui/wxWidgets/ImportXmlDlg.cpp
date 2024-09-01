@@ -1,10 +1,14 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
  * http://www.opensource.org/licenses/artistic-license-2.0.php
  */
+
+/** \file ImportXmlDlg.cpp
+* 
+*/
 
 #include <wx/wxprec.h>
 
@@ -22,12 +26,15 @@
 #include <wx/msw/msvcrt.h>
 #endif
 
-IMPLEMENT_CLASS( CImportXMLDlg, wxDialog )
+IMPLEMENT_CLASS( ImportXmlDlg, wxDialog )
 
-CImportXMLDlg::CImportXMLDlg(wxWindow* parent) : wxDialog(parent, wxID_ANY, wxString(_("Import XML Settings"))),
+ImportXmlDlg::ImportXmlDlg(wxWindow *parent, const wxString& filename) : wxDialog(parent, wxID_ANY, wxString(_("Import XML Settings"))),
                                                   importUnderGroup(false), 
-                                                  importPasswordsOnly(false)
+                                                  importPasswordsOnly(false),
+                                                  filepath(filename)
 {
+  wxASSERT(!parent || parent->IsTopLevel());
+
   enum { TopMargin = 20, BottomMargin = 20, SideMargin = 30, RowSeparation = 10, ColSeparation = 20};
   
   wxSizerFlags borderFlags = wxSizerFlags().Border(wxLEFT|wxRIGHT, SideMargin).Expand();
@@ -36,11 +43,11 @@ CImportXMLDlg::CImportXMLDlg(wxWindow* parent) : wxDialog(parent, wxID_ANY, wxSt
   wxBoxSizer* dlgSizer = new wxBoxSizer(wxVERTICAL);
   dlgSizer->AddSpacer(TopMargin);
 
-  dlgSizer->Add(new wxStaticText(this, wxID_ANY, _("XML file to import:")), borderFlags);
+  dlgSizer->Add(new wxStaticText(this, wxID_ANY, _("Import XML file:")), borderFlags);
   dlgSizer->AddSpacer(RowSeparation/2);
-  COpenFilePickerValidator validator(filepath);
-  dlgSizer->Add(new wxFilePickerCtrl(this, wxID_ANY, wxEmptyString, 
-                                          _("Please Choose a XML File to Import"), 
+  OpenFilePickerValidator validator(filepath);
+  dlgSizer->Add(new wxFilePickerCtrl(this, wxID_ANY, filepath,
+                                          _("Choose an XML File to Import"), 
                                           _("XML files (*.xml)|*.xml"), 
                                           wxDefaultPosition, wxDefaultSize, 
                                           wxFLP_DEFAULT_STYLE | wxFLP_USE_TEXTCTRL, 
@@ -70,13 +77,18 @@ CImportXMLDlg::CImportXMLDlg(wxWindow* parent) : wxDialog(parent, wxID_ANY, wxSt
   SetSizerAndFit(dlgSizer);
 }
 
-wxCheckBox* CImportXMLDlg::CheckBox(const wxString& label, bool* validatorTarget)
+ImportXmlDlg* ImportXmlDlg::Create(wxWindow *parent, const wxString& filename)
+{
+  return new ImportXmlDlg(parent, filename);
+}
+
+wxCheckBox* ImportXmlDlg::CheckBox(const wxString& label, bool* validatorTarget)
 {
   return new wxCheckBox(this, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, 0,
                           wxGenericValidator(validatorTarget));
 }
 
-wxTextCtrl* CImportXMLDlg::TextCtrl(wxString* validatorTarget)
+wxTextCtrl* ImportXmlDlg::TextCtrl(wxString* validatorTarget)
 {
   return new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, 
                                   wxTextValidator(wxFILTER_NONE, validatorTarget));

@@ -11,6 +11,7 @@
 
 #include "../stdafx.h"
 #include "VKBButton.h"
+#include "../winutils.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -64,7 +65,7 @@ void CVKBButton::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
                                 (m_bFlat ? DFCS_FLAT : 0));
 
   // Fill the interior colour if necessary
-  rect.DeflateRect(CSize(GetSystemMetrics(SM_CXEDGE), GetSystemMetrics(SM_CYEDGE)));
+  rect.DeflateRect(CSize(WinUtil::GetSystemMetrics(SM_CXEDGE, m_hWnd), WinUtil::GetSystemMetrics(SM_CYEDGE, m_hWnd)));
   if (m_bDeadKey) {
     pDC->FillSolidRect(rect, crefOrange);
   } else {

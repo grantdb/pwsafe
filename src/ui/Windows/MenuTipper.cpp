@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -17,7 +17,9 @@
 #include "resource2.h"  // Menu, Toolbar & Accelerator resources
 #include "resource3.h"  // String resources
 #include "MenuTipper.h"
+#include "winutils.h"
 #include <afxpriv.h> // for AfxLoadString
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -107,7 +109,7 @@ CRect CMenuTipManager::GetMenuTipRect(HMENU hmenu, UINT nID)
 
   // add heights of menu items until i reach nID
   int count = ::GetMenuItemCount(hmenu);
-  int cy = rcMenu.top + GetSystemMetrics(SM_CYEDGE) + 1;
+  int cy = rcMenu.top + WinUtil::GetSystemMetrics(SM_CYEDGE, m_hWnd) + 1;
   for (int i = 0; i < count; i++) {
     CRect rc;
     ::GetMenuItemRect(m_hWnd, hmenu, i, &rc);

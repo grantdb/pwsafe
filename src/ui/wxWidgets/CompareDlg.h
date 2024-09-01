@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
  * http://www.opensource.org/licenses/artistic-license-2.0.php
  */
-/** \file
+
+/** \file ComapreDlg.h
 * 
 */
 
@@ -15,6 +16,7 @@
 #include <wx/dialog.h>
 #include <wx/collpane.h>
 #include "../../core/DBCompareData.h"
+#include "../../core/Report.h"
 
 class PWScore;
 class PWSAuxCore;
@@ -25,7 +27,7 @@ struct ComparisonData;
 class wxGridEvent;
 class wxGridRangeSelectEvent;
 
-class CompareDlg: public wxDialog
+class CompareDlg : public wxDialog
 {
   void CreateControls();
   wxCollapsiblePane* CreateDBSelectionPanel(wxSizer* sizer);
@@ -33,6 +35,7 @@ class CompareDlg: public wxDialog
   wxCollapsiblePane* CreateDataPanel(wxSizer* dlgSizer, const wxString& title, ComparisonData* cd,
                                               bool customGrid = false);
   void OnCompare(wxCommandEvent& );
+  void OnShowReport(wxCommandEvent& );
   void OnGridCellRightClick(wxGridEvent& evt);
   void OnEditInCurrentDB(wxCommandEvent& evt);
   void OnViewInComparisonDB(wxCommandEvent& evt);
@@ -41,24 +44,47 @@ class CompareDlg: public wxDialog
   void OnDeleteItemsFromCurrentDB(wxCommandEvent& evt);
   void OnCopyFieldsToCurrentDB(wxCommandEvent& evt);
   void OnSyncItemsWithCurrentDB(wxCommandEvent& evt);
+  
+  void OnUpdateUI(wxUpdateUIEvent& event);
+  
+  void WriteReportData();
+  void ReportAdvancedOptions();
+  void WriteReport();
 
+protected:
+  explicit CompareDlg(wxWindow *parent, PWScore* core);
 public:
-  CompareDlg(wxWindow* parent, PWScore* core);
+  static CompareDlg* Create(wxWindow *parent, PWScore* core);
   ~CompareDlg();
 
 private:
-  PWScore*            m_currentCore;
-  PWSAuxCore*         m_otherCore;
-  SelectionCriteria*  m_selCriteria;
-  DbSelectionPanel*   m_dbPanel;
-  wxCollapsiblePane*  m_dbSelectionPane;
-  wxCollapsiblePane*  m_optionsPane;
-  ComparisonData      *m_current, *m_comparison, *m_conflicts, *m_identical;
+  struct ContextMenuData {
+    ComparisonData* cdata;
+    wxArrayInt selectedRows;    //indexes into the grid
+    wxArrayInt selectedItems;   //indexes into the table
+    CItemData::FieldType field;
+  };
+
+  PWScore*            m_currentCore = nullptr;
+  PWSAuxCore*         m_otherCore = nullptr;
+  SelectionCriteria*  m_selCriteria = nullptr;
+  DbSelectionPanel*   m_dbPanel = nullptr;
+  wxCollapsiblePane*  m_dbSelectionPane = nullptr;
+  wxCollapsiblePane*  m_optionsPane = nullptr;
+  ComparisonData      *m_current = nullptr, *m_comparison = nullptr, *m_conflicts = nullptr, *m_identical = nullptr;
 
   void DoCompare(wxCommandEvent& evt);
+  void DoShowReport();
+  void DoEditInCurrentDB(ContextMenuData menuContext);
+  void DoViewInComparisonDB(ContextMenuData menuContext);
+  void DoSyncItemsWithCurrentDB(int menuId, ContextMenuData menuContext);
+  
   bool ViewEditEntry(PWScore* core, const pws_os::CUUID& uuid, bool readOnly);
+  
+  CReport            m_compReport;
+  wxButton*          m_compareButton = nullptr;
 
   DECLARE_EVENT_TABLE()
 };
 
-#endif
+#endif /* _COMPAREDLG_H_ */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
@@ -18,7 +18,7 @@
 
 class PasswordSafeFrame;
 
-class SystemTray : protected wxTaskBarIcon
+class SystemTray : public wxTaskBarIcon
 {
   public:
     enum class TrayStatus { CLOSED, UNLOCKED, LOCKED };
@@ -41,13 +41,19 @@ class SystemTray : protected wxTaskBarIcon
   protected:
     //overridden from wxTaskBarIcon, called by framework on r-click
     virtual wxMenu* CreatePopupMenu();
+    void ProcessSysTrayMenuItem(int itemId);
 
   private:
     wxMenu* GetRecentHistory();
     wxMenu* SetupRecentEntryMenu(const CItemData* pci, size_t idx);
+    void ShowSetDatabaseIdDialog();
 
-    wxIcon iconClosed;
-    wxIcon iconUnlocked, iconLocked;
+    bool m_TrayIconWithOverlay;
+    int m_DatabaseID;
+    wxColor m_LockedDatabaseIdColor, m_UnlockedDatabaseIdColor;
+    wxIcon m_IconClosed;
+    wxIcon m_IconUnlocked, m_IconLocked;
+    wxIcon m_IconUnlockedWithID, m_IconLockedWithID;
     PasswordSafeFrame* m_frame;
     TrayStatus m_status;
 

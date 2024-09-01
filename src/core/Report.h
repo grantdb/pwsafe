@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -13,26 +13,34 @@
 
 #include "os/typedefs.h"
 #include "StringXStream.h"
+#include <map>
 
 class CReport
 {
 public:
-  CReport() {}
+  CReport() : m_iAction(-1) {}
   ~CReport() {}
 
-  void StartReport(LPCTSTR tcAction, const stringT &csDataBase);
+  void StartReport(int iAction, const stringT &csDataBase, bool writeHeader = true);
   void EndReport();
   void WriteLine(const stringT &cs_line, bool bCRLF = true)
   {WriteLine(cs_line.c_str(), bCRLF);}
   void WriteLine(LPCTSTR tc_line, bool bCRLF = true);
   void WriteLine();
   bool SaveToDisk();
+  bool ReadFromDisk();
+  bool PurgeFromDisk();
+  bool ReportExistsOnDisk() const;
   StringX GetString() {return m_osxs.rdbuf()->str();}
+  bool StringEmpty() const {return !m_osxs.rdbuf() || m_osxs.rdbuf()->str().empty();}
+  const stringT GetFileName() const {return m_cs_filename;}
+
+  static const std::map<int, LPCTSTR> ReportNames;
 
 private:
   oStringXStream m_osxs;
   stringT m_cs_filename;
-  stringT m_tcAction;
+  int m_iAction;
   stringT m_csDataBase;
 };
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -45,6 +45,7 @@ const UINT CCompareResultsDlg::FixedCols[CCompareResultsDlg::USER + 1] = {
 // These columns are optional and in this *preferred* order
 CCompareResultsDlg::OptionalColumns CCompareResultsDlg::OptCols[LAST - PASSWORD] = {
     {CItemData::PASSWORD,   IDS_PASSWORD},
+    {CItemData::TWOFACTORKEY, IDSC_FLDNMTWOFACTORKEY},
     {CItemData::NOTES,      IDS_NOTES},
     {CItemData::URL,        IDS_URL},
     {CItemData::AUTOTYPE,   IDS_AUTOTYPE},
@@ -76,13 +77,14 @@ CCompareResultsDlg::CCompareResultsDlg(CWnd* pParent,
                                        CString &csProtect, CString &csAttachment,
                                        CReport *pRpt)
   : CPWResizeDialog(CCompareResultsDlg::IDD, pParent),
+  m_iSortedColumn(0), m_bSortAscending(true),
+  m_ShowIdenticalEntries(BST_UNCHECKED),
+  m_OriginalDBChanged(false),
+  m_bTreatWhiteSpaceasEmpty(false),
   m_OnlyInCurrent(OnlyInCurrent), m_OnlyInComp(OnlyInComp),
   m_Conflicts(Conflicts), m_Identical(Identical),
   m_bsFields(bsFields), m_pcore0(pcore0), m_pcore1(pcore1),
-  m_pRpt(pRpt), m_bSortAscending(true), m_iSortedColumn(0),
-  m_OriginalDBChanged(false),
-  m_bTreatWhiteSpaceasEmpty(false),
-  m_ShowIdenticalEntries(BST_UNCHECKED),
+  m_pRpt(pRpt),
   m_csProtect(csProtect), m_csAttachment(csAttachment)
 {
 }
@@ -405,8 +407,6 @@ void CCompareResultsDlg::OnCancel()
   if (m_bDBNotificationState)
     GetMainDlg()->ResumeOnDBNotification();
 
-  m_menuManager.Cleanup();
-
   CPWResizeDialog::OnCancel();
 }
 
@@ -415,8 +415,6 @@ void CCompareResultsDlg::OnOK()
   // Reset Save Immediately if set originally
   if (m_bDBNotificationState)
     GetMainDlg()->ResumeOnDBNotification();
-
-  m_menuManager.Cleanup();
 
   CPWResizeDialog::OnOK();
 }
@@ -574,25 +572,25 @@ st_CompareData * CCompareResultsDlg::GetCompareData(const LONG_PTR dwItemData,
   switch (iList) {
     case IDENTICAL:
       cd_iter = std::find_if(self->m_Identical.begin(), self->m_Identical.end(),
-                             std::bind2nd(std::equal_to<int>(), id));
+                             std::bind(std::equal_to<int>(), std::placeholders::_1, id));
       if (cd_iter != self->m_Identical.end())
         retval = &*cd_iter;
       break;
     case BOTH:
       cd_iter = std::find_if(self->m_Conflicts.begin(), self->m_Conflicts.end(),
-                             std::bind2nd(std::equal_to<int>(), id));
+        std::bind(std::equal_to<int>(), std::placeholders::_1, id));
       if (cd_iter != self->m_Conflicts.end())
         retval = &*cd_iter;
       break;
     case CURRENT:
       cd_iter = std::find_if(self->m_OnlyInCurrent.begin(), self->m_OnlyInCurrent.end(),
-                             std::bind2nd(std::equal_to<int>(), id));
+        std::bind(std::equal_to<int>(), std::placeholders::_1, id));
       if (cd_iter != self->m_OnlyInCurrent.end())
         retval = &*cd_iter;
       break;
     case COMPARE:
       cd_iter = std::find_if(self->m_OnlyInComp.begin(), self->m_OnlyInComp.end(),
-                             std::bind2nd(std::equal_to<int>(), id));
+        std::bind(std::equal_to<int>(), std::placeholders::_1, id));
       if (cd_iter != self->m_OnlyInComp.end())
         retval = &*cd_iter;
       break;
@@ -708,21 +706,21 @@ void CCompareResultsDlg::OnCompareCopyToOriginalDB()
     case BOTH:
       m_numConflicts--;
       cd_iter = std::find_if(m_Conflicts.begin(), m_Conflicts.end(),
-                             std::bind2nd(std::equal_to<int>(), id));
+        std::bind(std::equal_to<int>(), std::placeholders::_1, id));
       if (cd_iter != m_Conflicts.end())
         m_Conflicts.erase(cd_iter);
       break;
     case CURRENT:
       m_numOnlyInCurrent--;
       cd_iter = std::find_if(m_OnlyInCurrent.begin(), m_OnlyInCurrent.end(),
-                             std::bind2nd(std::equal_to<int>(), id));
+        std::bind(std::equal_to<int>(), std::placeholders::_1, id));
       if (cd_iter != m_OnlyInCurrent.end())
         m_OnlyInCurrent.erase(cd_iter);
       break;
     case COMPARE:
       m_numOnlyInComp--;
       cd_iter = std::find_if(m_OnlyInComp.begin(), m_OnlyInComp.end(),
-                             std::bind2nd(std::equal_to<int>(), id));
+        std::bind(std::equal_to<int>(), std::placeholders::_1, id));
       if (cd_iter != m_OnlyInComp.end())
         m_OnlyInComp.erase(cd_iter);
       break;
@@ -860,14 +858,14 @@ void CCompareResultsDlg::DoAllFunctions(const int ifunction)
         case BOTH:
           m_numConflicts--;
           cd_iter = std::find_if(m_Conflicts.begin(), m_Conflicts.end(),
-                                 std::bind2nd(std::equal_to<int>(), id));
+            std::bind(std::equal_to<int>(), std::placeholders::_1, id));
           if (cd_iter != m_Conflicts.end())
             m_Conflicts.erase(cd_iter);
           break;
         case COMPARE:
           m_numOnlyInComp--;
           cd_iter = std::find_if(m_OnlyInComp.begin(), m_OnlyInComp.end(),
-                                 std::bind2nd(std::equal_to<int>(), id));
+            std::bind(std::equal_to<int>(), std::placeholders::_1, id));
           if (cd_iter != m_OnlyInComp.end())
             m_OnlyInComp.erase(cd_iter);
           break;
@@ -1203,7 +1201,7 @@ void CCompareResultsDlg::WriteReportData()
          cd_iter++) {
       const st_CompareData &st_data = *cd_iter;
 
-      buffer.Format(IDS_COMPARESTATS, st_data.group.c_str(), st_data.title.c_str(), st_data.user.c_str());
+      buffer.Format(IDSC_COMPARESTATS, st_data.group.c_str(), st_data.title.c_str(), st_data.user.c_str());
       m_pRpt->WriteLine((LPCWSTR)buffer);
     }
     m_pRpt->WriteLine();
@@ -1216,7 +1214,7 @@ void CCompareResultsDlg::WriteReportData()
          cd_iter++) {
       const st_CompareData &st_data = *cd_iter;
 
-      buffer.Format(IDS_COMPARESTATS, st_data.group.c_str(), st_data.title.c_str(), st_data.user.c_str());
+      buffer.Format(IDSC_COMPARESTATS, st_data.group.c_str(), st_data.title.c_str(), st_data.user.c_str());
       m_pRpt->WriteLine((LPCWSTR)buffer);
     }
     m_pRpt->WriteLine();
@@ -1355,16 +1353,16 @@ bool CCompareResultsDlg::CompareEntries(st_CompareData *pst_data)
   if (currentItem.GetEntryType() == CItemData::ET_ALIAS ||
       currentItem.GetEntryType() == CItemData::ET_SHORTCUT) {
      CItemData *pci_base = m_pcore0->GetBaseEntry(&currentItem);
-     sxCurrentPassword == pci_base->GetPassword();
+     sxCurrentPassword = pci_base->GetPassword();
   } else
-    sxCurrentPassword == currentItem.GetPassword();
+    sxCurrentPassword = currentItem.GetPassword();
 
   if (compItem.GetEntryType() == CItemData::ET_ALIAS ||
       compItem.GetEntryType() == CItemData::ET_SHORTCUT) {
     CItemData *pci_base = m_pcore1->GetBaseEntry(&compItem);
-    sxComparisonPassword == pci_base->GetPassword();
+    sxComparisonPassword = pci_base->GetPassword();
   } else
-    sxComparisonPassword == compItem.GetPassword();
+    sxComparisonPassword = compItem.GetPassword();
 
   if (m_bsFields.test(CItemData::PASSWORD) &&
       sxCurrentPassword != sxComparisonPassword)

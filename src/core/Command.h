@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -82,6 +82,7 @@ protected:
   // If needed, to be used by a Multicommand that changes the DB or
   // a single command that changes the DB outside a MultiCommand
   std::vector<StringX> m_vSavedModifiedNodes;
+  std::vector<StringX> m_vSavedModifiedEmptyGroups;
 
   // This is the potential change type if it there is anything to do
   // It is set so that MultiCommands can tell whether to save DB information
@@ -137,7 +138,7 @@ public:
   void Undo();
 
 private:
-  UpdateGUICommand& operator=(const UpdateGUICommand&); // Do not implement
+  UpdateGUICommand& operator=(const UpdateGUICommand&) = delete; // Do not implement
   UpdateGUICommand(CommandInterface *pcomInt, ExecuteFn When,
                    GUI_Action ga, const pws_os::CUUID &entryUUID);
   const ExecuteFn m_When;
@@ -169,20 +170,20 @@ public:
   enum Function {NP_ADDNEW = 0, NP_REPLACEALL};
 
   static DBPolicyNamesCommand *Create(CommandInterface *pcomInt,
-                                PSWDPolicyMap &MapPSWDPLC,
+                                const PSWDPolicyMap &MapPSWDPLC,
                                 Function function)
   { return new DBPolicyNamesCommand(pcomInt, MapPSWDPLC, function); }
   static DBPolicyNamesCommand *Create(CommandInterface *pcomInt,
-                                StringX &sxPolicyName, PWPolicy &st_pp)
+                                const StringX &sxPolicyName, const PWPolicy &st_pp)
   { return new DBPolicyNamesCommand(pcomInt, sxPolicyName, st_pp); }
   int Execute();
   void Undo();
 
 private:
-  DBPolicyNamesCommand(CommandInterface *pcomInt, PSWDPolicyMap &MapPSWDPLC,
+  DBPolicyNamesCommand(CommandInterface *pcomInt, const PSWDPolicyMap &MapPSWDPLC,
                        Function function);
-  DBPolicyNamesCommand(CommandInterface *pcomInt, StringX &sxPolicyName,
-                       PWPolicy &st_pp);
+  DBPolicyNamesCommand(CommandInterface *pcomInt, const StringX &sxPolicyName,
+                       const PWPolicy &st_pp);
 
   PSWDPolicyMap m_OldMapPSWDPLC;
   PSWDPolicyMap m_NewMapPSWDPLC;
@@ -241,13 +242,12 @@ public:
   friend class DeleteEntryCommand; // allow access to c'tor
 
 private:
-  AddEntryCommand& operator=(const AddEntryCommand&); // Do not implement
+  AddEntryCommand& operator=(const AddEntryCommand&) = delete; // Do not implement
   AddEntryCommand(CommandInterface *pcomInt, const CItemData &ci,
                   const pws_os::CUUID &baseUUID, const CItemAtt *att,
                   const Command *pcmd = nullptr);
   CItemData m_ci;
   CItemAtt m_att;
-  bool m_bExpired;
 };
 
 class DeleteEntryCommand : public Command
@@ -264,7 +264,7 @@ public:
   friend class AddEntryCommand; // allow access to c'tor
 
 private:
-  DeleteEntryCommand& operator=(const DeleteEntryCommand&); // Do not implement
+  DeleteEntryCommand& operator=(const DeleteEntryCommand&) = delete; // Do not implement
   DeleteEntryCommand(CommandInterface *pcomInt, const CItemData &ci,
                      const Command *pcmd = nullptr);
   const CItemData m_ci;
@@ -289,6 +289,43 @@ private:
                    const CItemData &new_ci);
   CItemData m_old_ci;
   CItemData m_new_ci;
+};
+
+class DeleteAttachmentCommand : public Command
+{
+public:
+  static DeleteAttachmentCommand *Create(CommandInterface *pcomInt,
+    const CItemData &ci,
+    const Command *pcmd = nullptr)
+  { return new DeleteAttachmentCommand(pcomInt, ci, pcmd); }
+  ~DeleteAttachmentCommand();
+  int Execute();
+  void Undo();
+
+private:
+  DeleteAttachmentCommand& operator=(const DeleteEntryCommand&) = delete; // Do not implement
+  DeleteAttachmentCommand(CommandInterface *pcomInt, const CItemData &ci,
+    const Command *pcmd = nullptr);
+  const CItemData m_ci;
+  CItemAtt m_att;
+};
+
+class EditAttachmentCommand : public Command
+{
+public:
+  static EditAttachmentCommand *Create(CommandInterface *pcomInt,
+    const CItemAtt &old_att,
+    const CItemAtt &new_att)
+  { return new EditAttachmentCommand(pcomInt, old_att, new_att); }
+  ~EditAttachmentCommand();
+  int Execute();
+  void Undo();
+
+private:
+  EditAttachmentCommand(CommandInterface *pcomInt, const CItemAtt &old_att,
+    const CItemAtt &new_att);
+  CItemAtt m_old_att;
+  CItemAtt m_new_att;
 };
 
 class UpdateEntryCommand : public Command
@@ -531,6 +568,139 @@ public:
 
   std::vector<Command *> m_vpcmds;
   std::vector<int> m_vRCs;
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Policies Management Commands
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Implements the management of policies within a collection.
+ * 
+ * Provides the ability for the individual policy specific commands 
+ * to easily manage policies within a collection.
+ */
+class MultiPolicyCollector
+{
+private:
+  PSWDPolicyMap& m_Policies;
+  
+protected:
+  MultiPolicyCollector(PSWDPolicyMap& policies);
+  virtual ~MultiPolicyCollector();
+  
+  void AddPolicy(const StringX& name, const PWPolicy& policy);
+  void RemovePolicy(const StringX& name);
+};
+
+/**
+ * Implements the management of a single policy, the default policy.
+ * 
+ * Needed by the policy specific command <code>PolicyCommandModify</code>, only.
+ */
+class SinglePolicyCollector
+{
+private:
+  StringX   m_Name;
+  PWPolicy& m_DefaultPolicy;
+  
+protected:
+  SinglePolicyCollector(PWPolicy& defaultPolicy);
+  virtual ~SinglePolicyCollector();
+  
+  void AddPolicy(const StringX& name, const PWPolicy& policy);
+};
+
+/**
+ * This class implements the command for adding policies into a collection.
+ */
+class PolicyCommandAdd : public Command, public MultiPolicyCollector
+{
+private:
+  StringX  m_Name;
+  PWPolicy m_Policy;
+  
+protected:
+public:
+  PolicyCommandAdd(CommandInterface& commandInterface, PSWDPolicyMap& policies, const stringT& name, const PWPolicy& policy);
+  ~PolicyCommandAdd();
+  
+  int Execute() override;
+  void Undo() override;
+};
+
+/**
+ * This class implements the command for removing policies from a collection.
+ */
+class PolicyCommandRemove : public Command, public MultiPolicyCollector
+{
+private:
+  StringX  m_Name;
+  PWPolicy m_Policy;
+  
+protected:
+public:
+  PolicyCommandRemove(CommandInterface& commandInterface, PSWDPolicyMap& policies, const stringT& name, const PWPolicy& policy);
+  ~PolicyCommandRemove();
+  
+  int Execute() override;
+  void Undo() override;
+};
+
+/**
+ * Provides the command template for modifying of existing policy rules.
+ * 
+ * The Collector is responsible for handling the policy data of type T in a type depending manner.
+ */
+template <typename Collector, typename T>
+class PolicyCommandModify : public Command, public Collector
+{
+private:
+  StringX  m_Name;
+  PWPolicy m_OriginalPolicy;
+  PWPolicy m_ModifiedPolicy;
+
+protected:
+public:
+  PolicyCommandModify(CommandInterface& commandInterface, T& data, const stringT& name, const PWPolicy& original, const PWPolicy& modified);
+  ~PolicyCommandModify();
+  
+  int Execute() override;
+  void Undo() override;
+};
+
+/**
+ * This class implements the command for renaming of existing policies in a collection.
+ * 
+ * There are two possible types of changes that could have been applied to a policy.
+ * Case 1) Policy name was changed, only.
+ * Case 2) Policy name but also some policy attributes were changed
+ * 
+ * This class assums always the second case, so that even when only the name was changed 
+ * a backup of the policy is created. That's why beside old and new name also two 
+ * policies are expected.
+ * 
+ * To just fulfill the first case only the old and new name is necessary and the 
+ * affected policy, that got renamed.
+ * 
+ * Assuming always case two, prevents additional checks what exactly has changed.
+ * Only the name, only the policy rules or both?!
+ */
+class PolicyCommandRename : public Command, public MultiPolicyCollector
+{
+private:
+  StringX  m_OldName;
+  StringX  m_NewName;
+  PWPolicy m_OriginalPolicy;
+  PWPolicy m_ModifiedPolicy;
+
+protected:
+public:
+  PolicyCommandRename(CommandInterface& commandInterface, PSWDPolicyMap& policies, const stringT& oldName, const stringT& newName, const PWPolicy& original, const PWPolicy& modified);
+  ~PolicyCommandRename();
+  
+  int Execute() override;
+  void Undo() override;
 };
 
 #endif /*  __COMMAND_H */

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+* Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
 * All rights reserved. Use of the code is allowed under the
 * Artistic License 2.0 terms, as specified in the LICENSE file
 * distributed with this code, or available from
@@ -10,6 +10,7 @@
 
 #include "PKBaseDlg.h"
 #include "Fonts.h"
+#include "winutils.h"
 #include "VirtualKeyboard/VKeyBoardDlg.h"
 
 #include "resource.h"
@@ -21,6 +22,7 @@
 
 #include <iomanip>
 #include <sstream>
+
 
 using namespace std;
 
@@ -78,6 +80,9 @@ void CPKBaseDlg::DoDataExchange(CDataExchange *pDX)
 
   DDX_Control(pDX, IDC_YUBI_PROGRESS, m_yubi_timeout);
   DDX_Control(pDX, IDC_YUBI_STATUS, m_yubi_status);
+
+  if (GetDlgItem(IDC_SCRCAP_STATE_CTL) != NULL)
+    DDX_Control(pDX, IDC_SCRCAP_STATE_CTL, m_scrCapStateCtl);
 }
 
 BEGIN_MESSAGE_MAP(CPKBaseDlg, CPWDialog)
@@ -89,13 +94,13 @@ END_MESSAGE_MAP()
 
 BOOL CPKBaseDlg::OnInitDialog(void)
 {
-  CPWDialog::OnInitDialog();
+  BOOL retval = CPWDialog::OnInitDialog();
 
   // Setup a timer to poll the key every 250 ms
   SetTimer(TIMER_YUBIKEYPOLL, 250, 0);
-
-  m_yubiLogo.LoadBitmap(IDB_YUBI_LOGO);
-  m_yubiLogoDisabled.LoadBitmap(IDB_YUBI_LOGO_DIS);
+  
+  VERIFY(WinUtil::LoadScaledBitmap(m_yubiLogo, IDB_YUBI_LOGO) == TRUE);
+  VERIFY(WinUtil::LoadScaledBitmap(m_yubiLogoDisabled, IDB_YUBI_LOGO_DIS) == TRUE);
 
   Fonts::GetInstance()->ApplyPasswordFont(GetDlgItem(IDC_PASSKEY));
 
@@ -127,7 +132,7 @@ BOOL CPKBaseDlg::OnInitDialog(void)
     m_yubi_status.SetWindowText(CString(MAKEINTRESOURCE(IDS_YUBI_INSERT_PROMPT)));
   }
 
-  return TRUE;  // return TRUE unless you set the focus to a control
+  return retval;  // return TRUE unless you set the focus to a control
 }
 
 BOOL CPKBaseDlg::PreTranslateMessage(MSG *pMsg)
@@ -199,7 +204,7 @@ void CPKBaseDlg::yubiProcessCompleted(YKLIB_RC yrc, unsigned short ts, const BYT
     YubiFailed(); // allow subclass to do something useful
     break;
 
-  default:                // A non-recoverable error has occured
+  default:                // A non-recoverable error has occurred
     m_yubi_timeout.ShowWindow(SW_HIDE);
     m_yubi_status.ShowWindow(SW_SHOW);
     // Generic error message

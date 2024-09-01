@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2018 Rony Shapiro <ronys@pwsafe.org>.
+ * Copyright (c) 2003-2024 Rony Shapiro <ronys@pwsafe.org>.
  * All rights reserved. Use of the code is allowed under the
  * Artistic License 2.0 terms, as specified in the LICENSE file
  * distributed with this code, or available from
@@ -9,18 +9,16 @@
 /** \file SelectionCriteria.cpp
 *
 */
+
 // For compilers that support precompilation, includes "wx/wx.h".
 #include <wx/wxprec.h>
-
-#ifdef __BORLANDC__
-#pragma hdrstop
-#endif
 
 #ifndef WX_PRECOMP
 #include <wx/wx.h>
 #endif
 
-#include "./SelectionCriteria.h"
+#include "SelectionCriteria.h"
+#include "core/Report.h"
 
 CItemData::FieldType subgroups[] = {  CItemData::GROUP,
                                       CItemData::GROUPTITLE,
@@ -105,8 +103,33 @@ wxString SelectionCriteria::GetGroupSelectionDescription() const
     return _("All entries");
   else
     return wxString(_("Entries whose ")) << GetSelectableFieldName(subgroups[m_subgroupObject]) << wxS(' ')
-            << subgroupFunctions[m_subgroupFunction].name << wxS(" \"") << m_subgroupText
+            << GetSubgroupFunctionName(m_subgroupFunction) << wxS(" \"") << m_subgroupText
                                          << wxS("\" [") << (m_fCaseSensitive? wxS("") : _("not ")) << _("case-sensitive]");
+}
+
+void SelectionCriteria::ReportAdvancedOptions(CReport* rpt, const wxString& operation, const wxString& fullPath)
+{
+  wxString line = GetGroupSelectionDescription();
+  line << _(" were ") << operation << _(" with corresponding entries from \"")
+              << fullPath << wxT('"');
+  rpt->WriteLine(line.c_str());
+  rpt->WriteLine();
+
+  wxArrayString fieldsSelected, fieldsNotSelected;
+  const bool allSelected = GetFieldSelection(fieldsSelected, fieldsNotSelected);
+  if (allSelected) {
+    line.Printf(_("\tAll fields in matching entries were %ls"), operation);
+    rpt->WriteLine(line.c_str());
+  }
+  else {
+    line.Printf(_("\tThe following fields were %ls"), operation);
+    rpt->WriteLine(line.c_str());
+    for( size_t idx = 0; idx < fieldsSelected.Count(); ++idx) {
+      line.Printf(wxT("\t\t* %ls"), fieldsSelected[idx]);
+      rpt->WriteLine(line.c_str());
+    }
+  }
+  rpt->WriteLine();
 }
 
 //static
@@ -119,7 +142,7 @@ size_t SelectionCriteria::GetNumSubgroupFunctions()
 wxString SelectionCriteria::GetSubgroupFunctionName(size_t idx)
 {
   wxASSERT_MSG(idx < GetNumSubgroupFunctions(), wxT("Invalid index for GetSubgroupFunctionName"));
-  return subgroupFunctions[idx].name;
+  return wxGetTranslation(subgroupFunctions[idx].name);
 }
 //static
 PWSMatch::MatchRule SelectionCriteria::GetSubgroupFunction(size_t idx)
