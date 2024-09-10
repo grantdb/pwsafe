@@ -33,6 +33,10 @@
 #include <wx/tokenzr.h>
 #include <wx/spinctrl.h>
 
+#if wxCHECK_VERSION(3, 1, 6)
+#include <wx/uilocale.h>
+#endif
+
 #if wxCHECK_VERSION(2,9,2)
 #include <wx/richmsgdlg.h>
 #endif
@@ -676,14 +680,38 @@ bool PWSafeApp::ActivateLanguage(wxLanguage language, bool tryOnly)
     const wxLanguageInfo *langInfo = nullptr;
     langInfo = wxLocale::GetLanguageInfo(language);
     if(langInfo) {
+
+#if defined(__WXMAC__)
+#if wxCHECK_VERSION(3, 2, 2)
+      // Some languages have multiple locale variations.  (e.g. en_US, en_GB, etc.)
+      // Just using the two letter languane identifier (e.g. en.UTF-8) does not work
+      // on macOS, there needs to be a region as well (e.g. en_US.UTF-8), not doing
+      // so causes some inconsistent results. Specifically, the date format seems to
+      // default to en_GB in WX but not in native macOS controls, such as the date picker.
+      wxString envString;
+      wxLocaleIdent sysLocaleId = wxUILocale::GetSystemLocaleId();
+      if (langInfo->CanonicalName == sysLocaleId.GetLanguage() && !sysLocaleId.GetRegion().empty()) {
+        envString = sysLocaleId.GetName();
+
+      } else if (!langInfo->CanonicalRef.empty()) {
+        envString = langInfo->CanonicalRef;
+      }
+      if (!envString.empty()) {
+        envString += ".UTF-8";
+        setlocale(LC_CTYPE, envString.c_str());
+        setlocale(LC_TIME, envString.c_str());
+      }
+#endif // wxCHECK_VERSION
+      // This value must be set for mac OS starting with version 11, but is no problem for earlier versions, see
+      // https://github.com/wxWidgets/wxWidgets/issues/19023
+      // https://docs.wxwidgets.org/3.2/classwx_locale.html
+      setlocale(LC_NUMERIC, "C");
+#else // __WXMAC__
       wxString envString = langInfo->CanonicalName + ".UTF-8";
       setlocale(LC_CTYPE, envString.c_str());
       setlocale(LC_TIME, envString.c_str());
-#if defined(__WXMAC__)
-      // This value must be set for mac OS starting with version 11, but is no problem for earlier versions, see
-      // https://trac.wxwidgets.org/ticket/19023
-      setlocale(LC_NUMERIC, "C");
-#endif
+#endif // __WXMAC__
+
     }
   }
   return bRes;
