@@ -16,11 +16,13 @@ Bugs fixed in 1.20.0
 * [GH1331](https://github.com/pwsafe/pwsafe/issues/1331) Correctly display long paths with ellipsis (...) in Master Password Entry window
 * [GH1332](https://github.com/pwsafe/pwsafe/issues/1332) Correctly display long paths with ellipsis (...) in Unlock Password Database window
 * [GH1372](https://github.com/pwsafe/pwsafe/issues/1372) Man page is now installed in the correct location (regression).
+* [GH1374](https://github.com/pwsafe/pwsafe/issues/1374) Alt browser command line parameters handling fixed, Misc. help function fixed.
 
 New features in 1.20.0
 ----------------------
 * [GH1301](https://github.com/pwsafe/pwsafe/issues/1301) TOTP authorization code can be used in autotype via '\2'
 * [FR890](https://sourceforge.net/p/passwordsafe/feature-requests/890) Set the Recurring checkbox by default when expiration by number of days is selected
+* [GH1389](https://github.com/pwsafe/pwsafe/pull/1389) Disable (gray-out) unimplemented configuration options
 
 
 PasswordSafe 1.19.1 Release 2 July 2024

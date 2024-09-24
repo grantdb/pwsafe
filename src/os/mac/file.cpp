@@ -22,6 +22,8 @@
 #include <dirent.h>
 #include <fnmatch.h>
 
+#include <CoreFoundation/CoreFoundation.h>
+
 #include "../file.h"
 #include "../env.h"
 
@@ -32,23 +34,47 @@
 
 #include "../../core/pugixml/pugixml.hpp"
 
+#if defined(PWS_LITTLE_ENDIAN)
+#define wcharEncoding kCFStringEncodingUTF32LE
+#else
+#define wcharEncoding kCFStringEncodingUTF32BE
+#endif
+
 using namespace std;
 
 const TCHAR pws_os::PathSeparator = _T('/');
+
+// To add non-Unicode support, createFileSystemRepresentation() needs to be extended,
+// and the conversion of the mode parameter of FOpen().
+#ifndef UNICODE
+#error UNICODE must be defined
+#endif
+
+// This function returns a pointer to an allocated char[],
+// the caller must delete the array.
+static char *createFileSystemRepresentation(const stringT &filename)
+{
+  // Convert to UTF-16
+  CFStringRef str = CFStringCreateWithBytes(kCFAllocatorDefault, reinterpret_cast<const unsigned char *>(filename.c_str()), filename.length()*sizeof(wchar_t), wcharEncoding, false);
+  assert(str != NULL);
+
+  CFIndex maxBufLen = CFStringGetMaximumSizeOfFileSystemRepresentation(str);
+  char *buffer = new char[maxBufLen];
+
+  bool res = CFStringGetFileSystemRepresentation(str, buffer, maxBufLen);
+  assert(res);
+
+  CFRelease(str);
+  return buffer;
+}
 
 bool pws_os::FileExists(const stringT &filename)
 {
   struct stat statbuf;
   int status;
-#ifndef UNICODE
-  status = ::stat(filename.c_str(), &statbuf);
-#else
-  size_t N = wcstombs(NULL, filename.c_str(), 0) + 1;
-  char *fn = new char[N];
-  wcstombs(fn, filename.c_str(), N);
+  char *fn = createFileSystemRepresentation(filename);
   status = ::stat(fn, &statbuf);
   delete[] fn;
-#endif /* UNICODE */
   return (status == 0);
 }
 
@@ -56,40 +82,23 @@ bool pws_os::FileExists(const stringT &filename, bool &bReadOnly)
 {
   bool retval;
   bReadOnly = false;
-#ifndef UNICODE
-  retval = (::access(filename.c_str(), R_OK) == 0);
-  if (retval) {
-    bReadOnly = (::access(filename.c_str(), W_OK) != 0);
-  }
-#else
-  size_t N = wcstombs(NULL, filename.c_str(), 0) + 1;
-  char *fn = new char[N];
-  wcstombs(fn, filename.c_str(), N);
+  char *fn = createFileSystemRepresentation(filename);
   retval = (::access(fn, R_OK) == 0);
   if (retval) {
     bReadOnly = (::access(fn, W_OK) != 0);
   }
   delete[] fn;
-#endif /* UNICODE */
   return retval;
 }
 
 bool pws_os::RenameFile(const stringT &oldname, const stringT &newname)
 {
   int status;
-#ifndef UNICODE
-  status = ::rename(oldname.c_str(), newname.c_str());
-#else
-  size_t oldN = wcstombs(NULL, oldname.c_str(), 0) + 1;
-  char *oldfn = new char[oldN];
-  wcstombs(oldfn, oldname.c_str(), oldN);
-  size_t newN = wcstombs(NULL, newname.c_str(), 0) + 1;
-  char *newfn = new char[newN];
-  wcstombs(newfn, newname.c_str(), newN);
+  char *oldfn = createFileSystemRepresentation(oldname);
+  char *newfn = createFileSystemRepresentation(newname);
   status = ::rename(oldfn, newfn);
   delete[] oldfn;
   delete[] newfn;
-#endif /* UNICODE */
   return (status == 0);
 }
 
@@ -98,18 +107,8 @@ bool pws_os::CopyAFile(const stringT &from, const stringT &to)
   const char *szfrom = NULL;
   const char *szto = NULL;
   bool retval = false;
-#ifndef UNICODE
-  szfrom = from.c_str();
-  szto = to.c_str();
-#else
-  size_t fromsize = wcstombs(NULL, from.c_str(), 0) + 1;
-  szfrom = new char[fromsize];
-  wcstombs(const_cast<char *>(szfrom), from.c_str(), fromsize);
-  size_t tosize = wcstombs(NULL, to.c_str(), 0) + 1;
-  assert(tosize > 0);
-  szto = new char[tosize];
-  wcstombs(const_cast<char *>(szto), to.c_str(), tosize);
-#endif /* UNICODE */
+  szfrom = createFileSystemRepresentation(from);
+  szto = createFileSystemRepresentation(to);
   // can we read the source?
   bool readable = ::access(szfrom, R_OK) == 0;
   if (!readable) {
@@ -139,28 +138,17 @@ bool pws_os::CopyAFile(const stringT &from, const stringT &to)
     } while(readBytes != 0);
     retval = true;
   }
-#ifdef UNICODE
   delete[] szfrom;
   delete[] szto;
-#endif
   return retval;
 }
 
 bool pws_os::DeleteAFile(const stringT &filename)
 {
-#ifndef UNICODE
-  const char *szfn =  filename.c_str();
-#else
-  size_t fnsize = wcstombs(NULL, filename.c_str(), 0) + 1;
-  assert(fnsize > 0);
-  const char *szfn = new char[fnsize];
-  wcstombs(const_cast<char *>(szfn), filename.c_str(), fnsize);
-#endif /* UNICODE */
+  const char *szfn = createFileSystemRepresentation(filename);
 
   bool retval = (::unlink(szfn) == 0);
-#ifdef UNICODE
   delete[] szfn;
-#endif
   return retval;
 }
 
@@ -188,18 +176,9 @@ void pws_os::FindFiles(const stringT &filter, vector<stringT> &res)
     return;
   // filter is a full path with a filter file name.
   const char *szfilter;
-#ifdef UNICODE
-  size_t fltsize = wcstombs(NULL, filter.c_str(), 0) + 1;
-  assert(fltsize > 0);
-  szfilter = new char[fltsize];
-  wcstombs(const_cast<char *>(szfilter), filter.c_str(), fltsize);
-#else
-  szfilter = filter.c_str();
-#endif /* UNICODE */
+  szfilter = createFileSystemRepresentation(filter);
   string cfilter(szfilter);
-#ifdef UNICODE
   delete[] szfilter;
-#endif
   // start by splitting it up
   string dir;
   string::size_type last_slash = cfilter.find_last_of("/");
@@ -217,9 +196,6 @@ void pws_os::FindFiles(const stringT &filter, vector<stringT> &res)
   if (nMatches <= 0)
     return;
   while (nMatches-- != 0) {
-#ifndef UNICODE
-    res.push_back(namelist[nMatches]->d_name);
-#else
     size_t wname_len = ::mbstowcs(NULL,
                                   namelist[nMatches]->d_name,
                                   0) + 1;
@@ -227,7 +203,6 @@ void pws_os::FindFiles(const stringT &filter, vector<stringT> &res)
     mbstowcs(wname, namelist[nMatches]->d_name, wname_len);
     res.push_back(wname);
     delete[] wname;
-#endif
     free(namelist[nMatches]);
   }
   free(namelist);
@@ -255,13 +230,7 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker, HANDLE &)
 {
   const stringT lock_filename = GetLockFileName(filename);
   stringT s_locker;
-#ifndef UNICODE
-  const char *lfn = lock_filename.c_str();
-#else
-  size_t lfs = wcstombs(NULL, lock_filename.c_str(), lock_filename.length()) + 1;
-  char *lfn = new char[lfs];
-  wcstombs(lfn, lock_filename.c_str(), lfs);
-#endif
+  char *lfn = createFileSystemRepresentation(lock_filename);
   int fh = open(lfn, (O_CREAT | O_EXCL | O_WRONLY),
                  (S_IREAD | S_IWRITE));
 
@@ -344,9 +313,7 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker, HANDLE &)
       LoadAString(locker, IDSC_UNKNOWN_ERROR);
       break;
     } // switch (errno)
-#ifdef UNICODE
     delete[] lfn;
-#endif
     return false;
   } else { // valid filehandle, write our info
 
@@ -368,9 +335,7 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker, HANDLE &)
 #pragma GCC diagnostic pop
 
     close(fh);
-#ifdef UNICODE
     delete[] lfn;
-#endif
     return true;
   }
 }
@@ -378,17 +343,9 @@ bool pws_os::LockFile(const stringT &filename, stringT &locker, HANDLE &)
 void pws_os::UnlockFile(const stringT &filename, HANDLE &)
 {
   stringT lock_filename = GetLockFileName(filename);
-#ifndef UNICODE
-  const char *lfn = lock_filename.c_str();
-#else
-  size_t lfs = wcstombs(NULL, lock_filename.c_str(), lock_filename.length()) + 1;
-  char *lfn = new char[lfs];
-  wcstombs(lfn, lock_filename.c_str(), lfs);
-#endif
+  char *lfn = createFileSystemRepresentation(lock_filename);
   unlink(lfn);
-#ifdef UNICODE
   delete[] lfn;
-#endif
 }
 
 bool pws_os::IsLockedFile(const stringT &filename)
@@ -405,25 +362,15 @@ std::FILE *pws_os::FOpen(const stringT &filename, const TCHAR *mode)
   
   const char *cfname = NULL;
   const char *cmode = NULL;
-#ifdef UNICODE
-  size_t fnsize = wcstombs(NULL, filename.c_str(), 0) + 1;
-  assert(fnsize > 0);
-  cfname = new char[fnsize];
-  wcstombs(const_cast<char *>(cfname), filename.c_str(), fnsize);
+  cfname = createFileSystemRepresentation(filename);
 
   size_t modesize = wcstombs(NULL, mode, 0) + 1;
   assert(modesize > 0);
   cmode = new char[modesize];
   wcstombs(const_cast<char *>(cmode), mode, modesize);
-#else
-  cfname = filename.c_str();
-  cmode = mode;
-#endif /* UNICODE */
   FILE *retval = ::fopen(cfname, cmode);
-#ifdef UNICODE
   delete[] cfname;
   delete[] cmode;
-#endif
   return retval;
 }
 
@@ -456,9 +403,7 @@ bool pws_os::GetFileTimes(const stringT &filename,
 {
   struct stat statbuf;
   int status;
-  size_t N = wcstombs(NULL, filename.c_str(), 0) + 1;
-  char *fn = new char[N];
-  wcstombs(fn, filename.c_str(), N);
+  char *fn = createFileSystemRepresentation(filename);
   status = ::stat(fn, &statbuf);
   delete[] fn;
   if (status == 0) {

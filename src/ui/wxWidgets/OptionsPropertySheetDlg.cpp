@@ -253,7 +253,10 @@ void OptionsPropertySheetDlg::CreateControls()
 
   wxString shortcutsTabTitle = _("Shortcuts");
 
-  m_Shortcuts_Panel = CreateShortcutsPanel(shortcutsTabTitle);
+  // TODO: Disabled until implemented
+  m_Shortcuts_Panel = CreateShortcutsPanel(shortcutsTabTitle + " (Not Implemented)");
+  m_Shortcuts_Panel->Disable();
+  //
 
   GetBookCtrl()->AddPage(m_Shortcuts_Panel, shortcutsTabTitle, false, 5);
 
@@ -611,8 +614,8 @@ wxPanel* OptionsPropertySheetDlg::CreateMiscellaneousPanel(const wxString& title
   wxStaticText* itemStaticText73 = new wxStaticText( itemPanel44, wxID_STATIC, _("Browser Command Line parameters"), wxDefaultPosition, wxDefaultSize, 0 );
   itemBoxSizer71->Add(itemStaticText73, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
-  wxTextCtrl* itemTextCtrl72 = new wxTextCtrl( itemPanel44, ID_TEXTCTRL14, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-  itemBoxSizer71->Add(itemTextCtrl72, 1, wxEXPAND|wxALL, 5);
+  wxTextCtrl* misc_OtherBrowserParamsTXT = new wxTextCtrl( itemPanel44, ID_TEXTCTRL14, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+  itemBoxSizer71->Add(misc_OtherBrowserParamsTXT, 1, wxEXPAND|wxALL, 5);
 
   // Miscellaneous Preferences
   misc_ConfirmDeleteCB->SetValidator( wxGenericValidator(& m_Misc_ConfirmDelete) );
@@ -623,6 +626,7 @@ wxPanel* OptionsPropertySheetDlg::CreateMiscellaneousPanel(const wxString& title
   misc_UseDefUsernameCB->SetValidator( wxGenericValidator(& m_Misc_UseDefUsername) );
   misc_QuerySetDefUsernameCB->SetValidator( wxGenericValidator(& m_Misc_QuerySetDefUsername) );
   misc_OtherBrowserLocationTXT->SetValidator( wxGenericValidator(& m_Misc_OtherBrowserLocation) );
+  misc_OtherBrowserParamsTXT->SetValidator( wxGenericValidator(& m_Misc_OtherBrowserParams) );
 
   return itemPanel44;
 }
@@ -788,7 +792,10 @@ wxPanel* OptionsPropertySheetDlg::CreateSecurityPanel(const wxString& title)
   security_ConfirmCopyCB->SetValidator( wxGenericValidator(& m_Security_ConfirmCopy) );
   security_CopyPswdBrowseURLCB->SetValidator( wxGenericValidator(& m_Security_CopyPswdBrowseURL) );
   security_LockOnMinimizeCB->SetValidator( wxGenericValidator(& m_Security_LockOnMinimize) );
-  security_LockOnWindowLockCB->SetValidator( wxGenericValidator(& m_Security_LockOnWindowLock) );
+  // TODO: Disabled until implemented
+  //security_LockOnWindowLockCB->SetValidator( wxGenericValidator(& m_Security_LockOnWindowLock) );
+  security_LockOnWindowLockCB->Disable();
+  //
   m_Security_LockOnIdleTimeoutCB->SetValidator( wxGenericValidator(& m_Security_LockOnIdleTimeout) );
   security_HashIterSliderSL->SetValidator( wxGenericValidator(& m_Security_HashIterSlider) );
 
@@ -852,6 +859,7 @@ wxPanel* OptionsPropertySheetDlg::CreateSystemPanel(const wxString& title)
   wxCheckBox* system_StartupCB = new wxCheckBox( itemPanel104, ID_CHECKBOX31, _("Start Password Safe at Login"), wxDefaultPosition, wxDefaultSize, 0 );
   system_StartupCB->SetValue(false);
   itemStaticBoxSizer106->Add(system_StartupCB, 0, wxALIGN_LEFT|wxALL, 5);
+  system_StartupCB->Disable();  // TODO: Disabled until implemented
 
   m_System_SystemTrayWarningST = new wxStaticText( itemPanel104, wxID_STATIC, _("There appears to be no system tray support in your current environment.\nAny related functionality may not work as expected."), wxDefaultPosition, wxDefaultSize, 0 );
   itemStaticBoxSizer106->Add(m_System_SystemTrayWarningST, 0, wxALIGN_LEFT|wxALL|wxEXPAND, 5);
@@ -1016,7 +1024,7 @@ void OptionsPropertySheetDlg::PrefsToPropSheet()
   m_Misc_DefaultUsernameLBL->Enable(m_Misc_UseDefUsername);
   m_Misc_QuerySetDefUsername = prefs->GetPref(PWSprefs::QuerySetDef);
   m_Misc_OtherBrowserLocation = prefs->GetPref(PWSprefs::AltBrowser).c_str();
-  m_Misc_OtherBrowserLocationparams = prefs->GetPref(PWSprefs::AltBrowserCmdLineParms).c_str();
+  m_Misc_OtherBrowserParams = prefs->GetPref(PWSprefs::AltBrowserCmdLineParms).c_str();
 
   // Password History preferences
   m_PasswordHistory_Save = prefs->GetPref(PWSprefs::SavePasswordHistory);
@@ -1048,6 +1056,8 @@ void OptionsPropertySheetDlg::PrefsToPropSheet()
   m_System_UseSystemTrayCB->SetValue(prefs->GetPref(PWSprefs::UseSystemTray));
   if (!IsTaskBarIconAvailable()) {
     m_System_SystemTrayWarningST->Show();
+    m_System_UseSystemTrayCB->SetValue(false);
+    m_System_UseSystemTrayCB->Disable();
   }
   m_System_Startup = false; // XXX TBD
   m_System_MaxMRUItems = prefs->GetPref(PWSprefs::MaxMRUItems);
@@ -1118,7 +1128,7 @@ void OptionsPropertySheetDlg::PropSheetToPrefs()
   prefs->SetPref(PWSprefs::QuerySetDef, m_Misc_QuerySetDefUsername);
   prefs->SetPref(PWSprefs::AltBrowser, tostringx(m_Misc_OtherBrowserLocation));
   prefs->SetPref(PWSprefs::AltBrowserCmdLineParms,
-                 tostringx(m_Misc_OtherBrowserLocationparams));
+                 tostringx(m_Misc_OtherBrowserParams));
 
   // Password History preferences
   prefs->SetPref(PWSprefs::SavePasswordHistory, m_PasswordHistory_Save);
